@@ -1,5 +1,4 @@
 {
- "kind": "deck-outline",
  "id": "deck-competitive-analysis",
  "title": "Competitive Analysis",
  "categories": [
@@ -13,62 +12,3054 @@
   "market"
  ],
  "styleTags": [
-  "dark",
-  "professional"
+  "minimal",
+  "modern",
+  "clean"
  ],
- "themeId": "theme-noir",
  "size": [
   1920,
   1080
  ],
- "rank": 56,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Barlow Condensed",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Barlow",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Permanent Marker",
+   "weight": 400
+  },
+  {
+   "role": "label",
+   "family": "Chivo Mono",
+   "weight": 500
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#272B31",
+      0
+     ],
+     [
+      "#131518",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1100,
+     "y": -620,
+     "w": 1400,
+     "h": 1400,
+     "stroke": "#FF4B50",
+     "strokeWidth": 2,
+     "opacity": 0.22,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1250,
+     "y": -470,
+     "w": 1100,
+     "h": 1100,
+     "stroke": "#FF4B50",
+     "strokeWidth": 2,
+     "opacity": 0.3,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1400,
+     "y": -320,
+     "w": 800,
+     "h": 800,
+     "stroke": "#FF4B50",
+     "strokeWidth": 2,
+     "opacity": 0.38,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1550,
+     "y": -170,
+     "w": 500,
+     "h": 500,
+     "stroke": "#FF4B50",
+     "strokeWidth": 2,
+     "opacity": 0.45999999999999996,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#FF4B50",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Form & Function",
+     "family": "Barlow",
+     "size": 22,
+     "weight": 600,
+     "color": "#F5F5F3",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 39,
+     "text": "the landscape, unsentimentally",
+     "family": "Permanent Marker",
+     "size": 30,
+     "weight": 400,
+     "color": "#FF6266",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 207,
+     "text": "Who plays, and\nwhere the lines are",
+     "family": "Barlow Condensed",
+     "size": 94,
+     "weight": 700,
+     "color": "#F5F5F3",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 683,
+     "w": 900,
+     "h": 120,
+     "text": "Three players on six criteria, their momentum, our edge when buyers compare, the threat that would hurt most, and our response.",
+     "family": "Barlow",
+     "size": 28,
+     "weight": 400,
+     "color": "#A9AEB6",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Marcus Obi, Strategy  ·  20 October 2026",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A9AEB6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 8",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A9AEB6",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#31363D",
+     "radius": 0,
+     "stroke": "#3E434A",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "3",
+     "family": "Chivo Mono",
+     "size": 26,
+     "weight": 700,
+     "color": "#FF6266",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 246,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "players",
+     "family": "Chivo Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#A9AEB6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 396,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#31363D",
+     "radius": 0,
+     "stroke": "#3E434A",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 416,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "6",
+     "family": "Chivo Mono",
+     "size": 26,
+     "weight": 700,
+     "color": "#FF6266",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 546,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "criteria",
+     "family": "Chivo Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#A9AEB6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 696,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#31363D",
+     "radius": 0,
+     "stroke": "#3E434A",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "$30",
+     "family": "Chivo Mono",
+     "size": 26,
+     "weight": 700,
+     "color": "#FF6266",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 846,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "the trigger",
+     "family": "Chivo Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#A9AEB6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 170,
+     "w": 700,
+     "h": 700,
+     "fill": "#FF4B50",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1220,
+     "y": 240,
+     "w": 560,
+     "h": 560,
+     "fill": "#FF4B50",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 891,
+     "w": 720,
+     "h": 33,
+     "text": "read it like a scout, not a fan",
+     "family": "Permanent Marker",
+     "size": 26,
+     "weight": 400,
+     "color": "#FF6266",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-109-map-location",
+     "x": 1210,
+     "y": 230,
+     "w": 580,
+     "h": 580,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Matrix",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1420,
+     "y": -320,
+     "w": 760,
+     "h": 760,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2,
+     "opacity": 0.18,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1540,
+     "y": -200,
+     "w": 520,
+     "h": 520,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2,
+     "opacity": 0.26,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The matrix",
+     "family": "Chivo Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#C4121F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 78,
+     "text": "Six criteria, three players",
+     "family": "Barlow Condensed",
+     "size": 64,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Competitive landscape, 2026",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 8",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1344,
+     "y": 142,
+     "w": 20,
+     "h": 20,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "text",
+     "x": 1374,
+     "y": 138,
+     "w": 126,
+     "h": 26,
+     "text": "meets it",
+     "family": "Chivo Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1504,
+     "y": 142,
+     "w": 20,
+     "h": 20,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "rect",
+     "x": 1514,
+     "y": 141,
+     "w": 12,
+     "h": 22,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1504,
+     "y": 142,
+     "w": 20,
+     "h": 20,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "text",
+     "x": 1534,
+     "y": 138,
+     "w": 126,
+     "h": 26,
+     "text": "partly",
+     "family": "Chivo Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1664,
+     "y": 142,
+     "w": 20,
+     "h": 20,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "text",
+     "x": 1694,
+     "y": 138,
+     "w": 126,
+     "h": 26,
+     "text": "does not",
+     "family": "Chivo Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 942,
+     "y": 246,
+     "w": 294,
+     "h": 640,
+     "fill": "#F1F2F4"
+    },
+    {
+     "kind": "rect",
+     "x": 942,
+     "y": 246,
+     "w": 294,
+     "h": 4,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 262,
+     "w": 400,
+     "h": 26,
+     "text": "Criterion",
+     "family": "Chivo Mono",
+     "size": 16,
+     "weight": 600,
+     "color": "#C4121F",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 632,
+     "y": 262,
+     "w": 260,
+     "h": 26,
+     "text": "Buyer weight",
+     "family": "Chivo Mono",
+     "size": 16,
+     "weight": 600,
+     "color": "#C4121F",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 942,
+     "y": 256,
+     "w": 294,
+     "h": 36,
+     "text": "Us",
+     "family": "Barlow Condensed",
+     "size": 28,
+     "weight": 700,
+     "color": "#C4121F",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1236,
+     "y": 256,
+     "w": 294,
+     "h": 36,
+     "text": "Northlight",
+     "family": "Barlow Condensed",
+     "size": 28,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1530,
+     "y": 256,
+     "w": 294,
+     "h": 36,
+     "text": "Vantage",
+     "family": "Barlow Condensed",
+     "size": 28,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 296,
+     "w": 1728,
+     "h": 2,
+     "fill": "#1B1D21"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 312,
+     "w": 500,
+     "h": 32,
+     "text": "Time to first value",
+     "family": "Barlow",
+     "size": 24,
+     "weight": 600,
+     "color": "#1B1D21",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 344,
+     "w": 500,
+     "h": 24,
+     "text": "pilot start to first live board",
+     "family": "Barlow",
+     "size": 17,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 632,
+     "y": 333,
+     "w": 176,
+     "h": 14,
+     "fill": "#E2E4E8"
+    },
+    {
+     "kind": "rect",
+     "x": 632,
+     "y": 333,
+     "w": 176,
+     "h": 14,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "text",
+     "x": 824,
+     "y": 327,
+     "w": 72,
+     "h": 26,
+     "text": "30%",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 600,
+     "color": "#1B1D21",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 1069,
+     "y": 320,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1363,
+     "y": 320,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "rect",
+     "x": 1383,
+     "y": 319,
+     "w": 22,
+     "h": 42,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1363,
+     "y": 320,
+     "w": 40,
+     "h": 40,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 320,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "rect",
+     "x": 1677,
+     "y": 319,
+     "w": 22,
+     "h": 42,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 320,
+     "w": 40,
+     "h": 40,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 381,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 396,
+     "w": 500,
+     "h": 32,
+     "text": "Enterprise security",
+     "family": "Barlow",
+     "size": 24,
+     "weight": 600,
+     "color": "#1B1D21",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 428,
+     "w": 500,
+     "h": 24,
+     "text": "SSO, audit log, data residency",
+     "family": "Barlow",
+     "size": 17,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 632,
+     "y": 417,
+     "w": 176,
+     "h": 14,
+     "fill": "#E2E4E8"
+    },
+    {
+     "kind": "rect",
+     "x": 632,
+     "y": 417,
+     "w": 117,
+     "h": 14,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "text",
+     "x": 824,
+     "y": 411,
+     "w": 72,
+     "h": 26,
+     "text": "20%",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 600,
+     "color": "#1B1D21",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 1069,
+     "y": 404,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1363,
+     "y": 404,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 404,
+     "w": 40,
+     "h": 40,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 465,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 480,
+     "w": 500,
+     "h": 32,
+     "text": "Data ownership",
+     "family": "Barlow",
+     "size": 24,
+     "weight": 600,
+     "color": "#1B1D21",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 512,
+     "w": 500,
+     "h": 24,
+     "text": "open file format, self-hosting",
+     "family": "Barlow",
+     "size": 17,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 632,
+     "y": 501,
+     "w": 176,
+     "h": 14,
+     "fill": "#E2E4E8"
+    },
+    {
+     "kind": "rect",
+     "x": 632,
+     "y": 501,
+     "w": 117,
+     "h": 14,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "text",
+     "x": 824,
+     "y": 495,
+     "w": 72,
+     "h": 26,
+     "text": "20%",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 600,
+     "color": "#1B1D21",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 1069,
+     "y": 488,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1363,
+     "y": 488,
+     "w": 40,
+     "h": 40,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 488,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "rect",
+     "x": 1677,
+     "y": 487,
+     "w": 22,
+     "h": 42,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 488,
+     "w": 40,
+     "h": 40,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 549,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 564,
+     "w": 500,
+     "h": 32,
+     "text": "Integrations",
+     "family": "Barlow",
+     "size": 24,
+     "weight": 600,
+     "color": "#1B1D21",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 596,
+     "w": 500,
+     "h": 24,
+     "text": "what buyers count in the demo",
+     "family": "Barlow",
+     "size": 17,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 632,
+     "y": 585,
+     "w": 176,
+     "h": 14,
+     "fill": "#E2E4E8"
+    },
+    {
+     "kind": "rect",
+     "x": 632,
+     "y": 585,
+     "w": 59,
+     "h": 14,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "text",
+     "x": 824,
+     "y": 579,
+     "w": 72,
+     "h": 26,
+     "text": "10%",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 600,
+     "color": "#1B1D21",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 1069,
+     "y": 572,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "rect",
+     "x": 1089,
+     "y": 571,
+     "w": 22,
+     "h": 42,
+     "fill": "#F1F2F4"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1069,
+     "y": 572,
+     "w": 40,
+     "h": 40,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1363,
+     "y": 572,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 572,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "rect",
+     "x": 1677,
+     "y": 571,
+     "w": 22,
+     "h": 42,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 572,
+     "w": 40,
+     "h": 40,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 633,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 648,
+     "w": 500,
+     "h": 32,
+     "text": "Price at scale",
+     "family": "Barlow",
+     "size": 24,
+     "weight": 600,
+     "color": "#1B1D21",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 680,
+     "w": 500,
+     "h": 24,
+     "text": "five hundred seats, year two",
+     "family": "Barlow",
+     "size": 17,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 632,
+     "y": 669,
+     "w": 176,
+     "h": 14,
+     "fill": "#E2E4E8"
+    },
+    {
+     "kind": "rect",
+     "x": 632,
+     "y": 669,
+     "w": 59,
+     "h": 14,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "text",
+     "x": 824,
+     "y": 663,
+     "w": 72,
+     "h": 26,
+     "text": "10%",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 600,
+     "color": "#1B1D21",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 1069,
+     "y": 656,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "rect",
+     "x": 1089,
+     "y": 655,
+     "w": 22,
+     "h": 42,
+     "fill": "#F1F2F4"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1069,
+     "y": 656,
+     "w": 40,
+     "h": 40,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1363,
+     "y": 656,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "rect",
+     "x": 1383,
+     "y": 655,
+     "w": 22,
+     "h": 42,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1363,
+     "y": 656,
+     "w": 40,
+     "h": 40,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 656,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 717,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 732,
+     "w": 500,
+     "h": 32,
+     "text": "AI assistant",
+     "family": "Barlow",
+     "size": 24,
+     "weight": 600,
+     "color": "#1B1D21",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 764,
+     "w": 500,
+     "h": 24,
+     "text": "grounded, adopted, measured",
+     "family": "Barlow",
+     "size": 17,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 632,
+     "y": 753,
+     "w": 176,
+     "h": 14,
+     "fill": "#E2E4E8"
+    },
+    {
+     "kind": "rect",
+     "x": 632,
+     "y": 753,
+     "w": 59,
+     "h": 14,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "text",
+     "x": 824,
+     "y": 747,
+     "w": 72,
+     "h": 26,
+     "text": "10%",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 600,
+     "color": "#1B1D21",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 1069,
+     "y": 740,
+     "w": 40,
+     "h": 40,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1363,
+     "y": 740,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 740,
+     "w": 40,
+     "h": 40,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "rect",
+     "x": 1677,
+     "y": 739,
+     "w": 22,
+     "h": 42,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 740,
+     "w": 40,
+     "h": 40,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 801,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 808,
+     "w": 1728,
+     "h": 2,
+     "fill": "#1B1D21"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 828,
+     "w": 500,
+     "h": 32,
+     "text": "Weighted score",
+     "family": "Barlow",
+     "size": 24,
+     "weight": 600,
+     "color": "#1B1D21",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 860,
+     "w": 500,
+     "h": 24,
+     "text": "out of 100, by buyer weight",
+     "family": "Barlow",
+     "size": 17,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 942,
+     "y": 822,
+     "w": 294,
+     "h": 56,
+     "text": "80",
+     "family": "Barlow Condensed",
+     "size": 48,
+     "weight": 700,
+     "color": "#C4121F",
+     "lineHeight": 1,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1236,
+     "y": 822,
+     "w": 294,
+     "h": 56,
+     "text": "60",
+     "family": "Barlow Condensed",
+     "size": 48,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1530,
+     "y": 822,
+     "w": 294,
+     "h": 56,
+     "text": "45",
+     "family": "Barlow Condensed",
+     "size": 48,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 926,
+     "w": 760,
+     "h": 30,
+     "text": "weights come from the last twenty win-loss calls",
+     "family": "Permanent Marker",
+     "size": 24,
+     "weight": 400,
+     "color": "#C4121F",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Timeline",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1420,
+     "y": -320,
+     "w": 760,
+     "h": 760,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2,
+     "opacity": 0.18,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1540,
+     "y": -200,
+     "w": 520,
+     "h": 520,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2,
+     "opacity": 0.26,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Their momentum",
+     "family": "Chivo Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#C4121F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 78,
+     "text": "What they shipped this year",
+     "family": "Barlow Condensed",
+     "size": 64,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Competitive landscape, 2026",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 8",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 429,
+     "w": 1728,
+     "h": 3,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 429,
+     "w": 1080,
+     "h": 3,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 416,
+     "w": 30,
+     "h": 30,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 356,
+     "w": 300,
+     "h": 28,
+     "text": "Q1",
+     "family": "Chivo Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#C4121F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 480,
+     "w": 384,
+     "h": 44,
+     "text": "The marketplace",
+     "family": "Barlow Condensed",
+     "size": 32,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 532,
+     "w": 384,
+     "h": 120,
+     "text": "Two hundred integrations in a quarter, most of them thin. Buyers count them anyway.",
+     "family": "Barlow",
+     "size": 21,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 528,
+     "y": 416,
+     "w": 30,
+     "h": 30,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 356,
+     "w": 300,
+     "h": 28,
+     "text": "Q2",
+     "family": "Chivo Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#C4121F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 480,
+     "w": 384,
+     "h": 44,
+     "text": "Usage-based pricing",
+     "family": "Barlow Condensed",
+     "size": 32,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 532,
+     "w": 384,
+     "h": 120,
+     "text": "Cheaper to start, expensive at scale. Wins the pilot, loses the renewal.",
+     "family": "Barlow",
+     "size": 21,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 960,
+     "y": 416,
+     "w": 30,
+     "h": 30,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 356,
+     "w": 300,
+     "h": 28,
+     "text": "Q3",
+     "family": "Chivo Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#C4121F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 480,
+     "w": 384,
+     "h": 44,
+     "text": "The AI assistant",
+     "family": "Barlow Condensed",
+     "size": 32,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 532,
+     "w": 384,
+     "h": 120,
+     "text": "Fast, shallow, and demoed everywhere. Sets the expectation we now have to meet.",
+     "family": "Barlow",
+     "size": 21,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1392,
+     "y": 416,
+     "w": 30,
+     "h": 30,
+     "fill": "#FFFFFF",
+     "stroke": "#E11D2B",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 356,
+     "w": 300,
+     "h": 28,
+     "text": "Q4",
+     "family": "Chivo Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#C4121F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 480,
+     "w": 384,
+     "h": 80,
+     "text": "Expected: enterprise bundle",
+     "family": "Barlow Condensed",
+     "size": 32,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 568,
+     "w": 384,
+     "h": 120,
+     "text": "Their partner channel says SSO and audit logs ship by December.",
+     "family": "Barlow",
+     "size": 21,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 926,
+     "w": 760,
+     "h": 30,
+     "text": "four quarters, four moves, none of them slow",
+     "family": "Permanent Marker",
+     "size": 24,
+     "weight": 400,
+     "color": "#C4121F",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1420,
+     "y": -320,
+     "w": 760,
+     "h": 760,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2,
+     "opacity": 0.18,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1540,
+     "y": -200,
+     "w": 520,
+     "h": 520,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2,
+     "opacity": 0.26,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Our edge",
+     "family": "Chivo Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#C4121F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 78,
+     "text": "Where we win when buyers compare",
+     "family": "Barlow Condensed",
+     "size": 64,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Competitive landscape, 2026",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 8",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 246,
+     "w": 560,
+     "h": 580,
+     "fill": "#F1F2F4",
+     "radius": 0,
+     "stroke": "#D8DBDF",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 246,
+     "w": 560,
+     "h": 6,
+     "fill": "#E11D2B",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 294,
+     "w": 80,
+     "h": 80,
+     "fill": "#eec7cc"
+    },
+    {
+     "kind": "icon",
+     "icon": "bolt",
+     "x": 156,
+     "y": 314,
+     "w": 40,
+     "h": 40,
+     "color": "#C4121F"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 410,
+     "w": 480,
+     "h": 100,
+     "text": "Three days to value, not three weeks",
+     "family": "Barlow Condensed",
+     "size": 34,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 522,
+     "w": 480,
+     "h": 160,
+     "text": "Every won deal this year cited it. Lead with the pilot, measure it, put the number on the proposal.",
+     "family": "Barlow",
+     "size": 22,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 742,
+     "w": 480,
+     "h": 1,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 766,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 246,
+     "w": 560,
+     "h": 580,
+     "fill": "#F1F2F4",
+     "radius": 0,
+     "stroke": "#D8DBDF",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 246,
+     "w": 560,
+     "h": 6,
+     "fill": "#2B2F36",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 294,
+     "w": 80,
+     "h": 80,
+     "fill": "#c9cbce"
+    },
+    {
+     "kind": "icon",
+     "icon": "lock",
+     "x": 740,
+     "y": 314,
+     "w": 40,
+     "h": 40,
+     "color": "#2B2F36"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 410,
+     "w": 480,
+     "h": 100,
+     "text": "The customer owns the data",
+     "family": "Barlow Condensed",
+     "size": 34,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 522,
+     "w": 480,
+     "h": 160,
+     "text": "Open format and self-hosting close regulated buyers before price is discussed.",
+     "family": "Barlow",
+     "size": 22,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 742,
+     "w": 480,
+     "h": 1,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 766,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 246,
+     "w": 560,
+     "h": 580,
+     "fill": "#F1F2F4",
+     "radius": 0,
+     "stroke": "#D8DBDF",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 246,
+     "w": 560,
+     "h": 6,
+     "fill": "#E11D2B",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 294,
+     "w": 80,
+     "h": 80,
+     "fill": "#eec7cc"
+    },
+    {
+     "kind": "icon",
+     "icon": "user",
+     "x": 1324,
+     "y": 314,
+     "w": 40,
+     "h": 40,
+     "color": "#C4121F"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 410,
+     "w": 480,
+     "h": 100,
+     "text": "One named engineer per account",
+     "family": "Barlow Condensed",
+     "size": 34,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 522,
+     "w": 480,
+     "h": 160,
+     "text": "Their support is a queue. Ours has a face. Renewals mention it unprompted.",
+     "family": "Barlow",
+     "size": 22,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 742,
+     "w": 480,
+     "h": 1,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 766,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 926,
+     "w": 760,
+     "h": 30,
+     "text": "won deals say these three, unprompted",
+     "family": "Permanent Marker",
+     "size": 24,
+     "weight": 400,
+     "color": "#C4121F",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Statement",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1420,
+     "y": -320,
+     "w": 760,
+     "h": 760,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2,
+     "opacity": 0.18,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1540,
+     "y": -200,
+     "w": 520,
+     "h": 520,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2,
+     "opacity": 0.26,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Competitive landscape, 2026",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 8",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 39,
+     "text": "the landscape, unsentimentally",
+     "family": "Permanent Marker",
+     "size": 30,
+     "weight": 400,
+     "color": "#C4121F",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 289,
+     "w": 120,
+     "h": 6,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 335,
+     "w": 1560,
+     "h": 292,
+     "text": "The move that hurts us most is not their next feature. It is a price cut we answer too late.",
+     "family": "Barlow Condensed",
+     "size": 84,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 667,
+     "w": 1000,
+     "h": 32,
+     "text": "Strategy review, October 2026",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 926,
+     "w": 760,
+     "h": 30,
+     "text": "the response is drafted; the trigger is not agreed",
+     "family": "Permanent Marker",
+     "size": 24,
+     "weight": 400,
+     "color": "#C4121F",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Section",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#272B31",
+      0
+     ],
+     [
+      "#131518",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1100,
+     "y": -620,
+     "w": 1400,
+     "h": 1400,
+     "stroke": "#FF4B50",
+     "strokeWidth": 2,
+     "opacity": 0.22,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1250,
+     "y": -470,
+     "w": 1100,
+     "h": 1100,
+     "stroke": "#FF4B50",
+     "strokeWidth": 2,
+     "opacity": 0.3,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1400,
+     "y": -320,
+     "w": 800,
+     "h": 800,
+     "stroke": "#FF4B50",
+     "strokeWidth": 2,
+     "opacity": 0.38,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1550,
+     "y": -170,
+     "w": 500,
+     "h": 500,
+     "stroke": "#FF4B50",
+     "strokeWidth": 2,
+     "opacity": 0.45999999999999996,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 800,
+     "h": 256,
+     "text": "Q4",
+     "family": "Barlow Condensed",
+     "size": 236,
+     "weight": 700,
+     "color": "#FF6266",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 492,
+     "w": 120,
+     "h": 4,
+     "fill": "#FF4B50"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 520,
+     "w": 1100,
+     "h": 112,
+     "text": "Our response",
+     "family": "Barlow Condensed",
+     "size": 96,
+     "weight": 700,
+     "color": "#F5F5F3",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 652,
+     "w": 900,
+     "h": 90,
+     "text": "Three moves in order, one trigger we watch weekly, and a date on each of them.",
+     "family": "Barlow",
+     "size": 28,
+     "weight": 400,
+     "color": "#A9AEB6",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1240,
+     "y": 280,
+     "w": 560,
+     "h": 560,
+     "fill": "#FF4B50",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1296,
+     "y": 336,
+     "w": 448,
+     "h": 448,
+     "fill": "#FF4B50",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 1000,
+     "h": 50,
+     "text": "what we do about it",
+     "family": "Permanent Marker",
+     "size": 30,
+     "weight": 400,
+     "color": "#FF6266",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#3E434A"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Competitive landscape, 2026",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A9AEB6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 8",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A9AEB6",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 891,
+     "w": 720,
+     "h": 33,
+     "text": "dates, owners, a number each",
+     "family": "Permanent Marker",
+     "size": 26,
+     "weight": 400,
+     "color": "#FF6266",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day77-pocket-knief",
+     "x": 1300,
+     "y": 340,
+     "w": 440,
+     "h": 440,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Process",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1420,
+     "y": -320,
+     "w": 760,
+     "h": 760,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2,
+     "opacity": 0.18,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1540,
+     "y": -200,
+     "w": 520,
+     "h": 520,
+     "stroke": "#E11D2B",
+     "strokeWidth": 2,
+     "opacity": 0.26,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Response plan",
+     "family": "Chivo Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#C4121F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 78,
+     "text": "Three moves, sequenced",
+     "family": "Barlow Condensed",
+     "size": 64,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Competitive landscape, 2026",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 8",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#565B63",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 276,
+     "w": 88,
+     "h": 88,
+     "fill": "#E11D2B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 276,
+     "w": 88,
+     "h": 88,
+     "text": "1",
+     "family": "Barlow Condensed",
+     "size": 34,
+     "weight": 700,
+     "color": "#F5F5F3",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 200,
+     "y": 319,
+     "w": 322,
+     "h": 2,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 408,
+     "w": 402,
+     "h": 44,
+     "text": "Now",
+     "family": "Barlow Condensed",
+     "size": 32,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 462,
+     "w": 378,
+     "h": 150,
+     "text": "Publish the pilot outcomes page. Every proposal links to it by November.",
+     "family": "Barlow",
+     "size": 21,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 538,
+     "y": 276,
+     "w": 88,
+     "h": 88,
+     "fill": "#272B31"
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 276,
+     "w": 88,
+     "h": 88,
+     "text": "2",
+     "family": "Barlow Condensed",
+     "size": 34,
+     "weight": 700,
+     "color": "#F5F5F3",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 642,
+     "y": 319,
+     "w": 322,
+     "h": 2,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 408,
+     "w": 402,
+     "h": 44,
+     "text": "Q4",
+     "family": "Barlow Condensed",
+     "size": 32,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 462,
+     "w": 378,
+     "h": 150,
+     "text": "Ship a real assistant, not a demo. Grounded in the customer's own files, measured on adoption.",
+     "family": "Barlow",
+     "size": 21,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 980,
+     "y": 276,
+     "w": 88,
+     "h": 88,
+     "fill": "#272B31"
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 276,
+     "w": 88,
+     "h": 88,
+     "text": "3",
+     "family": "Barlow Condensed",
+     "size": 34,
+     "weight": 700,
+     "color": "#F5F5F3",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1084,
+     "y": 319,
+     "w": 322,
+     "h": 2,
+     "fill": "#D8DBDF"
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 408,
+     "w": 402,
+     "h": 44,
+     "text": "Q1",
+     "family": "Barlow Condensed",
+     "size": 32,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 462,
+     "w": 378,
+     "h": 150,
+     "text": "Announce the enterprise bundle before theirs lands. Same features, our security story.",
+     "family": "Barlow",
+     "size": 21,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1422,
+     "y": 276,
+     "w": 88,
+     "h": 88,
+     "fill": "#272B31"
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 276,
+     "w": 88,
+     "h": 88,
+     "text": "4",
+     "family": "Barlow Condensed",
+     "size": 34,
+     "weight": 700,
+     "color": "#F5F5F3",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 408,
+     "w": 402,
+     "h": 44,
+     "text": "Ongoing",
+     "family": "Barlow Condensed",
+     "size": 32,
+     "weight": 700,
+     "color": "#1B1D21",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 462,
+     "w": 378,
+     "h": 150,
+     "text": "Watch pricing weekly. A cut below $30 per seat triggers the prepared response within a week.",
+     "family": "Barlow",
+     "size": 21,
+     "weight": 400,
+     "color": "#565B63",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 926,
+     "w": 760,
+     "h": 30,
+     "text": "a name on each move by Friday",
+     "family": "Permanent Marker",
+     "size": 24,
+     "weight": 400,
+     "color": "#C4121F",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#272B31",
+      0
+     ],
+     [
+      "#131518",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1100,
+     "y": -620,
+     "w": 1400,
+     "h": 1400,
+     "stroke": "#FF4B50",
+     "strokeWidth": 2,
+     "opacity": 0.22,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1250,
+     "y": -470,
+     "w": 1100,
+     "h": 1100,
+     "stroke": "#FF4B50",
+     "strokeWidth": 2,
+     "opacity": 0.3,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1400,
+     "y": -320,
+     "w": 800,
+     "h": 800,
+     "stroke": "#FF4B50",
+     "strokeWidth": 2,
+     "opacity": 0.38,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1550,
+     "y": -170,
+     "w": 500,
+     "h": 500,
+     "stroke": "#FF4B50",
+     "strokeWidth": 2,
+     "opacity": 0.45999999999999996,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#FF4B50",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#FF4B50",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#FF4B50",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Form & Function",
+     "family": "Barlow",
+     "size": 22,
+     "weight": 600,
+     "color": "#F5F5F3",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 39,
+     "text": "Decide, then move",
+     "family": "Permanent Marker",
+     "size": 30,
+     "weight": 400,
+     "color": "#FF6266",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 138,
+     "text": "Decide, then move",
+     "family": "Barlow Condensed",
+     "size": 116,
+     "weight": 700,
+     "color": "#F5F5F3",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 472,
+     "w": 940,
+     "h": 120,
+     "text": "The full comparison, win-loss notes and the pricing response are in the strategy folder.",
+     "family": "Barlow",
+     "size": 28,
+     "weight": 400,
+     "color": "#A9AEB6",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#FF4B50"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "marcus@formfunction.example",
+     "family": "Barlow",
+     "size": 24,
+     "weight": 500,
+     "color": "#F5F5F3",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "world",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#FF4B50"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "formfunction.example/strategy",
+     "family": "Barlow",
+     "size": 24,
+     "weight": 500,
+     "color": "#F5F5F3",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "calendar",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#FF4B50"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "Next review: January",
+     "family": "Barlow",
+     "size": 24,
+     "weight": 500,
+     "color": "#F5F5F3",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Open the win-loss notes",
+     "fill": "#FF4B50",
+     "color": "#1B1D21",
+     "family": "Barlow",
+     "size": 22,
+     "weight": 700,
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "08 / 8",
+     "family": "Chivo Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A9AEB6",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 891,
+     "w": 720,
+     "h": 33,
+     "text": "one decision today: the trigger price",
+     "family": "Permanent Marker",
+     "size": 26,
+     "weight": 400,
+     "color": "#FF6266",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-scooter",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n8",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p1-n3",
+   "kind": "text",
+   "label": "Title",
+   "hint": "What the matrix compares"
+  },
+  {
+   "node": "p1-n19",
+   "kind": "text",
+   "label": "Us",
+   "hint": "Who is compared"
+  },
+  {
+   "node": "p1-n20",
+   "kind": "text",
+   "label": "Rival 1",
+   "hint": "Who is compared"
+  },
+  {
+   "node": "p1-n21",
+   "kind": "text",
+   "label": "Rival 2",
+   "hint": "Who is compared"
+  },
+  {
+   "node": "p1-n23",
+   "kind": "text",
+   "label": "Criterion 1",
+   "hint": "What buyers weigh"
+  },
+  {
+   "node": "p1-n36",
+   "kind": "text",
+   "label": "Criterion 2",
+   "hint": "What buyers weigh"
+  },
+  {
+   "node": "p1-n45",
+   "kind": "text",
+   "label": "Criterion 3",
+   "hint": "What buyers weigh"
+  },
+  {
+   "node": "p1-n56",
+   "kind": "text",
+   "label": "Criterion 4",
+   "hint": "What buyers weigh"
+  },
+  {
+   "node": "p1-n69",
+   "kind": "text",
+   "label": "Criterion 5",
+   "hint": "What buyers weigh"
+  },
+  {
+   "node": "p1-n82",
+   "kind": "text",
+   "label": "Criterion 6",
+   "hint": "What buyers weigh"
+  },
+  {
+   "node": "p7-n12",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p7-n14",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p7-n16",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Competitive Landscape",
-  "theme": "sharp, unsentimental",
-  "pages": [
-   {
-    "title": "The landscape",
-    "points": [
-     "Who plays and where the lines are"
-    ],
-    "visualRole": "cover"
-   },
-   {
-    "title": "Head to head",
-    "points": [
-     "Us versus the primary rival"
-    ],
-    "visualRole": "comparison"
-   },
-   {
-    "title": "Their momentum",
-    "points": [
-     "What they shipped and what it signals"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Our edge",
-    "points": [
-     "Where we win when buyers compare"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Threats",
-    "points": [
-     "The move that would hurt us most"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Response plan",
-    "points": [
-     "Three moves, sequenced"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 56
 }

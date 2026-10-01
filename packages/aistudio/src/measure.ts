@@ -23,8 +23,14 @@ import type { ComposedPage } from "./archetypes";
 export type PageVariant =
   /** Bullets split across two unnamed columns: the remedy for a long list. */
   | "twoUp"
-  /** Bullets set one step larger: the remedy for a short list on an empty page. */
+  /** The form set one step larger: the remedy for short content on an empty
+   *  page, for bullets and for the horizontal forms (columns, process,
+   *  timeline, team, agenda) whose content sits in one band. */
   | "large";
+
+/** Forms whose content runs across the page in one band: short content
+ *  leaves the bands above and below empty, and the remedy is scale. */
+const horizontalForms = new Set<Archetype>(["twoColumn", "threeUp", "process", "timeline", "team", "agenda"]);
 
 export interface PageReport {
   index: number;
@@ -36,6 +42,8 @@ export interface PageReport {
   /** Share of the reading area with no node on it, 0..1. */
   whitespace: number;
   issues: QualityIssue[];
+  /** Text runs the repair pass re-inked to AA before the page left. */
+  repairs: number;
 }
 
 export interface DeckReport {
@@ -46,6 +54,8 @@ export interface DeckReport {
   repetition: number[];
   /** Pages whose copy needs shortening: geometry has done what it can. */
   shorten: number[];
+  /** Text runs re-inked to AA across the deck. */
+  repairs: number;
   /** True when nothing needs a second pass. */
   ok: boolean;
 }
@@ -85,6 +95,7 @@ export interface MeasurablePage {
   nodes: Node[];
   overfull: string[];
   issues: QualityIssue[];
+  repairs?: number;
 }
 
 /** Whitespace above this on a paper page reads as unfinished. Impact pages
@@ -96,14 +107,17 @@ export function measureDeck(pages: MeasurablePage[], size: { width: number; heig
   const reports: PageReport[] = pages.map((p, i) => {
     // Furniture (kicker, page number) is not content: it must not count as
     // filling the page.
-    const boxes = p.nodes.filter((n) => n.name !== "Kicker" && n.name !== "Page number").map(boxOf).filter((b): b is Box => !!b);
+    const boxes = p.nodes.filter((n) => n.name !== "Kicker" && n.name !== "Page number" && n.name !== "Logo" && n.name !== "Decor" && n.name !== "Footer").map(boxOf).filter((b): b is Box => !!b);
     return {
       index: i,
       archetype: p.archetype,
       impact: p.impact,
-      overfull: [...p.overfull],
+      // A form measures some text twice (once to size the block, once to
+      // place it), so a name can repeat; the report lists each once.
+      overfull: [...new Set(p.overfull)],
       whitespace: Math.round(whitespaceShare(boxes, area) * 1000) / 1000,
       issues: p.issues,
+      repairs: p.repairs ?? 0,
     };
   });
   const bulletShare = pages.length ? pages.filter((p) => p.archetype === "bullets").length / pages.length : 0;
@@ -122,6 +136,7 @@ export function measureDeck(pages: MeasurablePage[], size: { width: number; heig
     bulletShare: Math.round(bulletShare * 100) / 100,
     repetition,
     shorten,
+    repairs: reports.reduce((n, r) => n + r.repairs, 0),
     // Repetition and sparseness are the fixer's business and are remedied by
     // variants before a caller sees this; what remains for a second pass is
     // copy that did not fit, and any hard quality issue.
@@ -138,6 +153,10 @@ export function measureDeck(pages: MeasurablePage[], size: { width: number; heig
 export function planVariants(report: DeckReport, outline: DesignOutline): Record<number, PageVariant> {
   const out: Record<number, PageVariant> = {};
   for (const r of report.pages) {
+    if (horizontalForms.has(r.archetype)) {
+      if (!r.impact && r.whitespace > sparseThreshold) out[r.index] = "large";
+      continue;
+    }
     if (r.archetype !== "bullets") continue;
     const points = outline.pages[r.index]?.points.length ?? 0;
     if (report.repetition.includes(r.index) && points >= 4) out[r.index] = "twoUp";
@@ -148,6 +167,6 @@ export function planVariants(report: DeckReport, outline: DesignOutline): Record
 }
 
 /** Convenience for callers holding ComposedPages plus their quality issues. */
-export function toMeasurable(page: ComposedPage, issues: QualityIssue[]): MeasurablePage {
-  return { archetype: page.archetype, impact: page.impact, nodes: page.nodes, overfull: page.overfull, issues };
+export function toMeasurable(page: ComposedPage, issues: QualityIssue[], repairs = 0): MeasurablePage {
+  return { archetype: page.archetype, impact: page.impact, nodes: page.nodes, overfull: page.overfull, issues, repairs };
 }

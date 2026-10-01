@@ -1,5 +1,4 @@
 {
- "kind": "deck-outline",
  "id": "deck-gtm-strategy",
  "title": "Go-to-Market Strategy",
  "categories": [
@@ -13,62 +12,3245 @@
   "marketing"
  ],
  "styleTags": [
-  "dark",
-  "bold"
+  "professional",
+  "classic",
+  "elegant"
  ],
- "themeId": "theme-ember",
  "size": [
   1920,
   1080
  ],
- "rank": 58,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Vollkorn",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Work Sans",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Gochi Hand",
+   "weight": 400
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1C3A2E",
+      0
+     ],
+     [
+      "#0E2119",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1100,
+     "y": -620,
+     "w": 1400,
+     "h": 1400,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.22,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1250,
+     "y": -470,
+     "w": 1100,
+     "h": 1100,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.3,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1400,
+     "y": -320,
+     "w": 800,
+     "h": 800,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.38,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1550,
+     "y": -170,
+     "w": 500,
+     "h": 500,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.45999999999999996,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#D3A84E",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Northwind Systems",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#ECE8DF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 47,
+     "text": "The motion",
+     "family": "Gochi Hand",
+     "size": 36,
+     "weight": 400,
+     "color": "#E0B95E",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 231,
+     "text": "How Fleet Edition\nreaches its buyer",
+     "family": "Vollkorn",
+     "size": 105,
+     "weight": 700,
+     "color": "#ECE8DF",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 707,
+     "w": 900,
+     "h": 120,
+     "text": "The buyer, the message per persona, the channels and what each costs, and the first ninety days from soft launch to scale.",
+     "family": "Work Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#A8B7AC",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Marcus Obi, VP Sales  ·  November 2026",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#A8B7AC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#A8B7AC",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#254735",
+     "radius": 6,
+     "stroke": "#2F5142",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "3",
+     "family": "Vollkorn",
+     "size": 26,
+     "weight": 700,
+     "color": "#E0B95E",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 246,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "buyers",
+     "family": "Work Sans",
+     "size": 16,
+     "weight": 500,
+     "color": "#A8B7AC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 396,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#254735",
+     "radius": 6,
+     "stroke": "#2F5142",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 416,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "5",
+     "family": "Vollkorn",
+     "size": 26,
+     "weight": 700,
+     "color": "#E0B95E",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 546,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "channels",
+     "family": "Work Sans",
+     "size": 16,
+     "weight": 500,
+     "color": "#A8B7AC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 696,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#254735",
+     "radius": 6,
+     "stroke": "#2F5142",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "90",
+     "family": "Vollkorn",
+     "size": 26,
+     "weight": 700,
+     "color": "#E0B95E",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 846,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "days",
+     "family": "Work Sans",
+     "size": 16,
+     "weight": 500,
+     "color": "#A8B7AC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 170,
+     "w": 700,
+     "h": 700,
+     "fill": "#D3A84E",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1220,
+     "y": 240,
+     "w": 560,
+     "h": 560,
+     "fill": "#D3A84E",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 885,
+     "w": 720,
+     "h": 39,
+     "text": "read it as a field plan, not a forecast",
+     "family": "Gochi Hand",
+     "size": 31,
+     "weight": 400,
+     "color": "#E0B95E",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day65-city-road",
+     "x": 1210,
+     "y": 230,
+     "w": 580,
+     "h": 580,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#ECE8DF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1420,
+     "y": -320,
+     "w": 760,
+     "h": 760,
+     "stroke": "#A87A22",
+     "strokeWidth": 2,
+     "opacity": 0.18,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1540,
+     "y": -200,
+     "w": 520,
+     "h": 520,
+     "stroke": "#A87A22",
+     "strokeWidth": 2,
+     "opacity": 0.26,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The buyer",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "Who signs, who uses, who blocks",
+     "family": "Vollkorn",
+     "size": 62,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Systems  ·  Go-to-market: Fleet Edition",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#E3DED3",
+     "radius": 6,
+     "stroke": "#D3CEC2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#A87A22",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#d7cab0"
+    },
+    {
+     "kind": "icon",
+     "icon": "briefcase",
+     "x": 156,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#7C5A14"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "Signs: the operations director",
+     "family": "Vollkorn",
+     "size": 34,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "Owns the fleet budget and the uptime number. Buys when a peer has already bought.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4E5A52",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#E3DED3",
+     "radius": 6,
+     "stroke": "#D3CEC2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#2E5C42",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#bfc4b6"
+    },
+    {
+     "kind": "icon",
+     "icon": "truck",
+     "x": 740,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#2E5C42"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "Uses: the dispatch lead",
+     "family": "Vollkorn",
+     "size": 34,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "Lives in the tool nine hours a day. If the first week is hard, the deal dies at renewal.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4E5A52",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#E3DED3",
+     "radius": 6,
+     "stroke": "#D3CEC2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#A87A22",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#d7cab0"
+    },
+    {
+     "kind": "icon",
+     "icon": "shield",
+     "x": 1324,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#7C5A14"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "Blocks: IT and security",
+     "family": "Vollkorn",
+     "size": 34,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "Asks about data residency and SSO in the first call. Answer before they ask.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4E5A52",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "the blocker gets the first call, not the last",
+     "family": "Gochi Hand",
+     "size": 29,
+     "weight": 400,
+     "color": "#7C5A14",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Section",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1C3A2E",
+      0
+     ],
+     [
+      "#0E2119",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1100,
+     "y": -620,
+     "w": 1400,
+     "h": 1400,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.22,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1250,
+     "y": -470,
+     "w": 1100,
+     "h": 1100,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.3,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1400,
+     "y": -320,
+     "w": 800,
+     "h": 800,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.38,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1550,
+     "y": -170,
+     "w": 500,
+     "h": 500,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.45999999999999996,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 800,
+     "h": 256,
+     "text": "01",
+     "family": "Vollkorn",
+     "size": 236,
+     "weight": 700,
+     "color": "#E0B95E",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 492,
+     "w": 120,
+     "h": 4,
+     "fill": "#D3A84E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 520,
+     "w": 1100,
+     "h": 112,
+     "text": "The motion",
+     "family": "Vollkorn",
+     "size": 96,
+     "weight": 700,
+     "color": "#ECE8DF",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 652,
+     "w": 900,
+     "h": 90,
+     "text": "One promise per buyer, proof they can check, and a channel that carries it. Then ninety days, staged.",
+     "family": "Work Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#A8B7AC",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1240,
+     "y": 280,
+     "w": 560,
+     "h": 560,
+     "fill": "#D3A84E",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1296,
+     "y": 336,
+     "w": 448,
+     "h": 448,
+     "fill": "#D3A84E",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 1000,
+     "h": 50,
+     "text": "Where the plan starts",
+     "family": "Gochi Hand",
+     "size": 36,
+     "weight": 400,
+     "color": "#E0B95E",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#2F5142"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Systems  ·  Go-to-market: Fleet Edition",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#A8B7AC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#A8B7AC",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 885,
+     "w": 720,
+     "h": 39,
+     "text": "three buyers, one route",
+     "family": "Gochi Hand",
+     "size": 31,
+     "weight": 400,
+     "color": "#E0B95E",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-109-map-location",
+     "x": 1300,
+     "y": 340,
+     "w": 440,
+     "h": 440,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Motion map",
+   "bg": "#ECE8DF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1420,
+     "y": -320,
+     "w": 760,
+     "h": 760,
+     "stroke": "#A87A22",
+     "strokeWidth": 2,
+     "opacity": 0.18,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1540,
+     "y": -200,
+     "w": 520,
+     "h": 520,
+     "stroke": "#A87A22",
+     "strokeWidth": 2,
+     "opacity": 0.26,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The message",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "The promise, the proof, the channel",
+     "family": "Vollkorn",
+     "size": 62,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Systems  ·  Go-to-market: Fleet Edition",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 432,
+     "fill": "#E3DED3",
+     "radius": 6,
+     "stroke": "#D3CEC2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#A87A22",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 132,
+     "y": 278,
+     "w": 64,
+     "h": 64,
+     "fill": "#d7cab0"
+    },
+    {
+     "kind": "icon",
+     "icon": "briefcase",
+     "x": 148,
+     "y": 294,
+     "w": 32,
+     "h": 32,
+     "color": "#A87A22"
+    },
+    {
+     "kind": "text",
+     "x": 212,
+     "y": 274,
+     "w": 408,
+     "h": 36,
+     "text": "Operations director",
+     "family": "Vollkorn",
+     "size": 28,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 212,
+     "y": 314,
+     "w": 408,
+     "h": 24,
+     "text": "Signs the deal",
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 132,
+     "y": 364,
+     "w": 488,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 390,
+     "w": 488,
+     "h": 20,
+     "text": "Promise",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 416,
+     "w": 488,
+     "h": 60,
+     "text": "Two points of uptime",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#16281E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 486,
+     "w": 488,
+     "h": 20,
+     "text": "Proof",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 512,
+     "w": 488,
+     "h": 60,
+     "text": "The Brightline case study",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#16281E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 582,
+     "w": 488,
+     "h": 20,
+     "text": "Channel",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 608,
+     "w": 488,
+     "h": 60,
+     "text": "Partner referral, then an executive brief",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#16281E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 375,
+     "y": 676,
+     "w": 2,
+     "h": 28,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 432,
+     "fill": "#E3DED3",
+     "radius": 6,
+     "stroke": "#D3CEC2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#A87A22",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 716,
+     "y": 278,
+     "w": 64,
+     "h": 64,
+     "fill": "#d7cab0"
+    },
+    {
+     "kind": "icon",
+     "icon": "truck",
+     "x": 732,
+     "y": 294,
+     "w": 32,
+     "h": 32,
+     "color": "#A87A22"
+    },
+    {
+     "kind": "text",
+     "x": 796,
+     "y": 274,
+     "w": 408,
+     "h": 36,
+     "text": "Dispatch lead",
+     "family": "Vollkorn",
+     "size": 28,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 796,
+     "y": 314,
+     "w": 408,
+     "h": 24,
+     "text": "Uses it nine hours a day",
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 716,
+     "y": 364,
+     "w": 488,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 390,
+     "w": 488,
+     "h": 20,
+     "text": "Promise",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 416,
+     "w": 488,
+     "h": 60,
+     "text": "Nothing to learn on Monday",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#16281E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 486,
+     "w": 488,
+     "h": 20,
+     "text": "Proof",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 512,
+     "w": 488,
+     "h": 60,
+     "text": "A ninety-second demo",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#16281E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 582,
+     "w": 488,
+     "h": 20,
+     "text": "Channel",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 608,
+     "w": 488,
+     "h": 60,
+     "text": "A two-week pilot on their own routes",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#16281E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 959,
+     "y": 676,
+     "w": 2,
+     "h": 28,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 432,
+     "fill": "#E3DED3",
+     "radius": 6,
+     "stroke": "#D3CEC2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#2E5C42",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1300,
+     "y": 278,
+     "w": 64,
+     "h": 64,
+     "fill": "#bfc4b6"
+    },
+    {
+     "kind": "icon",
+     "icon": "shield",
+     "x": 1316,
+     "y": 294,
+     "w": 32,
+     "h": 32,
+     "color": "#2E5C42"
+    },
+    {
+     "kind": "text",
+     "x": 1380,
+     "y": 274,
+     "w": 408,
+     "h": 36,
+     "text": "IT and security",
+     "family": "Vollkorn",
+     "size": 28,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1380,
+     "y": 314,
+     "w": 408,
+     "h": 24,
+     "text": "Can block it in one call",
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1300,
+     "y": 364,
+     "w": 488,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 1300,
+     "y": 390,
+     "w": 488,
+     "h": 20,
+     "text": "Promise",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#2E5C42",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1300,
+     "y": 416,
+     "w": 488,
+     "h": 60,
+     "text": "Your data stays yours",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#16281E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1300,
+     "y": 486,
+     "w": 488,
+     "h": 20,
+     "text": "Proof",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#2E5C42",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1300,
+     "y": 512,
+     "w": 488,
+     "h": 60,
+     "text": "The certifications page",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#16281E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1300,
+     "y": 582,
+     "w": 488,
+     "h": 20,
+     "text": "Channel",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#2E5C42",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1300,
+     "y": 608,
+     "w": 488,
+     "h": 60,
+     "text": "The questionnaire, answered before they ask",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#16281E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1543,
+     "y": 676,
+     "w": 2,
+     "h": 28,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 704,
+     "w": 1728,
+     "h": 176,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#1C3A2E",
+        0
+       ],
+       [
+        "#0E2119",
+        1
+       ]
+      ]
+     },
+     "radius": 6
+    },
+    {
+     "kind": "ellipse",
+     "x": 370,
+     "y": 698,
+     "w": 12,
+     "h": 12,
+     "fill": "#A87A22"
+    },
+    {
+     "kind": "ellipse",
+     "x": 954,
+     "y": 698,
+     "w": 12,
+     "h": 12,
+     "fill": "#A87A22"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1538,
+     "y": 698,
+     "w": 12,
+     "h": 12,
+     "fill": "#2E5C42"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 734,
+     "w": 270,
+     "h": 24,
+     "text": "The first ninety days",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#E0B95E",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 766,
+     "w": 270,
+     "h": 72,
+     "text": "Soft launch\nto scale",
+     "family": "Vollkorn",
+     "size": 30,
+     "weight": 700,
+     "color": "#ECE8DF",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 400,
+     "y": 732,
+     "w": 1,
+     "h": 120,
+     "fill": "#2F5142"
+    },
+    {
+     "kind": "rect",
+     "x": 444,
+     "y": 794,
+     "w": 1336,
+     "h": 3,
+     "fill": "#A8B7AC",
+     "opacity": 0.5
+    },
+    {
+     "kind": "text",
+     "x": 436,
+     "y": 734,
+     "w": 304,
+     "h": 22,
+     "text": "Weeks 1 to 2",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#E0B95E",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 436,
+     "y": 787,
+     "w": 16,
+     "h": 16,
+     "fill": "#D3A84E"
+    },
+    {
+     "kind": "text",
+     "x": 436,
+     "y": 818,
+     "w": 304,
+     "h": 28,
+     "text": "Soft launch",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#ECE8DF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 436,
+     "y": 848,
+     "w": 304,
+     "h": 22,
+     "text": "Ten design partners live",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 500,
+     "color": "#A8B7AC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 770,
+     "y": 734,
+     "w": 304,
+     "h": 22,
+     "text": "Weeks 3 to 6",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#E0B95E",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 770,
+     "y": 787,
+     "w": 16,
+     "h": 16,
+     "fill": "#1C3A2E",
+     "stroke": "#D3A84E",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 770,
+     "y": 818,
+     "w": 304,
+     "h": 28,
+     "text": "Partner enablement",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#ECE8DF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 770,
+     "y": 848,
+     "w": 304,
+     "h": 22,
+     "text": "Forty partners trained",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 500,
+     "color": "#A8B7AC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1104,
+     "y": 734,
+     "w": 304,
+     "h": 22,
+     "text": "Weeks 7 to 10",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#E0B95E",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 1104,
+     "y": 787,
+     "w": 16,
+     "h": 16,
+     "fill": "#1C3A2E",
+     "stroke": "#D3A84E",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 1104,
+     "y": 818,
+     "w": 304,
+     "h": 28,
+     "text": "Outbound at volume",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#ECE8DF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1104,
+     "y": 848,
+     "w": 304,
+     "h": 22,
+     "text": "Two reps on the top 300",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 500,
+     "color": "#A8B7AC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1438,
+     "y": 734,
+     "w": 304,
+     "h": 22,
+     "text": "Weeks 11 to 13",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#E0B95E",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 1438,
+     "y": 787,
+     "w": 16,
+     "h": 16,
+     "fill": "#1C3A2E",
+     "stroke": "#D3A84E",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 1438,
+     "y": 818,
+     "w": 304,
+     "h": 28,
+     "text": "Scale or stop",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#ECE8DF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1438,
+     "y": 848,
+     "w": 304,
+     "h": 22,
+     "text": "Double two channels, cut one",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 500,
+     "color": "#A8B7AC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1772,
+     "y": 787,
+     "w": 16,
+     "h": 16,
+     "fill": "#9CC7A8"
+    },
+    {
+     "kind": "text",
+     "x": 1652,
+     "y": 734,
+     "w": 136,
+     "h": 22,
+     "text": "Day 90",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#9CC7A8",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "if you keep one page, keep this one",
+     "family": "Gochi Hand",
+     "size": 29,
+     "weight": 400,
+     "color": "#7C5A14",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Chart",
+   "bg": "#ECE8DF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1420,
+     "y": -320,
+     "w": 760,
+     "h": 760,
+     "stroke": "#A87A22",
+     "strokeWidth": 2,
+     "opacity": 0.18,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1540,
+     "y": -200,
+     "w": 520,
+     "h": 520,
+     "stroke": "#A87A22",
+     "strokeWidth": 2,
+     "opacity": 0.26,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The channels",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1100,
+     "h": 120,
+     "text": "Where the motion runs, and what each costs",
+     "family": "Vollkorn",
+     "size": 51,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Systems  ·  Go-to-market: Fleet Edition",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 264,
+     "w": 1100,
+     "h": 70,
+     "text": "Partners bring the cheapest pipeline; paid search the most expensive. The plan weights accordingly.",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 400,
+     "color": "#4E5A52",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "chart",
+     "x": 96,
+     "y": 352,
+     "w": 1140,
+     "h": 560,
+     "chartType": "barGrouped",
+     "fontSize": 18,
+     "categories": [
+      "Partners",
+      "Outbound",
+      "Events",
+      "Inbound",
+      "Paid"
+     ],
+     "series": [
+      {
+       "name": "Cost per opportunity ($K)",
+       "values": [
+        1.8,
+        3.4,
+        4.1,
+        2.2,
+        6.5
+       ],
+       "color": "#2E5C42"
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 308,
+     "w": 504,
+     "h": 80,
+     "text": "$1.8K",
+     "family": "Vollkorn",
+     "size": 64,
+     "weight": 700,
+     "color": "#7C5A14",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 396,
+     "w": 504,
+     "h": 60,
+     "text": "Cost per opportunity through partners",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4E5A52",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1320,
+     "y": 460,
+     "w": 504,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 488,
+     "w": 504,
+     "h": 80,
+     "text": "45%",
+     "family": "Vollkorn",
+     "size": 64,
+     "weight": 700,
+     "color": "#7C5A14",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 576,
+     "w": 504,
+     "h": 60,
+     "text": "Of pipeline expected from partners and inbound",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4E5A52",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1320,
+     "y": 640,
+     "w": 504,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 668,
+     "w": 504,
+     "h": 80,
+     "text": "$6.5K",
+     "family": "Vollkorn",
+     "size": 64,
+     "weight": 700,
+     "color": "#7C5A14",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 756,
+     "w": 504,
+     "h": 60,
+     "text": "Paid search, capped at 10% of budget",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4E5A52",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "partners first, paid last",
+     "family": "Gochi Hand",
+     "size": 29,
+     "weight": 400,
+     "color": "#7C5A14",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Timeline",
+   "bg": "#ECE8DF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1420,
+     "y": -320,
+     "w": 760,
+     "h": 760,
+     "stroke": "#A87A22",
+     "strokeWidth": 2,
+     "opacity": 0.18,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1540,
+     "y": -200,
+     "w": 520,
+     "h": 520,
+     "stroke": "#A87A22",
+     "strokeWidth": 2,
+     "opacity": 0.26,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The first 90 days",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "From soft launch to scale",
+     "family": "Vollkorn",
+     "size": 62,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Systems  ·  Go-to-market: Fleet Edition",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 427,
+     "w": 1728,
+     "h": 3,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 414,
+     "w": 30,
+     "h": 30,
+     "fill": "#ECE8DF",
+     "stroke": "#A87A22",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 354,
+     "w": 300,
+     "h": 28,
+     "text": "Weeks 1 to 2",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 478,
+     "w": 384,
+     "h": 44,
+     "text": "Soft launch",
+     "family": "Vollkorn",
+     "size": 32,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 530,
+     "w": 384,
+     "h": 120,
+     "text": "Ten design partners live; every call recorded and reviewed on Friday.",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 400,
+     "color": "#4E5A52",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 528,
+     "y": 414,
+     "w": 30,
+     "h": 30,
+     "fill": "#ECE8DF",
+     "stroke": "#A87A22",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 354,
+     "w": 300,
+     "h": 28,
+     "text": "Weeks 3 to 6",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 478,
+     "w": 384,
+     "h": 44,
+     "text": "Partner enablement",
+     "family": "Vollkorn",
+     "size": 32,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 530,
+     "w": 384,
+     "h": 120,
+     "text": "Forty partners trained; the referral offer goes live.",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 400,
+     "color": "#4E5A52",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 960,
+     "y": 414,
+     "w": 30,
+     "h": 30,
+     "fill": "#ECE8DF",
+     "stroke": "#A87A22",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 354,
+     "w": 300,
+     "h": 28,
+     "text": "Weeks 7 to 10",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 478,
+     "w": 384,
+     "h": 44,
+     "text": "Outbound at volume",
+     "family": "Vollkorn",
+     "size": 32,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 530,
+     "w": 384,
+     "h": 120,
+     "text": "Two reps on the top 300 accounts with the case study in hand.",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 400,
+     "color": "#4E5A52",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1392,
+     "y": 414,
+     "w": 30,
+     "h": 30,
+     "fill": "#ECE8DF",
+     "stroke": "#A87A22",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 354,
+     "w": 300,
+     "h": 28,
+     "text": "Weeks 11 to 13",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 478,
+     "w": 384,
+     "h": 44,
+     "text": "Scale or stop",
+     "family": "Vollkorn",
+     "size": 32,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 530,
+     "w": 384,
+     "h": 120,
+     "text": "Review by channel. Double the two that work; cut the one that does not.",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 400,
+     "color": "#4E5A52",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "we cut on the number, not on a feeling",
+     "family": "Gochi Hand",
+     "size": 29,
+     "weight": 400,
+     "color": "#7C5A14",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Quote",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1C3A2E",
+      0
+     ],
+     [
+      "#0E2119",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1100,
+     "y": -620,
+     "w": 1400,
+     "h": 1400,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.22,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1250,
+     "y": -470,
+     "w": 1100,
+     "h": 1100,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.3,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1400,
+     "y": -320,
+     "w": 800,
+     "h": 800,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.38,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1550,
+     "y": -170,
+     "w": 500,
+     "h": 500,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.45999999999999996,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#2F5142"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Systems  ·  Go-to-market: Fleet Edition",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#A8B7AC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#A8B7AC",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 260,
+     "h": 260,
+     "text": "“",
+     "family": "Vollkorn",
+     "size": 280,
+     "weight": 700,
+     "color": "#E0B95E",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 400,
+     "w": 1400,
+     "h": 221,
+     "text": "Two points of uptime is a number my board understands. The pilot proved it in a fortnight, and dispatch never once called support.",
+     "family": "Vollkorn",
+     "size": 54,
+     "weight": 700,
+     "color": "#ECE8DF",
+     "lineHeight": 1.26
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 116,
+     "y": 681,
+     "w": 84,
+     "h": 84,
+     "fill": "#2D5540"
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 689,
+     "w": 800,
+     "h": 32,
+     "text": "Rowan Achebe",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#ECE8DF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 725,
+     "w": 800,
+     "h": 28,
+     "text": "Director of Operations, Brightline Logistics",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#A8B7AC",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 885,
+     "w": 720,
+     "h": 39,
+     "text": "the proof we carry into every first call",
+     "family": "Gochi Hand",
+     "size": 31,
+     "weight": 400,
+     "color": "#E0B95E",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "op-peep-97",
+     "x": 128,
+     "y": 689,
+     "w": 60,
+     "h": 68
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#ECE8DF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1420,
+     "y": -320,
+     "w": 760,
+     "h": 760,
+     "stroke": "#A87A22",
+     "strokeWidth": 2,
+     "opacity": 0.18,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1540,
+     "y": -200,
+     "w": 520,
+     "h": 520,
+     "stroke": "#A87A22",
+     "strokeWidth": 2,
+     "opacity": 0.26,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "What kills us",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#7C5A14",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "The failure modes we will watch",
+     "family": "Vollkorn",
+     "size": 62,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Systems  ·  Go-to-market: Fleet Edition",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "08 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#E3DED3",
+     "radius": 6,
+     "stroke": "#D3CEC2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#A87A22",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#d7cab0"
+    },
+    {
+     "kind": "icon",
+     "icon": "alert-triangle",
+     "x": 156,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#7C5A14"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "The first week is hard",
+     "family": "Vollkorn",
+     "size": 34,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "If dispatch leads need a call to get started, renewals fail in twelve months. Watch: setup completion without support.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4E5A52",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#E3DED3",
+     "radius": 6,
+     "stroke": "#D3CEC2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#2E5C42",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#bfc4b6"
+    },
+    {
+     "kind": "icon",
+     "icon": "coin",
+     "x": 740,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#2E5C42"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "We price like the incumbent",
+     "family": "Vollkorn",
+     "size": 34,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "Fleet buyers expect per-vehicle pricing. Per-seat confuses them. Watch: quote-to-close time.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4E5A52",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#E3DED3",
+     "radius": 6,
+     "stroke": "#D3CEC2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#A87A22",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#d7cab0"
+    },
+    {
+     "kind": "icon",
+     "icon": "clock",
+     "x": 1324,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#7C5A14"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "Partners sell our roadmap",
+     "family": "Vollkorn",
+     "size": 34,
+     "weight": 700,
+     "color": "#16281E",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "Partners promise features that are not built. Watch: escalations mentioning a promise we did not make.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4E5A52",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#D3CEC2"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4E5A52",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "three numbers, checked every Friday",
+     "family": "Gochi Hand",
+     "size": 29,
+     "weight": 400,
+     "color": "#7C5A14",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1C3A2E",
+      0
+     ],
+     [
+      "#0E2119",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1100,
+     "y": -620,
+     "w": 1400,
+     "h": 1400,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.22,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1250,
+     "y": -470,
+     "w": 1100,
+     "h": 1100,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.3,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1400,
+     "y": -320,
+     "w": 800,
+     "h": 800,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.38,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1550,
+     "y": -170,
+     "w": 500,
+     "h": 500,
+     "stroke": "#D3A84E",
+     "strokeWidth": 2,
+     "opacity": 0.45999999999999996,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#D3A84E",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#D3A84E",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#D3A84E",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Northwind Systems",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#ECE8DF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 47,
+     "text": "What we will watch",
+     "family": "Gochi Hand",
+     "size": 36,
+     "weight": 400,
+     "color": "#E0B95E",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 138,
+     "text": "Questions",
+     "family": "Vollkorn",
+     "size": 116,
+     "weight": 700,
+     "color": "#ECE8DF",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 472,
+     "w": 940,
+     "h": 120,
+     "text": "The full plan, the persona research and the channel model are in the go-to-market folder.",
+     "family": "Work Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#A8B7AC",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#D3A84E"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "marcus@northwind.example",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#ECE8DF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "world",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#D3A84E"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "northwind.example/gtm",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#ECE8DF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "calendar",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#D3A84E"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "Channel review: week 13",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#ECE8DF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Open the plan",
+     "fill": "#D3A84E",
+     "color": "#16281E",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 700,
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "09 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#A8B7AC",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 885,
+     "w": 720,
+     "h": 39,
+     "text": "bring the objections, we want them early",
+     "family": "Gochi Hand",
+     "size": 31,
+     "weight": 400,
+     "color": "#E0B95E",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day66-travel",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n8",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p3-n11",
+   "kind": "text",
+   "label": "Buyer 1",
+   "hint": "Who this column is for"
+  },
+  {
+   "node": "p3-n15",
+   "kind": "text",
+   "label": "Promise 1",
+   "hint": "One line they would repeat"
+  },
+  {
+   "node": "p3-n25",
+   "kind": "text",
+   "label": "Buyer 2",
+   "hint": "Who this column is for"
+  },
+  {
+   "node": "p3-n29",
+   "kind": "text",
+   "label": "Promise 2",
+   "hint": "One line they would repeat"
+  },
+  {
+   "node": "p3-n39",
+   "kind": "text",
+   "label": "Buyer 3",
+   "hint": "Who this column is for"
+  },
+  {
+   "node": "p3-n43",
+   "kind": "text",
+   "label": "Promise 3",
+   "hint": "One line they would repeat"
+  },
+  {
+   "node": "p8-n12",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n14",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n16",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Go-to-Market",
-  "theme": "decisive, staged",
-  "pages": [
-   {
-    "title": "The motion",
-    "points": [
-     "How this product reaches its buyer"
-    ],
-    "visualRole": "cover"
-   },
-   {
-    "title": "The buyer",
-    "points": [
-     "Who signs, who uses, who blocks"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "The message",
-    "points": [
-     "The promise and the proof, per persona"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "The channels",
-    "points": [
-     "Where the motion runs and what each costs"
-    ],
-    "visualRole": "data"
-   },
-   {
-    "title": "The first 90 days",
-    "points": [
-     "Week-by-week from soft launch to scale"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "What kills us",
-    "points": [
-     "The failure modes we will watch"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 58
 }

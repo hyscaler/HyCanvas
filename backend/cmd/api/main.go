@@ -298,6 +298,30 @@ func main() {
 	// grants that never completed (and their pending objects).
 	uploadsSvc := uploads.NewService(pool, store, acct)
 	uploadsSvc.StartDirectUploadJanitor(rtCtx, 15*time.Minute)
+	// The starter brand kit: a workspace that has no kit receives HyCanvas's
+	// own, as its default, when it is created and (once) on the first boot
+	// after the upgrade for the workspaces that predate it. The default kit
+	// grounds every generation in the workspace, so BRAND_STARTER_KIT="off"
+	// keeps it out on an instance whose users bring their own brands.
+	if brand.StarterKitEnabled() {
+		brandSvc.WithStarterAssets(starterAssets{uploadsSvc})
+		acct.WithWorkspaceHook(func(ctx context.Context, workspaceID, ownerID string) {
+			// Outlives the request that created the workspace, within reason.
+			ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+			defer cancel()
+			if _, err := brandSvc.SeedStarterKit(ctx, workspaceID, ownerID); err != nil {
+				logger.Warn("brand: starter kit not seeded", "workspace", workspaceID, "err", err)
+			}
+		})
+		go func() {
+			n, err := brandSvc.SeedStarterKits(rtCtx)
+			if err != nil && rtCtx.Err() == nil {
+				logger.Warn("brand: starter kit pass stopped", "seeded", n, "err", err)
+			} else if n > 0 {
+				logger.Info("brand: starter kit seeded into workspaces without a kit", "count", n)
+			}
+		}()
+	}
 	// Templates: catalog (embedded seed + DB), apply (deep-copy -> new design),
 	// save-as-template, collections. The adapter bridges the persistence service.
 	templatesSvc := templates.NewService(pool, acct, templatesPersist{persist})
@@ -530,6 +554,18 @@ func (t templatesPersist) LoadDesignFile(ctx context.Context, designID, workspac
 		return nil, err
 	}
 	return loaded.File, nil
+}
+
+// starterAssets stores the starter brand kit's artwork through the uploads
+// service (brand.StarterAssets).
+type starterAssets struct{ u *uploads.Service }
+
+func (a starterAssets) StoreStarterAsset(ctx context.Context, workspaceID, ownerID, filename string, data []byte) (string, error) {
+	asset, err := a.u.StoreBuiltin(ctx, workspaceID, ownerID, filename, data)
+	if err != nil {
+		return "", err
+	}
+	return asset.ID, nil
 }
 
 // pushAdapter bridges the push service to the engagement emitter's Pusher hook.

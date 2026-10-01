@@ -160,6 +160,11 @@ func (s *Service) contentURL(id string) string {
 	return s.publicURL + "/api/v1/assets/" + id + "/content"
 }
 
+// AssetURL is the URL a design file references an asset by, the same one the
+// list and upload views carry. Exported for callers that compose a file
+// around an asset they only know by id (a brand kit's logo).
+func (s *Service) AssetURL(id string) string { return s.contentURL(id) }
+
 func (s *Service) toUploaded(a assetRow) UploadedAsset {
 	kind := strings.ToLower(a.Kind)
 	if a.MediaKind != "" {
@@ -244,6 +249,19 @@ func (s *Service) store(ctx context.Context, userID, workspaceID string, buf []b
 	// Large videos get a background preview proxy (best-effort).
 	s.maybeGenerateProxy(row.ID, buf, sniff.Mime)
 	return s.toUploaded(row), nil
+}
+
+// StoreBuiltin stores artwork the product ships (the starter brand kit's
+// logos) in a workspace's library as its owner. There is no membership check:
+// the caller is workspace creation or the boot-time seeding pass, not a
+// request, and ownerID comes from the workspace row. Quotas still apply.
+func (s *Service) StoreBuiltin(ctx context.Context, workspaceID, ownerID, filename string, data []byte) (UploadedAsset, error) {
+	fn := strings.TrimSpace(filename)
+	var name *string
+	if fn != "" {
+		name = &fn
+	}
+	return s.store(ctx, ownerID, workspaceID, data, name, nil, "", true)
 }
 
 // ImportFromURL imports an image from a remote URL with a per-hop SSRF guard

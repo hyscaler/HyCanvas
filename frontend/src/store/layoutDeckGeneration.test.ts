@@ -185,3 +185,43 @@ describe("relayout pruning", () => {
     expect(pageChildren(idx).some((n) => n.data?.placeholderId === "ph-content")).toBe(true);
   });
 });
+
+describe("a composed deck's brand logo assets", () => {
+  beforeEach(() => {
+    const st = useEditor.getState() as unknown as { newDocument?: () => void };
+    if (st.newDocument) st.newDocument();
+  });
+
+  const white = { type: "solid", color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } };
+  const logo = { assetId: "logo-light", url: "/api/v1/assets/logo-light/content", aspect: 5, dark: { assetId: "logo-dark", url: "/api/v1/assets/logo-dark/content", aspect: 5 } };
+
+  it("lists the logo and its dark version in the file, once, and drops them on undo", () => {
+    const st = useEditor.getState();
+    const deckLike = {
+      title: "Branded",
+      system: { logo },
+      pages: [{ name: "Cover", background: white, nodes: [] }, { name: "Body", background: white, nodes: [] }],
+    } as unknown as Parameters<typeof st.buildDeckFromOutline>[0];
+    st.buildDeckFromOutline(deckLike, { width: 1920, height: 1080 });
+    const ids = () => (useEditor.getState().doc as unknown as { assets: { id: string; url: string }[] }).assets.map((a) => a.id).sort();
+    expect(ids()).toEqual(["logo-dark", "logo-light"]);
+    // Appending a second deck with the same kit adds nothing twice.
+    useEditor.getState().appendDeckPages(deckLike, { width: 1920, height: 1080 });
+    expect(ids()).toEqual(["logo-dark", "logo-light"]);
+    useEditor.getState().undo();
+    expect(ids()).toEqual(["logo-dark", "logo-light"]);
+    useEditor.getState().undo();
+    expect(ids()).toEqual([]);
+  });
+
+  it("lists a logo without a dark version on its own", () => {
+    const st = useEditor.getState();
+    const deckLike = {
+      title: "Branded",
+      system: { logo: { assetId: "logo-light", url: "/api/v1/assets/logo-light/content" } },
+      pages: [{ name: "Cover", background: white, nodes: [] }],
+    } as unknown as Parameters<typeof st.buildDeckFromOutline>[0];
+    st.buildDeckFromOutline(deckLike, { width: 1920, height: 1080 });
+    expect((useEditor.getState().doc as unknown as { assets: { id: string }[] }).assets.map((a) => a.id)).toEqual(["logo-light"]);
+  });
+});

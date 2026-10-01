@@ -1,10 +1,9 @@
 {
- "kind": "deck-outline",
  "id": "deck-portfolio",
  "title": "Personal Portfolio",
  "categories": [
   "presentations",
-  "personal"
+  "business"
  ],
  "tags": [
   "portfolio",
@@ -13,62 +12,2372 @@
   "work"
  ],
  "styleTags": [
-  "dark",
-  "minimal"
+  "minimal",
+  "modern",
+  "clean"
  ],
- "themeId": "theme-midnight",
  "size": [
   1920,
   1080
  ],
- "rank": 76,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Syne",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Host Grotesk",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Reenie Beanie",
+   "weight": 400
+  },
+  {
+   "role": "label",
+   "family": "Martian Mono",
+   "weight": 500
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1C1B18",
+      0
+     ],
+     [
+      "#0C0C0A",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "A",
+     "family": "Syne",
+     "size": 620,
+     "weight": 500,
+     "color": "#2d2c29",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#35332E"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#E5734A",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Aisha Bello",
+     "family": "Host Grotesk",
+     "size": 22,
+     "weight": 600,
+     "color": "#F4F1EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 57,
+     "text": "Aisha Bello, product designer",
+     "family": "Reenie Beanie",
+     "size": 44,
+     "weight": 400,
+     "color": "#EE8A63",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 360,
+     "text": "Hi, I am Aisha.\nI design the\nfirst week.",
+     "family": "Syne",
+     "size": 111,
+     "weight": 700,
+     "color": "#F4F1EA",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 836,
+     "w": 900,
+     "h": 80,
+     "text": "Product designer, eight years, three companies. I work where a stranger decides whether to stay.",
+     "family": "Host Grotesk",
+     "size": 28,
+     "weight": 400,
+     "color": "#B4AFA4",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Selected work, 2023 to 2026",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B4AFA4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B4AFA4",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 170,
+     "w": 700,
+     "h": 700,
+     "fill": "#E5734A",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1220,
+     "y": 240,
+     "w": 560,
+     "h": 560,
+     "fill": "#E5734A",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 878,
+     "w": 720,
+     "h": 46,
+     "text": "ask me for the long version",
+     "family": "Reenie Beanie",
+     "size": 37,
+     "weight": 400,
+     "color": "#EE8A63",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day13-it-girl",
+     "x": 1210,
+     "y": 230,
+     "w": 580,
+     "h": 580,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Statement",
+   "bg": "#F4F1EA",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "A",
+     "family": "Syne",
+     "size": 620,
+     "weight": 500,
+     "color": "#e9e6df",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#D9D3C7"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D9D3C7"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Aisha Bello  ·  Product design portfolio",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5B564E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5B564E",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 57,
+     "text": "Aisha Bello, product designer",
+     "family": "Reenie Beanie",
+     "size": 44,
+     "weight": 400,
+     "color": "#A8421F",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 307,
+     "w": 120,
+     "h": 6,
+     "fill": "#C4522B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 353,
+     "w": 1560,
+     "h": 279,
+     "text": "The first week decides whether a product becomes someone's. That is the week I design.",
+     "family": "Syne",
+     "size": 80,
+     "weight": 700,
+     "color": "#151412",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 672,
+     "w": 1000,
+     "h": 32,
+     "text": "Aisha Bello, on why every case study here starts at signup",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5B564E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 868,
+     "w": 760,
+     "h": 88,
+     "text": "written on a sticky note above my desk",
+     "family": "Reenie Beanie",
+     "size": 35,
+     "weight": 400,
+     "color": "#A8421F",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Section",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1C1B18",
+      0
+     ],
+     [
+      "#0C0C0A",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "A",
+     "family": "Syne",
+     "size": 620,
+     "weight": 500,
+     "color": "#2d2c29",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#35332E"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 330,
+     "w": 120,
+     "h": 4,
+     "fill": "#E5734A"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 358,
+     "w": 1100,
+     "h": 112,
+     "text": "Selected work",
+     "family": "Syne",
+     "size": 96,
+     "weight": 700,
+     "color": "#F4F1EA",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 490,
+     "w": 900,
+     "h": 90,
+     "text": "Three products, three years, one question each. The newest first, the shortest last.",
+     "family": "Host Grotesk",
+     "size": 28,
+     "weight": 400,
+     "color": "#B4AFA4",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1240,
+     "y": 280,
+     "w": 560,
+     "h": 560,
+     "fill": "#E5734A",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1296,
+     "y": 336,
+     "w": 448,
+     "h": 448,
+     "fill": "#E5734A",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 1000,
+     "h": 50,
+     "text": "three case studies, 2023 to 2026",
+     "family": "Reenie Beanie",
+     "size": 44,
+     "weight": 400,
+     "color": "#EE8A63",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#35332E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Aisha Bello  ·  Product design portfolio",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B4AFA4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B4AFA4",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 831,
+     "w": 720,
+     "h": 93,
+     "text": "each fits on one page, on purpose",
+     "family": "Reenie Beanie",
+     "size": 37,
+     "weight": 400,
+     "color": "#EE8A63",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day4-polariod",
+     "x": 1300,
+     "y": 340,
+     "w": 440,
+     "h": 440,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Case study",
+   "bg": "#F4F1EA",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "A",
+     "family": "Syne",
+     "size": 620,
+     "weight": 500,
+     "color": "#e9e6df",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#D9D3C7"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Selected work one  ·  2025",
+     "family": "Martian Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A8421F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "Onboarding at Form & Function",
+     "family": "Syne",
+     "size": 60,
+     "weight": 700,
+     "color": "#151412",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D9D3C7"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Aisha Bello  ·  Product design portfolio",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5B564E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5B564E",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 96,
+     "y": 242,
+     "w": 880,
+     "h": 560,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#e6d0c2",
+        0
+       ],
+       [
+        "#ECE8DF",
+        1
+       ]
+      ]
+     },
+     "radius": 9
+    },
+    {
+     "kind": "ellipse",
+     "x": 316,
+     "y": 302,
+     "w": 440,
+     "h": 440,
+     "fill": "#C4522B",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 360,
+     "y": 346,
+     "w": 352,
+     "h": 352,
+     "fill": "#C4522B",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "button",
+     "x": 116,
+     "y": 262,
+     "w": 116,
+     "h": 36,
+     "label": "01 / 03",
+     "fill": "#A8421F",
+     "color": "#F4F1EA",
+     "family": "Martian Mono",
+     "size": 14,
+     "weight": 600
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 824,
+     "w": 880,
+     "h": 26,
+     "text": "Fig. 01  ·  the preview-first flow, the version fourteen people tested",
+     "family": "Martian Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#5B564E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1040,
+     "y": 242,
+     "w": 784,
+     "h": 26,
+     "text": "The problem",
+     "family": "Martian Mono",
+     "size": 17,
+     "weight": 600,
+     "color": "#A8421F",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1040,
+     "y": 276,
+     "w": 784,
+     "h": 92,
+     "text": "Half of new accounts needed a support call before their first report. Eleven days to first value, most of it spent connecting sources nobody had asked for yet.",
+     "family": "Host Grotesk",
+     "size": 21,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1040,
+     "y": 382,
+     "w": 784,
+     "h": 26,
+     "text": "My role",
+     "family": "Martian Mono",
+     "size": 17,
+     "weight": 600,
+     "color": "#A8421F",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1040,
+     "y": 416,
+     "w": 784,
+     "h": 92,
+     "text": "Research lead and sole designer. Fourteen sessions, one prototype, one very opinionated flow.",
+     "family": "Host Grotesk",
+     "size": 21,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1040,
+     "y": 522,
+     "w": 784,
+     "h": 26,
+     "text": "The outcome",
+     "family": "Martian Mono",
+     "size": 17,
+     "weight": 600,
+     "color": "#A8421F",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1040,
+     "y": 556,
+     "w": 784,
+     "h": 92,
+     "text": "Preview-first onboarding: the first report drawn from their own data before any setup. Completion nearly doubled in testing, and first value came in three days after launch.",
+     "family": "Host Grotesk",
+     "size": 21,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1040,
+     "y": 656,
+     "w": 784,
+     "h": 1,
+     "fill": "#D9D3C7"
+    },
+    {
+     "kind": "text",
+     "x": 1040,
+     "y": 674,
+     "w": 784,
+     "h": 24,
+     "text": "The result",
+     "family": "Martian Mono",
+     "size": 15,
+     "weight": 600,
+     "color": "#A8421F",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1040,
+     "y": 708,
+     "w": 380,
+     "h": 116,
+     "text": "78%",
+     "family": "Syne",
+     "size": 104,
+     "weight": 700,
+     "color": "#A8421F",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1440,
+     "y": 714,
+     "w": 120,
+     "h": 44,
+     "text": "41%",
+     "family": "Syne",
+     "size": 34,
+     "weight": 700,
+     "color": "#5B564E",
+     "lineHeight": 1.06,
+     "strike": true
+    },
+    {
+     "kind": "text",
+     "x": 1536,
+     "y": 724,
+     "w": 120,
+     "h": 22,
+     "text": "before",
+     "family": "Martian Mono",
+     "size": 14,
+     "weight": 500,
+     "color": "#5B564E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1440,
+     "y": 764,
+     "w": 384,
+     "h": 30,
+     "text": "Completion in testing",
+     "family": "Host Grotesk",
+     "size": 22,
+     "weight": 600,
+     "color": "#151412",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1440,
+     "y": 800,
+     "w": 384,
+     "h": 56,
+     "text": "Three days to first value after launch, from eleven.",
+     "family": "Host Grotesk",
+     "size": 19,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 864,
+     "w": 880,
+     "h": 44,
+     "text": "fourteen sessions on a borrowed laptop",
+     "family": "Reenie Beanie",
+     "size": 35,
+     "weight": 400,
+     "color": "#A8421F",
+     "lineHeight": 1.2,
+     "align": "left"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day94-ui-ux",
+     "x": 286,
+     "y": 302,
+     "w": 500,
+     "h": 440,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Text and picture",
+   "bg": "#F4F1EA",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "A",
+     "family": "Syne",
+     "size": 620,
+     "weight": 500,
+     "color": "#e9e6df",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#D9D3C7"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Selected work two  ·  2024",
+     "family": "Martian Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A8421F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 960,
+     "h": 74,
+     "text": "Billing at Cobalt Health",
+     "family": "Syne",
+     "size": 60,
+     "weight": 700,
+     "color": "#151412",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D9D3C7"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Aisha Bello  ·  Product design portfolio",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5B564E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5B564E",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 270,
+     "w": 34,
+     "h": 34,
+     "fill": "#e5cdbf"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 270,
+     "w": 34,
+     "h": 34,
+     "text": "1",
+     "family": "Syne",
+     "size": 17,
+     "weight": 700,
+     "color": "#A8421F",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 266,
+     "w": 840,
+     "h": 44,
+     "text": "The constraint",
+     "family": "Syne",
+     "size": 32,
+     "weight": 700,
+     "color": "#151412",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 318,
+     "w": 840,
+     "h": 70,
+     "text": "An invoice that finance, the customer and a regulator all had to read, in one layout, with no second version.",
+     "family": "Host Grotesk",
+     "size": 22,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 448,
+     "w": 34,
+     "h": 34,
+     "fill": "#e5cdbf"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 448,
+     "w": 34,
+     "h": 34,
+     "text": "2",
+     "family": "Syne",
+     "size": 17,
+     "weight": 700,
+     "color": "#A8421F",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 444,
+     "w": 840,
+     "h": 44,
+     "text": "What shaped the solution",
+     "family": "Syne",
+     "size": 32,
+     "weight": 700,
+     "color": "#151412",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 496,
+     "w": 840,
+     "h": 70,
+     "text": "I designed for the regulator first. If the strictest reader could follow it, the others could.",
+     "family": "Host Grotesk",
+     "size": 22,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 626,
+     "w": 34,
+     "h": 34,
+     "fill": "#e5cdbf"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 626,
+     "w": 34,
+     "h": 34,
+     "text": "3",
+     "family": "Syne",
+     "size": 17,
+     "weight": 700,
+     "color": "#A8421F",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 622,
+     "w": 840,
+     "h": 44,
+     "text": "The outcome",
+     "family": "Syne",
+     "size": 32,
+     "weight": 700,
+     "color": "#151412",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 674,
+     "w": 840,
+     "h": 70,
+     "text": "Disputes fell by two thirds. Finance stopped sending the explanatory email.",
+     "family": "Host Grotesk",
+     "size": 22,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1080,
+     "y": 196,
+     "w": 744,
+     "h": 690,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#bdb9b2",
+        0
+       ],
+       [
+        "#ECE8DF",
+        1
+       ]
+      ]
+     },
+     "radius": 9
+    },
+    {
+     "kind": "ellipse",
+     "x": 1202,
+     "y": 291,
+     "w": 500,
+     "h": 500,
+     "fill": "#C4522B",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1252,
+     "y": 341,
+     "w": 400,
+     "h": 400,
+     "fill": "#C4522B",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 868,
+     "w": 760,
+     "h": 88,
+     "text": "designed for the strictest reader first",
+     "family": "Reenie Beanie",
+     "size": 35,
+     "weight": 400,
+     "color": "#A8421F",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day78-wallet",
+     "x": 1160,
+     "y": 270,
+     "w": 584,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Figures",
+   "bg": "#F4F1EA",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "A",
+     "family": "Syne",
+     "size": 620,
+     "weight": 500,
+     "color": "#e9e6df",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#D9D3C7"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Selected work three  ·  2023",
+     "family": "Martian Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A8421F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 71,
+     "text": "The mobile app at Beacon, in numbers",
+     "family": "Syne",
+     "size": 57,
+     "weight": 700,
+     "color": "#151412",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D9D3C7"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Aisha Bello  ·  Product design portfolio",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5B564E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5B564E",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 239,
+     "w": 414,
+     "h": 560,
+     "fill": "#ECE8DF",
+     "radius": 6,
+     "stroke": "#D9D3C7",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 239,
+     "w": 414,
+     "h": 6,
+     "fill": "#C4522B",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 295,
+     "w": 342,
+     "h": 120,
+     "text": "4.8",
+     "family": "Syne",
+     "size": 104,
+     "weight": 700,
+     "color": "#A8421F",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 435,
+     "w": 342,
+     "h": 34,
+     "text": "App store rating",
+     "family": "Host Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#151412",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 132,
+     "y": 489,
+     "w": 190,
+     "h": 40,
+     "label": "Was 3.6",
+     "fill": "#e5cdbf",
+     "color": "#A8421F",
+     "family": "Host Grotesk",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 559,
+     "w": 342,
+     "h": 140,
+     "text": "Twelve months after the redesign shipped.",
+     "family": "Host Grotesk",
+     "size": 20,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 239,
+     "w": 414,
+     "h": 560,
+     "fill": "#ECE8DF",
+     "radius": 6,
+     "stroke": "#D9D3C7",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 239,
+     "w": 414,
+     "h": 6,
+     "fill": "#151412",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 295,
+     "w": 342,
+     "h": 120,
+     "text": "62%",
+     "family": "Syne",
+     "size": 104,
+     "weight": 700,
+     "color": "#151412",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 435,
+     "w": 342,
+     "h": 34,
+     "text": "Weekly active",
+     "family": "Host Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#151412",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 570,
+     "y": 489,
+     "w": 190,
+     "h": 40,
+     "label": "Was 38%",
+     "fill": "#c5c2ba",
+     "color": "#151412",
+     "family": "Host Grotesk",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 559,
+     "w": 342,
+     "h": 140,
+     "text": "Drivers who open the app every week.",
+     "family": "Host Grotesk",
+     "size": 20,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 239,
+     "w": 414,
+     "h": 560,
+     "fill": "#ECE8DF",
+     "radius": 6,
+     "stroke": "#D9D3C7",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 239,
+     "w": 414,
+     "h": 6,
+     "fill": "#C4522B",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 295,
+     "w": 342,
+     "h": 120,
+     "text": "−54%",
+     "family": "Syne",
+     "size": 104,
+     "weight": 700,
+     "color": "#A8421F",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 435,
+     "w": 342,
+     "h": 34,
+     "text": "Support contacts",
+     "family": "Host Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#151412",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1008,
+     "y": 489,
+     "w": 190,
+     "h": 40,
+     "label": "Per active user",
+     "fill": "#e5cdbf",
+     "color": "#A8421F",
+     "family": "Host Grotesk",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 559,
+     "w": 342,
+     "h": 140,
+     "text": "The map and the shift screen did most of it.",
+     "family": "Host Grotesk",
+     "size": 20,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 239,
+     "w": 414,
+     "h": 560,
+     "fill": "#ECE8DF",
+     "radius": 6,
+     "stroke": "#D9D3C7",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 239,
+     "w": 414,
+     "h": 6,
+     "fill": "#151412",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 295,
+     "w": 342,
+     "h": 120,
+     "text": "3",
+     "family": "Syne",
+     "size": 104,
+     "weight": 700,
+     "color": "#151412",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 435,
+     "w": 342,
+     "h": 34,
+     "text": "People",
+     "family": "Host Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#151412",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1446,
+     "y": 489,
+     "w": 190,
+     "h": 40,
+     "label": "One designer",
+     "fill": "#c5c2ba",
+     "color": "#151412",
+     "family": "Host Grotesk",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 559,
+     "w": 342,
+     "h": 140,
+     "text": "A small team, a long list, and a lot of saying no.",
+     "family": "Host Grotesk",
+     "size": 20,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 868,
+     "w": 760,
+     "h": 88,
+     "text": "three of us, and a very long list of no",
+     "family": "Reenie Beanie",
+     "size": 35,
+     "weight": 400,
+     "color": "#A8421F",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Quote",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1C1B18",
+      0
+     ],
+     [
+      "#0C0C0A",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "A",
+     "family": "Syne",
+     "size": 620,
+     "weight": 500,
+     "color": "#2d2c29",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#35332E"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#35332E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Aisha Bello  ·  Product design portfolio",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B4AFA4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B4AFA4",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 260,
+     "h": 260,
+     "text": "“",
+     "family": "Syne",
+     "size": 280,
+     "weight": 700,
+     "color": "#EE8A63",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 400,
+     "w": 1100,
+     "h": 221,
+     "text": "She asks the question the room was avoiding, then draws the answer so nobody has to argue about it.",
+     "family": "Syne",
+     "size": 54,
+     "weight": 700,
+     "color": "#F4F1EA",
+     "lineHeight": 1.26
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 116,
+     "y": 681,
+     "w": 84,
+     "h": 84,
+     "fill": "#312F29"
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 689,
+     "w": 800,
+     "h": 32,
+     "text": "Tomas Reyes",
+     "family": "Host Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#F4F1EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 725,
+     "w": 800,
+     "h": 28,
+     "text": "Engineering lead, Form & Function",
+     "family": "Host Grotesk",
+     "size": 20,
+     "weight": 400,
+     "color": "#B4AFA4",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 831,
+     "w": 720,
+     "h": 93,
+     "text": "he led the build on case study one",
+     "family": "Reenie Beanie",
+     "size": 37,
+     "weight": 400,
+     "color": "#EE8A63",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "op-peep-94",
+     "x": 128,
+     "y": 689,
+     "w": 60,
+     "h": 68
+    }
+   ]
+  },
+  {
+   "name": "Process",
+   "bg": "#F4F1EA",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "A",
+     "family": "Syne",
+     "size": 620,
+     "weight": 500,
+     "color": "#e9e6df",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#D9D3C7"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "How I work",
+     "family": "Martian Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A8421F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "Watch, argue, build, measure.",
+     "family": "Syne",
+     "size": 60,
+     "weight": 700,
+     "color": "#151412",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D9D3C7"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Aisha Bello  ·  Product design portfolio",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5B564E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "08 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5B564E",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "fill": "#C4522B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "text": "1",
+     "family": "Syne",
+     "size": 34,
+     "weight": 700,
+     "color": "#151412",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 200,
+     "y": 315,
+     "w": 322,
+     "h": 2,
+     "fill": "#D9D3C7"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 404,
+     "w": 402,
+     "h": 44,
+     "text": "Watch first",
+     "family": "Syne",
+     "size": 32,
+     "weight": 700,
+     "color": "#151412",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 458,
+     "w": 378,
+     "h": 150,
+     "text": "Sessions with real users on their own data before a single screen is drawn.",
+     "family": "Host Grotesk",
+     "size": 21,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 538,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "fill": "#1C1B18"
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "text": "2",
+     "family": "Syne",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1EA",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 642,
+     "y": 315,
+     "w": 322,
+     "h": 2,
+     "fill": "#D9D3C7"
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 404,
+     "w": 402,
+     "h": 44,
+     "text": "One flow, argued",
+     "family": "Syne",
+     "size": 32,
+     "weight": 700,
+     "color": "#151412",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 458,
+     "w": 378,
+     "h": 150,
+     "text": "A prototype with an opinion, tested against the alternative I rejected.",
+     "family": "Host Grotesk",
+     "size": 21,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 980,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "fill": "#1C1B18"
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "text": "3",
+     "family": "Syne",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1EA",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1084,
+     "y": 315,
+     "w": 322,
+     "h": 2,
+     "fill": "#D9D3C7"
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 404,
+     "w": 402,
+     "h": 44,
+     "text": "Build alongside",
+     "family": "Syne",
+     "size": 32,
+     "weight": 700,
+     "color": "#151412",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 458,
+     "w": 378,
+     "h": 150,
+     "text": "I sit with the engineers through the build. The design is done when it ships, not when it is handed over.",
+     "family": "Host Grotesk",
+     "size": 21,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1422,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "fill": "#1C1B18"
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "text": "4",
+     "family": "Syne",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1EA",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 404,
+     "w": 402,
+     "h": 44,
+     "text": "Measure",
+     "family": "Syne",
+     "size": 32,
+     "weight": 700,
+     "color": "#151412",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 458,
+     "w": 378,
+     "h": 150,
+     "text": "One number, agreed before launch, checked at thirty days.",
+     "family": "Host Grotesk",
+     "size": 21,
+     "weight": 400,
+     "color": "#5B564E",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 868,
+     "w": 760,
+     "h": 88,
+     "text": "step three is where the work actually is",
+     "family": "Reenie Beanie",
+     "size": 35,
+     "weight": 400,
+     "color": "#A8421F",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1C1B18",
+      0
+     ],
+     [
+      "#0C0C0A",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "A",
+     "family": "Syne",
+     "size": 620,
+     "weight": 500,
+     "color": "#2d2c29",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#35332E"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#E5734A",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#E5734A",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#E5734A",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Aisha Bello",
+     "family": "Host Grotesk",
+     "size": 22,
+     "weight": 600,
+     "color": "#F4F1EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 57,
+     "text": "thanks for looking",
+     "family": "Reenie Beanie",
+     "size": 44,
+     "weight": 400,
+     "color": "#EE8A63",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 138,
+     "text": "Let's talk.",
+     "family": "Syne",
+     "size": 116,
+     "weight": 700,
+     "color": "#F4F1EA",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 472,
+     "w": 940,
+     "h": 120,
+     "text": "I am looking for a team that cares about the first week as much as the tenth feature. Case studies in full at the link.",
+     "family": "Host Grotesk",
+     "size": 28,
+     "weight": 400,
+     "color": "#B4AFA4",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#E5734A"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "aisha@bello.example",
+     "family": "Host Grotesk",
+     "size": 24,
+     "weight": 500,
+     "color": "#F4F1EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "world",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#E5734A"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "bello.example/work",
+     "family": "Host Grotesk",
+     "size": 24,
+     "weight": 500,
+     "color": "#F4F1EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#E5734A"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "@aishadesigns",
+     "family": "Host Grotesk",
+     "size": 24,
+     "weight": 500,
+     "color": "#F4F1EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "See the case studies",
+     "fill": "#E5734A",
+     "color": "#151412",
+     "family": "Host Grotesk",
+     "size": 22,
+     "weight": 700,
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "09 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B4AFA4",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 878,
+     "w": 720,
+     "h": 46,
+     "text": "coffee is on me, remote or not",
+     "family": "Reenie Beanie",
+     "size": 37,
+     "weight": 400,
+     "color": "#EE8A63",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-coffee",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p3-n3",
+   "kind": "text",
+   "label": "Title",
+   "hint": "The product and the company"
+  },
+  {
+   "node": "p3-n10-label",
+   "kind": "text",
+   "label": "Index",
+   "hint": "Which case study of how many"
+  },
+  {
+   "node": "p3-n11",
+   "kind": "text",
+   "label": "Caption",
+   "hint": "What the picture shows"
+  },
+  {
+   "node": "p3-n13",
+   "kind": "text",
+   "label": "The problem",
+   "hint": "Two or three lines"
+  },
+  {
+   "node": "p3-n15",
+   "kind": "text",
+   "label": "My role",
+   "hint": "Two or three lines"
+  },
+  {
+   "node": "p3-n17",
+   "kind": "text",
+   "label": "The outcome",
+   "hint": "Two or three lines"
+  },
+  {
+   "node": "p3-n20",
+   "kind": "text",
+   "label": "Result",
+   "hint": "The one figure"
+  },
+  {
+   "node": "p8-n10",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n12",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n14",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Portfolio",
-  "theme": "confident, curated",
-  "pages": [
-   {
-    "title": "Hello",
-    "points": [
-     "Who I am and what I make"
-    ],
-    "visualRole": "cover"
-   },
-   {
-    "title": "Selected work one",
-    "points": [
-     "The problem, my role, the outcome"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Selected work two",
-    "points": [
-     "The constraint that shaped the solution"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Selected work three",
-    "points": [
-     "The result in numbers"
-    ],
-    "visualRole": "data"
-   },
-   {
-    "title": "How I work",
-    "points": [
-     "Process, tools, and collaboration style"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Let's talk",
-    "points": [
-     "Where to reach me"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 76
 }

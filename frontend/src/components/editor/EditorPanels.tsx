@@ -3,8 +3,8 @@
 // are undoable. Uploads/stock images are placed via the image asset provider.
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type FormEvent } from "react";
-import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, MonitorUp, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw, FileDown, FileText, Paperclip } from "lucide-react";
-import { migrate, type ChartType, type Node, type Fill, type Color, type Theme } from "@hc/schema";
+import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, MonitorUp, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw, FileDown, FileText, Paperclip, Layers, Copy, ArrowDown } from "lucide-react";
+import { migrate, type AssetRef, type ChartType, type Node, type Fill, type Color, type Theme } from "@hc/schema";
 import { searchFonts, type FontCatalogEntry } from "@hc/text";
 import { toHex, fromHex, relativeLuminance } from "@hc/color";
 import { formatBytes } from "@/lib/format";
@@ -13,7 +13,7 @@ import { stickers, stickerCategories, type Sticker } from "@/lib/stickers";
 import { parseModelJson } from "@/lib/magicDesign";
 import {
   normalizeOutline, deckThemes, layoutDeck, layoutDesign, groundImagePrompt, untrustedSourceRule,
-  sanitizeEditedOutline, dialsClause, dialDensities, dialTones, dialAudiences, dialScenarios, maxOutlinePages,
+  sanitizeEditedOutline, dialsClause, dialDensities, dialTones, dialAudiences, dialScenarios, dialLooks, maxOutlinePages,
   deriveLayoutContentSchema, layoutSelectionSchema, layoutSelectionSystemPrompt, layoutFillSystemPrompt, repairLayoutSelection,
   normalizeLayoutFill, fallbackLayoutFill, preferredLayoutFor, type LayoutFill,
   buildAgendaPages, pickAgendaLayout, extractTitleFromText, splitSlideSchema, splitSlideSystemPrompt,
@@ -23,8 +23,10 @@ import {
   type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
   deriveOutline, switchOutline, sourcesOutlineItem, type PageText, type SourceCitation,
-  themeCatalogEntry, deckThemeFromCatalog, themeRecordFromCatalog, deckThemeFromRecord, pageTreatment, catalogEntryForMood, themeRecordFromDesignSystem } from "@hc/aistudio";
+  themeCatalogEntry, deckThemeFromCatalog, themeRecordFromCatalog, deckThemeFromRecord, pageTreatment, catalogEntryForMood, themeRecordFromDesignSystem, type DeckLogo, type DeckReport, slotsFromThemeRecord,
+  isComposedSlide, slideItemOf, slideTextDump, reviseSlideSystemPrompt, reviseSlideSchema, reviseSlideItem, recomposeSlide } from "@hc/aistudio";
 import { builtinMasterAndLayouts, type SlideLayout } from "@hc/schema";
+import { shouldGroundInLayouts } from "@/lib/generationRoute";
 import { promptText } from "@/lib/promptDialog";
 import { downloadHycFile } from "@/lib/hycFile";
 import { generateAltText } from "@/lib/altText";
@@ -55,7 +57,7 @@ import { mermaidToDiagram, normalizeDiagramSpec, type DiagramSpec } from "@hc/wh
 import type { BrandVoice, BrandLintViolation } from "@hc/sdk";
 import { useEditor, type BrandFixTarget, type DeckTextEntry } from "@/store/editor";
 import { useBrand } from "@/store/brand";
-import { useComments } from "@/store/comments";
+import { TemplateSlidesDialog } from "@/components/editor/TemplateSlidesDialog";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -63,7 +65,11 @@ import { mirrorInRtl } from "@/lib/locale";
 import { tr, trOr } from "@/lib/i18n";
 import { cancelAiImages, enqueueAiImages, retryFailedAiImages, subscribeAiImageQueue } from "@/lib/aiImageQueue";
 import { peekPendingAiRequest, requestOpenProperties, setAiBusy, subscribeAiRequests, takeStagedAiSources, type AiRequest } from "@/lib/aiRequests";
+import { attachableImageAccept, imageAttachmentsNote, imageSource, isImageFile, maxAiImages, maxThreadImages, nameFromUrl, pickAttachedImage, readImageAttachment, referencePalette, toTurnImage, type AiImageAttachment, type ImageAttachmentSource, type TurnImage } from "@/lib/aiImageAttachments";
+import { mergeRestoredTurns } from "@/lib/aiTurns";
+import { reviewPages, reviewTurnText } from "@/lib/deckReview";
 import { AiProviderSettings } from "@/components/ai/AiProviderSettings";
+import { RevealingMarkdown } from "@/components/ui/ChatMarkdown";
 import { builtinThemes } from "@/lib/themeCatalog";
 import { cancelAiFills, enqueueAiFills, retryFailedAiFills, subscribeAiFillQueue } from "@/lib/aiFillQueue";
 import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
@@ -127,6 +133,9 @@ export function TemplatesPanel() {
   // fit this page. Searching expands it (hiding search hits would read as "no
   // results"), and so does having no matches at all (never an empty panel).
   const [showOther, setShowOther] = useState(false);
+  // A multi-page template (a presentation kit) also offers its slides one by
+  // one; this is the template whose picker is open.
+  const [pickFrom, setPickFrom] = useState<TemplateSummary | null>(null);
   // The active page's size drives the suggestions; re-read on page switches
   // and doc edits (a stage resize changes what "matching" means).
   const activePage = useEditor((s) => s.activePage);
@@ -138,18 +147,26 @@ export function TemplatesPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePage, rev]);
 
+  // A kit that restricts templates keeps everyone but a brand manager on the
+  // workspace's own gallery: the built-ins and other workspaces' templates
+  // are off-brand by definition.
+  const brandWorkspaceId = useBrand((s) => s.workspaceId);
+  const restrictToBrand = useBrand((s) => !!s.kit?.controls.restrictTemplates && !s.canManage);
+  const restrictedWorkspace = restrictToBrand ? brandWorkspaceId : null;
+
   useEffect(() => {
     let cancelled = false;
     // No workspace filter: the list endpoint's default scope is already
     // everything the caller may see (public + own private + all member
     // workspaces). Passing workspaceId NARROWS to that workspace only, which
-    // would hide public and cross-workspace templates from the gallery.
+    // would hide public and cross-workspace templates from the gallery; the
+    // kit's template restriction is the one case that wants exactly that.
     void oc
-      .listTemplates({ q: debouncedQuery.trim() || undefined })
+      .listTemplates({ q: debouncedQuery.trim() || undefined, ...(restrictedWorkspace ? { workspaceId: restrictedWorkspace } : {}) })
       .then((ts) => { if (!cancelled) setTemplates(ts); })
       .catch(() => { if (!cancelled) setTemplates([]); });
     return () => { cancelled = true; };
-  }, [debouncedQuery]);
+  }, [debouncedQuery, restrictedWorkspace]);
 
   // Rank: exact page-size matches, then same aspect ratio (within 2%), then the
   // rest of the gallery, keeping the server's order within each bucket.
@@ -227,12 +244,28 @@ export function TemplatesPanel() {
           <span className="absolute bottom-1 end-1 rounded bg-black/55 px-1 py-0.5 font-mono text-[9px] tabular-nums text-white/90">
             {Math.round(t.format?.width ?? 0)}x{Math.round(t.format?.height ?? 0)}
           </span>
+          {(t.pageCount ?? 0) > 1 && (
+            <span className="absolute bottom-1 start-1 rounded bg-black/55 px-1 py-0.5 text-[9px] font-medium text-white/90">
+              {tr("editor.n_slides", { count: t.pageCount })}
+            </span>
+          )}
           {busyId === t.id && (
             <span className="absolute inset-0 grid place-items-center bg-white/60"><Spinner /></span>
           )}
         </div>
         <div className="truncate px-2 py-1.5 text-xs font-medium text-neutral-700">{t.title}</div>
       </button>
+      {(t.pageCount ?? 0) > 1 && (
+        <button
+          type="button"
+          onClick={() => setPickFrom(t)}
+          title={tr("editor.pick_slides")}
+          aria-label={tr("editor.pick_slides_from", { title: t.title })}
+          className="absolute end-8 top-1 rounded-md border border-neutral-200 bg-surface p-1 text-neutral-600 opacity-0 shadow-sm transition hover:text-brand-ink focus-visible:opacity-100 group-hover:opacity-100"
+        >
+          <Layers size={12} />
+        </button>
+      )}
       <button
         type="button"
         onClick={() => void downloadHyc(t)}
@@ -248,6 +281,10 @@ export function TemplatesPanel() {
   const sectionCls = "mb-1.5 mt-3 text-xs font-semibold uppercase tracking-wide text-neutral-400";
   return (
     <PanelShell title={tr("editor.templates")}>
+      {pickFrom && <TemplateSlidesDialog template={pickFrom} onClose={() => setPickFrom(null)} />}
+      {restrictedWorkspace && (
+        <p className="mb-2 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1.5 text-[11px] leading-snug text-brand-ink">{tr("editor.brand_templates_only")}</p>
+      )}
       <label className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-surface px-2.5 py-1.5 focus-within:border-brand-400">
         <Search size={14} className="shrink-0 text-neutral-400" />
         <input
@@ -1942,7 +1979,55 @@ interface ChatTurn {
    *  turn - one bubble per intent, never the same reply printed twice - and
    *  its chips render in the neutral planned style until then. */
   proposed?: boolean;
+  /** Images sent with a user turn, shown in its bubble the way any chat
+   *  shows them. A restored turn knows their names and sizes only. */
+  images?: TurnImage[];
+  /** Documents sent with a user turn (a file, a pasted note, a fetched
+   *  page), or the pages a web search found, on the assistant turn that
+   *  reported it. Shown as chips in the bubble; a restored turn knows their
+   *  names and lengths. */
+  files?: TurnFile[];
+  /** True for a reply that arrived in this session, which is revealed at
+   *  reading pace; a restored reply shows whole. */
+  fresh?: boolean;
 }
+
+/** What a chat bubble keeps of a document sent with its message. */
+interface TurnFile {
+  id: string;
+  name: string;
+  chars: number;
+}
+
+/** A document in the conversation: staged in the composer (no sentAt,
+ *  editable and removable) or sent with a message (in its bubble, grounding
+ *  every later generation in this conversation). */
+type ChatSource = AiSource & { id: string; sentAt?: number };
+const asChatSource = (sc: AiSource & { id?: string; sentAt?: number }): ChatSource => ({ ...sc, id: sc.id ?? `src-${Math.random().toString(36).slice(2, 10)}` });
+const toTurnFile = (sc: ChatSource): TurnFile => ({ id: sc.id, name: sc.name, chars: sc.text.length });
+/** A long user message folded to its opening, the way a chat shows a pasted
+ *  brief, with the rest one click away. */
+function CollapsibleText({ text, limit = 700 }: { text: string; limit?: number }) {
+  const [open, setOpen] = useState(false);
+  if (text.length <= limit) return <span className="whitespace-pre-wrap">{text}</span>;
+  return (
+    <>
+      <span className="whitespace-pre-wrap">{open ? text : `${text.slice(0, limit).trimEnd()}…`}</span>
+      <button onClick={() => setOpen((v) => !v)} className="mt-1 block text-[11px] font-medium text-brand-ink hover:underline">{open ? tr("editor.show_less") : tr("editor.show_more")}</button>
+    </>
+  );
+}
+
+/** A document's length for a chip: characters under a thousand, else k. */
+const charsLabel = (n: number): string => (n < 1000 ? `${n} chars` : `${Math.round(n / 1000)}k chars`);
+/** How much of each document sent with a message the planner reads, so a
+ *  question about a note is answered from the note and not guessed at; the
+ *  executor still grounds a generation in the whole text. */
+const PLANNER_EXCERPT_CHARS = 1500;
+const PLANNER_EXCERPT_TOTAL = 6000;
+/** How much of a document persists with the turn that sent it, so a
+ *  reopened conversation still grounds a generation in it. */
+const PERSIST_TEXT_CHARS = 20_000;
 
 /** A proposal the user moved past without confirming never ran: unflag it and
  *  strike its chips so a later execution report can't replace the wrong turn. */
@@ -1961,14 +2046,20 @@ type ResolvedPayload =
   | { kind: "diagram"; spec: DiagramSpec }
   | { kind: "clusters"; clusters: { title: string; ids: string[] }[] }
   | { kind: "summary"; text: string }
-  | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean; themeId?: string; themeRecord?: Theme }
-  | { kind: "layoutDeck"; deckTitle: string; themeRecord: Theme; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill; fillPrompt: string; verbatim?: boolean; background: unknown; accent: string | null }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; styleClause: string; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; generateAllowed: boolean; workspaceId: string; designId: string | null; append: boolean }
+  | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; brandLogo: DeckLogo | null; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean; themeId?: string; themeRecord?: Theme; designType?: DesignType; look?: string }
+  | { kind: "layoutDeck"; deckTitle: string; themeRecord: Theme; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill; fillPrompt: string; verbatim?: boolean; background: unknown; accent: string | null }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; brandLogo: DeckLogo | null; styleClause: string; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; generateAllowed: boolean; workspaceId: string; designId: string | null; append: boolean }
   | { kind: "splitSlide"; pageIndex: number; pageId: string; halves: { layoutId: string; name: string; fill: LayoutFill }[] }
   | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number; afterPageId: string }
   | { kind: "webSearch"; query: string; count: number }
   | { kind: "deckTheme"; theme: Theme }
   | { kind: "chartData"; chartType: ChartType; categories: string[]; series: { name: string; values: number[] }[]; csv: string }
-  | { kind: "regenerateSlide"; pageIndex: number; pageId: string; layoutId: string; layoutChanged: boolean; hadLayout: boolean; fill: LayoutFill; imageTasks: { placeholderId: string; prompt: string; subject: string }[]; imageSize: string; generateAllowed: boolean; workspaceId: string; designId: string | null };
+  | { kind: "regenerateSlide"; pageIndex: number; pageId: string; layoutId: string; layoutChanged: boolean; hadLayout: boolean; fill: LayoutFill; imageTasks: { placeholderId: string; prompt: string; subject: string }[]; imageSize: string; generateAllowed: boolean; workspaceId: string; designId: string | null }
+  // A composed page set again: the revised item and the page the composer
+  // drew from it, to land in place of the current one.
+  | { kind: "recomposeSlide"; pageIndex: number; pageId: string; item: OutlineItem; background: Fill; nodes: Node[]; imageTasks: { placeholderId: string; prompt: string; subject: string }[]; imageSize: string; generateAllowed: boolean; workspaceId: string; designId: string | null; assets: AssetRef[] }
+  // An attached image to place: its (uploaded) URL, the page it goes on
+  // when the step named one, and the stock credit it carries.
+  | { kind: "placeImage"; image: string; pageIndex?: number; provenance?: Record<string, unknown> };
 
 /** Parse a model reply that must be a JSON array of exactly `n` strings.
  *  Tolerates markdown fences; anything else (wrong shape, wrong length,
@@ -1996,6 +2087,9 @@ interface AssistantDeps {
   voiceClause: string;
   brandPalette: string[];
   brandFonts: { heading?: string; body?: string };
+  /** The brand kit's primary logo with its asset URL, placed on every page of
+   *  a generated deck; null when the workspace has none or it has not loaded. */
+  brandLogo?: DeckLogo | null;
   imageCapable: boolean;
   /** Whether the provider supports image EDITING (some generate but cannot edit). */
   editImageCapable: boolean;
@@ -2016,9 +2110,22 @@ interface AssistantDeps {
   /** A built-in catalog theme chosen in the review card (F40 E12): the deck is
    *  composed on it instead of the title-seeded generated theme. */
   styleThemeId?: string;
+  /** True when a template's layout system was adopted into the document for
+   *  this generation, so the deck is grounded in those layouts. */
+  templateAdopted?: boolean;
   /** A template's theme record (F40 E14): wins over styleThemeId; the deck is
    *  composed on the template's palette and fonts. */
   styleThemeRecord?: Theme;
+  /** Images attached in the chat: pictures placeAttachedImage can place. Their
+   *  descriptions, once read, ride in `sources` like a document's text. */
+  images?: AiImageAttachment[];
+  /** The most recently attached image's colours: what a GENERATION is set in
+   *  when the workspace has no brand palette (paletteFor). Never a
+   *  recomposition's palette: a page set again must match its siblings. */
+  referencePalette?: string[];
+  /** A picture from disk was uploaded to place it: the chip now points at the
+   *  asset, so a second placement does not upload it again. */
+  onImageUploaded?: (id: string, url: string) => void;
   /** Aborts every model call in this run: a generation can take minutes, and
    *  a user who changed their mind should not have to wait it out and pay for
    *  it. Passed to the SDK, which forwards it to fetch. */
@@ -2047,6 +2154,16 @@ function abortError(): DOMException {
 /** Whether a document still carries a placeholder name, so generation may set
  *  one. Matches the labels new designs are created with, in any language, plus
  *  an empty title. */
+/** Name an untitled design after its generated deck: the file's title now,
+ *  and the record the dashboard lists, which only a rename call updates.
+ *  The rename is best effort; the file title already carries the name. */
+function adoptDeckTitle(title: string, designId: string | null | undefined): void {
+  const value = title.trim().slice(0, 120);
+  if (!value) return;
+  useEditor.getState().setDocTitle(value);
+  if (designId) void oc.renameDesign(designId, value).catch(() => {});
+}
+
 function isUntitledDoc(title: string | undefined): boolean {
   const t = (title ?? "").trim();
   if (!t) return true;
@@ -2059,6 +2176,41 @@ function actionLabel(action: string): string {
 }
 
 const HERO_ROLES = new Set(["cover", "quote", "closing"]);
+/** The palette a generation (a deck, a theme, a picture) is set in: the
+ *  brand's, else the most recently attached image's, so "make it look like
+ *  this" gets its colours. Regeneration of an existing page keeps the brand
+ *  palette alone, so the page matches the deck it sits in. */
+const paletteFor = (deps: AssistantDeps): string[] => (deps.brandPalette.length ? deps.brandPalette : deps.referencePalette ?? []);
+/** The opening of each document, within a shared budget, for the planner. */
+function documentExcerpts(docs: { name: string; text: string }[]): string {
+  let left = PLANNER_EXCERPT_TOTAL;
+  return docs
+    .map((sc) => {
+      const take = Math.min(PLANNER_EXCERPT_CHARS, left);
+      left -= take;
+      const body = sc.text.trim().slice(0, take);
+      return `--- ${sc.name} ---\n${body}${sc.text.trim().length > take ? "…" : ""}`;
+    })
+    .join("\n");
+}
+
+/** What the vision model is asked about an attached image: the reading a
+ *  designer needs, not a caption. */
+const DESCRIBE_FOR_DESIGN = `Describe this image for a presentation designer in two to four sentences of plain prose (no headings, no markdown, no lists): the subject, the setting, the mood, the notable colours, and any text visible in it.`;
+
+/** A description as plain prose: a model that answers with a heading and
+ *  markdown emphasis anyway is stripped of them, so the chip and the source
+ *  read as a sentence. */
+function plainDescription(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*#{1,6}\s+.*$/, "").replace(/^\s*[-*]\s+/, "").trim())
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 const MAX_HERO_IMAGES = 6;
 
 /** Flatten a text node's runs into a plain string. */
@@ -2206,7 +2358,8 @@ function prepareGenerateBrief(a: Record<string, unknown>, deps: AssistantDeps): 
   const size = explicit && explicit.width > 0 && explicit.height > 0
     ? { width: explicit.width, height: explicit.height }
     : { width: page?.width ?? 1280, height: page?.height ?? 720 };
-  const brandClause = [deps.voiceClause, deps.brandPalette.length ? `Use this brand palette: ${deps.brandPalette.join(", ")}.` : ""].filter(Boolean).join(" ").trim();
+  const palette = paletteFor(deps);
+  const brandClause = [deps.voiceClause, palette.length ? `Use this brand palette: ${palette.join(", ")}.` : ""].filter(Boolean).join(" ").trim();
   const pageCount = typeof a.pageCount === "number" ? a.pageCount : dt === "poster" ? 1 : undefined;
   let brief = String(a.prompt);
   const dials = dialsClause(deps.dials);
@@ -2472,14 +2625,14 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const logo = String(a.style ?? "").toLowerCase().includes("logo");
       const prompt = logo
         ? `A clean, modern, flat vector-style logo for: ${String(a.prompt)}. Centered, simple, bold shapes, solid background, no text or lettering unless explicitly requested.`
-        : groundImagePrompt(`${String(a.prompt)}. Well-composed, high detail, professional quality.`, { palette: deps.brandPalette, aspect: "square" });
+        : groundImagePrompt(`${String(a.prompt)}. Well-composed, high detail, professional quality.`, { palette: paletteFor(deps), aspect: "square" });
       const { image } = await oc.aiImage({ workspaceId: deps.workspaceId, prompt, size: "1024x1024" });
       if (!image) return { error: tr("editor.skip_no_image_returned") };
       return { payload: { kind: "image", image } };
     }
     case "generateBackgroundImage": {
       if (!deps.imageCapable) return { error: tr("editor.skip_provider_no_images") };
-      const prompt = groundImagePrompt(`${String(a.prompt)}. A full-bleed background image, subtle and uncluttered so text stays readable on top.`, { palette: deps.brandPalette, aspect: "landscape" });
+      const prompt = groundImagePrompt(`${String(a.prompt)}. A full-bleed background image, subtle and uncluttered so text stays readable on top.`, { palette: paletteFor(deps), aspect: "landscape" });
       const { image } = await oc.aiImage({ workspaceId: deps.workspaceId, prompt, size: "1792x1024" });
       if (!image) return { error: tr("editor.skip_no_image_returned") };
       return { payload: { kind: "bgimage", image } };
@@ -2509,6 +2662,56 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       if (!page) return { error: tr("editor.skip_page_missing") };
       const instruction = String(a.instruction ?? "").trim();
       if (!instruction) return { error: tr("editor.skip_instruction_needed") };
+      // A composed page (the archetype or kit composer drew it: named nodes
+      // on a background, no layout link) regenerates by recomposition: its
+      // outline item, kept on the page or read by the model off its text, is
+      // revised per the instruction and set again through the composer that
+      // set its siblings, so the page comes back in the deck's own system.
+      if (isComposedSlide(page as unknown as { children: unknown[]; layoutId?: string; data?: Record<string, unknown> })) {
+        const current = slideItemOf(page as unknown as { data?: Record<string, unknown> });
+        const shown = current
+          ? JSON.stringify(Object.fromEntries(Object.entries(current).filter(([k]) => k !== "id")))
+          : slideTextDump(page as unknown as { notes?: string; children: unknown[] });
+        const heading = current ? `Current slide (its outline item):` : `Current slide (its text boxes, top to bottom, named by role):`;
+        let item: OutlineItem;
+        try {
+          const { text } = await oc.aiTextStructured({
+            workspaceId: deps.workspaceId,
+            system: reviseSlideSystemPrompt(deps.voiceClause),
+            prompt: `Deck: ${st.doc.title}\nSlide ${idx + 1} of ${st.doc.pages.length}\nInstruction: ${instruction}\n${heading}\n${shown.slice(0, 8000)}`,
+            schema: reviseSlideSchema(),
+          }, deps.signal);
+          item = reviseSlideItem(parseModelJson(text), current);
+        } catch (e) {
+          if (deps.signal?.aborted) throw e;
+          return { error: tr("editor.skip_couldnt_regenerate_slide") };
+        }
+        const composed = recomposeSlide({ doc: st.doc, pageIndex: idx, item, brandPalette: deps.brandPalette, brandFonts: deps.brandFonts, logo: deps.brandLogo ?? null });
+        if (!composed) return { error: tr("editor.skip_couldnt_regenerate_slide") };
+        const { aspect, imageSize } = aspectAndImageSize(page);
+        // The logo the composer places references assets the file must list
+        // (a deck set before the workspace had a logo carries no ref yet).
+        const assets: AssetRef[] = [];
+        for (const l of [deps.brandLogo, deps.brandLogo?.dark]) {
+          if (l?.assetId && l.url && !assets.some((r) => r.id === l.assetId)) assets.push({ id: l.assetId, kind: "image", url: l.url, mime: "image/*", checksum: "" });
+        }
+        return {
+          payload: {
+            kind: "recomposeSlide",
+            pageIndex: idx,
+            pageId: page.id,
+            item,
+            background: composed.background,
+            nodes: composed.nodes,
+            imageTasks: Object.entries(composed.imagePrompts).map(([placeholderId, prompt]) => ({ placeholderId, prompt: groundImagePrompt(prompt, { palette: deps.brandPalette, aspect }), subject: prompt })),
+            imageSize,
+            generateAllowed: deps.imageCapable,
+            workspaceId: deps.workspaceId,
+            designId: deps.designId ?? null,
+            assets,
+          },
+        };
+      }
       // Read-only planning: the resolve phase must not mutate the document
       // (ensureSlideLayouts runs inside the APPLY turn); built-ins here only
       // shape the schemas, and their ids match what the apply installs.
@@ -2516,9 +2719,9 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const layouts = docLayouts?.length ? docLayouts : builtinMasterAndLayouts({ width: page.width, height: page.height }).layouts;
       type Slotted = { type: string; data?: { placeholderId?: string; aiImagePrompt?: string }; content?: { runs: { text: string }[] }[] };
       const slotted = (page.children as Slotted[]).filter((n) => n.data?.placeholderId);
-      // A slide with no placeholder boxes (freeform/pre-layout generation) has
-      // nothing this tool can rewrite in place: refuse cleanly instead of
-      // stacking new boxes over the existing content.
+      // A slide with no placeholder boxes and none of the composers' structure
+      // (a page the user drew) has nothing this tool can rewrite in place:
+      // refuse cleanly instead of stacking new boxes over the content.
       if (!slotted.length) return { error: tr("editor.skip_slide_not_layout_linked") };
       const currentTexts = slotted
         .filter((n) => n.type === "text" && n.content?.length)
@@ -2581,6 +2784,28 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           designId: deps.designId ?? null,
         },
       };
+    }
+    case "placeAttachedImage": {
+      const images = deps.images ?? [];
+      if (!images.length) return { error: tr("editor.skip_no_attached_image") };
+      const img = pickAttachedImage(images, typeof a.name === "string" ? a.name : undefined);
+      if (!img) return { error: tr("editor.skip_no_attached_image") };
+      const wanted = Math.round(Number(a.pageIndex));
+      const pageIndex = Number.isFinite(wanted) && wanted >= 1 && wanted <= st.doc.pages.length ? wanted - 1 : undefined;
+      let url = img.url;
+      if (img.file) {
+        // A picture from disk becomes a workspace upload first, so the page
+        // references an asset every collaborator and every export can load,
+        // not a URL that dies with this tab.
+        try {
+          const asset = await directUploadWithProgress(deps.workspaceId, img.file, { filename: img.file.name });
+          url = resolveAssetUrl(asset.url);
+          deps.onImageUploaded?.(img.id, url);
+        } catch {
+          return { error: tr("editor.skip_image_upload_failed") };
+        }
+      }
+      return { payload: { kind: "placeImage", image: url, pageIndex, provenance: img.provenance } };
     }
     case "splitSlide": {
       // One structured call splits the page's content into two outline items;
@@ -2699,7 +2924,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           system: themeGenSystemPrompt(),
           prompt: themeGenUserPrompt(typeof a.description === "string" ? a.description : undefined, {
             deckTitle: st.doc.title || undefined,
-            brandPalette: deps.brandPalette.length ? deps.brandPalette : undefined,
+            brandPalette: paletteFor(deps).length ? paletteFor(deps) : undefined,
           }),
           schema: generatedThemeSchema(),
         });
@@ -2840,11 +3065,16 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       // engine only when layout grounding is impossible.
       {
         const docLayouts = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts;
-        const layouts = docLayouts?.length ? docLayouts : builtinMasterAndLayouts(size).layouts;
+        const layouts = docLayouts ?? [];
+        // Only a template's own layouts ground a deck. The builtin slide
+        // layouts every presentation carries are scaffolding, and grounding
+        // in them turned every generated deck into title-and-bullets pages
+        // whatever the outline planned; those decks now compose through the
+        // archetype door below, the same one the API takes.
         // Picture slots stay available on text-only providers: the image queue
         // still resolves them via asset reuse and stock (no image provider
         // needed) and quietly skips a miss (generateAllowed=false).
-        if (layouts.length && (dt === "deck" || dt === "doc")) {
+        if (shouldGroundInLayouts({ designType: dt, docLayouts, templateAdopted: deps.templateAdopted })) {
           const items = outline.pages;
           const ids = layouts.map((l) => l.id);
           let selection: string[];
@@ -2888,7 +3118,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
                   subject: p.title,
                   prompt: groundImagePrompt(
                     `${outline.title}${p.title ? ` - ${p.title}` : ""}. ${outline.theme ?? ""}. A soft, uncluttered, low-contrast background with generous empty space so overlaid text stays readable. No text, no words, no logos in the image.`,
-                    { palette: deps.brandPalette, aspect },
+                    { palette: paletteFor(deps), aspect },
                   ),
                 }))
             : [];
@@ -2903,7 +3133,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
             ? deckThemeFromRecord(deps.styleThemeRecord, outline.title)
             : chosen
               ? deckThemeFromCatalog(chosen, outline.title)
-              : deckThemes({ brandPalette: deps.brandPalette, kicker: outline.title, count: 1, fontHeading: deps.brandFonts.heading, fontBody: deps.brandFonts.body, seed })[0];
+              : deckThemes({ brandPalette: paletteFor(deps), kicker: outline.title, count: 1, fontHeading: deps.brandFonts.heading, fontBody: deps.brandFonts.body, seed })[0];
           const background = layoutDesign({ layout: "centered", background: theme.background, blocks: [], dir: "ltr" }, size).background;
           // T19 (d): the deck's visual system doubles as the file theme, so
           // the theme picker reflects it and a later swap remaps exactly the
@@ -2934,8 +3164,9 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
               background,
               imageSize,
               size,
-              brandPalette: deps.brandPalette,
+              brandPalette: paletteFor(deps),
               brandFonts: deps.brandFonts,
+              brandLogo: deps.brandLogo ?? null,
               styleClause,
               heroPlans,
               generateAllowed: deps.imageCapable,
@@ -2963,11 +3194,11 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
             subject: p.title,
             prompt: groundImagePrompt(
               `${outline.title}${p.title ? ` - ${p.title}` : ""}. ${outline.theme ?? ""}. A soft, uncluttered, low-contrast background with generous empty space so overlaid text stays readable. No text, no words, no logos in the image.`,
-              { palette: deps.brandPalette, aspect },
+              { palette: paletteFor(deps), aspect },
             ),
           }));
       }
-      return { payload: { kind: "outline", outline, size, brandPalette: deps.brandPalette, brandFonts: deps.brandFonts, heroPlans, workspaceId: deps.workspaceId, designId: deps.designId ?? null, append, themeId: deps.styleThemeId, themeRecord: deps.styleThemeRecord } };
+      return { payload: { kind: "outline", outline, size, brandPalette: paletteFor(deps), brandFonts: deps.brandFonts, brandLogo: deps.brandLogo ?? null, heroPlans, workspaceId: deps.workspaceId, designId: deps.designId ?? null, append, themeId: deps.styleThemeId, themeRecord: deps.styleThemeRecord, designType: dt, look: deps.dials?.look } };
     }
     default:
       return {};
@@ -2978,6 +3209,31 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
 // changed (or read) the document successfully. Runs inside runAsTurn so all
 // steps collapse into a single undo entry. Generative steps consume the payload
 // pre-resolved by resolvePlanStep.
+// The composer's verdict on the deck it just built, carried to the turn that
+// reports the generation. The report used to stay inside the step: a deck
+// shipped with thirty-two texts flagged for contrast and nobody was told.
+let lastDeckCheck: string | null = null;
+function deckCheckNote(report: DeckReport): string {
+  const parts = [tr("editor.design_check_pages", { count: report.pages.length })];
+  if (report.repairs > 0) parts.push(tr("editor.design_check_repairs", { count: report.repairs }));
+  if (report.shorten.length) parts.push(tr("editor.design_check_long", { count: report.shorten.length }));
+  return parts.join(" ");
+}
+/** The pending check note, consumed once by the turn that reports it. */
+function takeDeckCheck(): string | null {
+  const note = lastDeckCheck;
+  lastDeckCheck = null;
+  return note;
+}
+// The pages the last generation placed, so the look afterwards renders
+// exactly those and not a deck's older pages.
+let lastDeckSpan: { first: number; count: number } | null = null;
+function takeDeckSpan(): { first: number; count: number } | null {
+  const span = lastDeckSpan;
+  lastDeckSpan = null;
+  return span;
+}
+
 function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; payload?: ResolvedPayload; brandFonts?: { heading?: string; body?: string } }): boolean {
   const st = useEditor.getState();
   const a = step.args;
@@ -3163,6 +3419,29 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       return true;
     }
     case "regenerateSlide": {
+      if (ctx?.payload?.kind === "recomposeSlide") {
+        const { pageIndex, pageId, item, background, nodes, imageTasks, imageSize, generateAllowed, workspaceId, designId, assets } = ctx.payload;
+        // The page must still be the one that was resolved (identity guard).
+        const live = st.doc.pages[pageIndex] as unknown as { id: string } | undefined;
+        if (!live || live.id !== pageId) return false;
+        // The page keeps its id; its content, note and item are replaced in
+        // one step, and the photo slots the composer tagged resolve behind.
+        if (!st.replacePageContent(pageIndex, { background, children: nodes, notes: item.note, data: { aiOutline: item }, assets })) return false;
+        const turnId = st.currentTurnId();
+        enqueueAiImages(imageTasks.map((t) => ({
+          workspaceId,
+          designId: designId ?? "",
+          turnId,
+          pageId,
+          placeholderId: t.placeholderId,
+          prompt: t.prompt,
+          subject: t.subject,
+          size: imageSize,
+          generateAllowed,
+        })));
+        st.goToPage(pageIndex);
+        return true;
+      }
       if (ctx?.payload?.kind !== "regenerateSlide") return false;
       const { pageIndex, pageId, layoutId, layoutChanged, hadLayout, fill, imageTasks, imageSize, generateAllowed, workspaceId, designId } = ctx.payload;
       // The page must still be the one that was resolved (identity guard).
@@ -3195,6 +3474,14 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         generateAllowed,
       })));
       st.goToPage(pageIndex);
+      return true;
+    }
+    case "placeAttachedImage": {
+      if (ctx?.payload?.kind !== "placeImage") return false;
+      // The page the step named; the selection there is whatever the user
+      // left, so a selected frame on it still receives the picture.
+      if (ctx.payload.pageIndex !== undefined && ctx.payload.pageIndex !== st.activePage) st.goToPage(ctx.payload.pageIndex);
+      placeImage(ctx.payload.image, ctx.payload.provenance);
       return true;
     }
     case "splitSlide": {
@@ -3316,7 +3603,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         // kept the raw prompt as its title, and one generated in the editor
         // kept its placeholder name however good the deck was. A title the
         // user chose is never overwritten.
-        if (deckTitle.trim() && isUntitledDoc(st.doc.title)) st.setDocTitle(deckTitle.trim().slice(0, 120));
+        if (deckTitle.trim() && isUntitledDoc(st.doc.title)) adoptDeckTitle(deckTitle, designId);
         const turnId = st.currentTurnId();
         const imageTasks: Parameters<typeof enqueueAiImages>[0] = [];
         const availableIds = new Set(installed.map((l) => l.id));
@@ -3397,7 +3684,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         return true;
       }
       if (ctx?.payload?.kind !== "outline") return false;
-      const { outline, size, brandPalette, brandFonts, heroPlans, workspaceId, designId, append, themeId, themeRecord } = ctx.payload;
+      const { outline, size, brandPalette, brandFonts, brandLogo, heroPlans, workspaceId, designId, append, themeId, themeRecord, designType, look } = ctx.payload;
       const clean: DesignOutline = { ...outline, pages: outline.pages.map((p) => ({ ...p, points: p.points.map((s) => s.trim()).filter(Boolean) })) };
       // F40 E12/E14: a template's theme record wins, then a chosen catalog
       // theme; else seed the default hue from the title so different briefs
@@ -3414,10 +3701,21 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       // slots and pairing when one is chosen or when nothing else names a
       // palette, so an unbranded brief still gets a designed deck.
       const catalog = chosenEntry ?? (!themeRecord && !brandPalette.length ? catalogEntryForMood(clean.theme, seed) : null);
-      const deck = layoutDeck(clean, themes[0], size, { catalog, brandPalette, seed });
+      // A brand kit or a chosen theme authored the fonts; a look's own
+      // pairing must not replace them. The dial overrides the model's look.
+      const fontsAuthored = !!(themeRecord || chosenEntry || brandFonts?.heading || brandFonts?.body);
+      // The kit sets a 16 by 9 deck in one of the signature templates'
+      // systems (the style the outline named, repainted in the brand or a
+      // chosen theme); other pages keep the classic composer.
+      const deck = layoutDeck(clean, themes[0], size, { catalog, brandPalette, seed, logo: brandLogo, designType, look: look && look !== "auto" ? look : undefined, fontsAuthored, renderer: "kit", brandFonts, themeChosen: !!(themeRecord || chosenEntry), themeSlots: themeRecord ? slotsFromThemeRecord(themeRecord) : null });
+      lastDeckCheck = deckCheckNote(deck.report);
       const base = append ? st.doc.pages.length : 0;
       const ids = append ? st.appendDeckPages(deck, size) : st.buildDeckFromOutline(deck, size);
       if (!ids.length) return false;
+      lastDeckSpan = { first: base, count: ids.length };
+      // A fresh design takes the deck's title, in the file and on the record
+      // the dashboard lists, as the layout-grounded path does.
+      if (clean.title.trim() && isUntitledDoc(st.doc.title)) adoptDeckTitle(clean.title, designId);
       // T19 (d): stamp the generated visual system as the file theme (record
       // only - these pages already wear its colors; a remap from any outgoing
       // theme would misfire). Appending never overrides an existing theme.
@@ -3446,10 +3744,14 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
           };
         }),
       );
-      const withSlots = new Set(deck.pages.map((p, i) => (Object.keys(p.imagePrompts).length ? i : -1)));
+      // A page whose picture the composer drew itself (a drawing from the
+      // set, procedural artwork) needs no hero picture behind it either, and
+      // a kit deck draws every picture it wants: a photograph lands in a
+      // tagged slot, everything else is a drawing in a halo.
+      const withSlots = new Set(deck.pages.map((p, i) => (Object.keys(p.imagePrompts).length || p.nodes.some((n) => n.name === "Illustration" || n.name === "Artwork") ? i : -1)));
       enqueueAiImages([
         ...slotTasks,
-        ...heroPlans.filter((h) => !withSlots.has(h.pageIndex)).map((h) => ({
+        ...heroPlans.filter((h) => deck.renderer !== "kit" && !withSlots.has(h.pageIndex)).map((h) => ({
           workspaceId,
           designId: designId ?? "",
           pageId: ids[h.pageIndex],
@@ -3479,19 +3781,34 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
   }
 }
 
-function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable }: {
+function AssistantPanel({ workspaceId, designId, aiReady, voiceClause, brandPalette, brandFonts, brandLogo, imageCapable, editImageCapable, visionCapable }: {
   workspaceId: string | null;
+  /** The open design, from the shell that loaded it. It used to be read from
+   *  the comments store, which is set only after the access lookup resolves
+   *  and never when that lookup fails, so a brief that landed early was sent
+   *  with no design to persist against and the history restore that ran
+   *  once the id arrived replaced the conversation. */
+  designId: string | null;
   aiReady: boolean;
   voiceClause: string;
   brandPalette: string[];
   brandFonts: { heading?: string; body?: string };
+  brandLogo: DeckLogo | null;
   imageCapable: boolean;
   editImageCapable: boolean;
+  /** The provider can read images, so a fresh deck gets a look. */
+  visionCapable: boolean;
 }) {
   const toast = useToast();
   const runAsTurn = useEditor((s) => s.runAsTurn);
   const undo = useEditor((s) => s.undo);
-  const designId = useComments((s) => s.designId); // current design (for persisted history)
+  // The latest id behind a stable ref, for a run that finishes after the user
+  // moved to another design.
+  const designIdRef = useRef(designId);
+  useEffect(() => { designIdRef.current = designId; }, [designId]);
+  // Nulled on unmount, as the comments store was, so a run that finishes
+  // after the user left this design applies nothing to the next one.
+  useEffect(() => () => { designIdRef.current = null; }, []);
   // Gates the Magic Switch row (C30): a form switch is offered on multi-page documents.
   const switchPageCount = useEditor((s) => s.doc.pages.length);
   const [input, setInput] = useState("");
@@ -3571,8 +3888,8 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // Attachments staged alongside the brief (the dashboard composer lets a
       // user attach the documents the design should be built from).
       const staged = takeStagedAiSources();
-      if (staged.length) setSources((xs) => [...xs, ...staged].slice(0, maxSources));
-      void send(req.text, staged);
+      if (staged.length) setSources((xs) => [...xs, ...staged.map(asChatSource)].slice(0, maxSources));
+      void send(req.text);
       return;
     }
     const text = tr("editor.regenerate_slide_n_instruction", { n: req.pageIndex + 1, instruction: req.instruction });
@@ -3611,11 +3928,54 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   }, [designId]);
   // Attached source content for create-from-document/URL/file (FR-23).
   // T15: multiple grounding attachments (cap 8), each editable before use.
-  const [sources, setSources] = useState<{ name: string; text: string }[]>([]);
-  const [editingSource, setEditingSource] = useState<number | null>(null);
+  // The conversation's documents: staged in the composer (chips, editable)
+  // or sent with a message (in its bubble). Behind a ref written
+  // synchronously, so a send sees what a caller staged a moment ago.
+  const [sources, setSourcesState] = useState<ChatSource[]>([]);
+  const sourcesRef = useRef<ChatSource[]>([]);
+  const setSources = (fn: (xs: ChatSource[]) => ChatSource[]) => {
+    sourcesRef.current = fn(sourcesRef.current);
+    setSourcesState(sourcesRef.current);
+  };
+  const stagedSources = sources.filter((sc) => !sc.sentAt);
+  const [editingSource, setEditingSource] = useState<string | null>(null);
   const [attachOpen, setAttachOpen] = useState(false);
+  // The link row inside the composer, opened from the attach menu.
+  const [linkOpen, setLinkOpen] = useState(false);
+  // Shown when the thread is scrolled up past recent messages.
+  const [awayFromBottom, setAwayFromBottom] = useState(false);
   const [attachUrl, setAttachUrl] = useState("");
   const [attachBusy, setAttachBusy] = useState(false);
+  // The conversation's images: staged in the composer (no sentAt, shown as
+  // chips, cap 4 per message) or sent with a message (shown in its bubble,
+  // still placeable by name). Behind a ref written synchronously, so a send
+  // that awaits a reading sees the description the moment it lands.
+  const [images, setImagesState] = useState<AiImageAttachment[]>([]);
+  const imagesRef = useRef<AiImageAttachment[]>([]);
+  const setImages = (fn: (xs: AiImageAttachment[]) => AiImageAttachment[]) => {
+    imagesRef.current = fn(imagesRef.current);
+    setImagesState(imagesRef.current);
+  };
+  // The vision reading in flight per image, awaited by a send so the planner
+  // learns what the picture shows before it plans.
+  const readsRef = useRef(new Map<string, Promise<void>>());
+  // The images that went out with the latest message: what grounds that
+  // message's generation (an earlier screenshot must not).
+  const sentWithLastRef = useRef<Set<string>>(new Set());
+  const staged = images.filter((im) => !im.sentAt);
+  // The attach menu closes on a click anywhere else, as a menu does.
+  useEffect(() => {
+    if (!attachOpen) return;
+    const onDown = (ev: MouseEvent) => {
+      const t = ev.target as globalThis.Node | null;
+      if (attachToggleRef.current?.parentElement?.contains(t)) return;
+      setAttachOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [attachOpen]);
+  // Object URLs of pictures from disk die with the panel.
+  useEffect(() => () => { for (const im of imagesRef.current) if (im.url.startsWith("blob:")) URL.revokeObjectURL(im.url); }, []);
   // Drag-and-drop attaching: a file dragged from the desktop onto the panel is
   // the same gesture users expect from any chat, and it lands on exactly the
   // pipeline the file picker uses. The canvas has its own image drop handler,
@@ -3672,6 +4032,8 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       }));
       setPending(null);
       clearReview();
+      resetAttachments();
+      restoreAttachments(persisted);
     } catch {
       toast.error(tr("editor.couldnt_open_that_conversation"));
     }
@@ -3705,14 +4067,32 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
               const steps = plan
                 ?.map((st) => (typeof st?.action === "string" ? { action: st.action, ok: true } : null))
                 .filter((v): v is { action: string; ok: boolean } => !!v);
-              return { role: t.role, text: t.text, ...(steps?.length ? { steps } : {}) };
+              // The images a user turn went out with come back by name: the
+              // pictures lived in the session that sent them.
+              const prov = (t as { provenance?: { images?: unknown } }).provenance;
+              const images = Array.isArray(prov?.images)
+                ? (prov.images as { name?: unknown; width?: unknown; height?: unknown }[])
+                    .filter((im) => im && typeof im.name === "string")
+                    .map((im, k) => ({ id: `restored-${k}`, name: String(im.name), width: Number(im.width) || 0, height: Number(im.height) || 0, ...(typeof (im as { url?: unknown }).url === "string" ? { url: (im as { url: string }).url } : {}) }))
+                : [];
+              const files = Array.isArray((prov as { files?: unknown } | undefined)?.files)
+                ? ((prov as { files: { name?: unknown; chars?: unknown }[] }).files)
+                    .filter((f) => f && typeof f.name === "string")
+                    .map((f, k) => ({ id: `restored-file-${k}`, name: String(f.name), chars: Number(f.chars) || 0 }))
+                : [];
+              return { role: t.role, text: t.text, ...(steps?.length ? { steps } : {}), ...(images.length ? { images } : {}), ...(files.length ? { files } : {}) };
             });
+            restoreAttachmentsRef.current(persisted);
           }
         }
       } catch {
         // history is best-effort; a fresh chat is fine
       }
-      if (!cancelled) setTurns(restored); // setState after await: allowed by the lint rule
+      // Merged, never replaced: a brief handed over from the dashboard is sent
+      // the moment this panel mounts, before the history comes back, and a
+      // wholesale replace wiped that prompt from view (the generation ran on
+      // underneath). Which request finished first decided whether it showed.
+      if (!cancelled) setTurns((current) => mergeRestoredTurns(restored, current)); // setState after await: allowed by the lint rule
     })();
     return () => { cancelled = true; };
   }, [designId]);
@@ -3734,12 +4114,21 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       return null;
     }
   }
-  async function persistTurn(role: "user" | "assistant", text: string, plan?: unknown) {
+  async function lookAtDeck(span: { first: number; count: number }) {
+    if (!workspaceId) return;
+    const reviews = await reviewPages(workspaceId, useEditor.getState().doc, span.first, span.count);
+    if (!reviews) return;
+    const text = reviewTurnText(reviews);
+    setTurns((t) => [...t, { role: "assistant", text }]);
+    void persistTurn("assistant", text);
+  }
+
+  async function persistTurn(role: "user" | "assistant", text: string, plan?: unknown, extra?: Record<string, unknown>) {
     if (!designId) return;
     const sid = await ensureSession();
     if (!sid) return;
     try {
-      await oc.appendAiTurn(designId, sid, { role, text, plan, provenance: { feature: "assistant", at: new Date().toISOString() } });
+      await oc.appendAiTurn(designId, sid, { role, text, plan, provenance: { feature: "assistant", at: new Date().toISOString(), ...extra } });
     } catch {
       // best-effort
     }
@@ -3775,7 +4164,8 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     reviewAbort.current = aborter;
     setReview((r) => ({ outline: null, loading: true, dials, themeId: r?.themeId, templateId: r?.templateId }));
     try {
-      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, dials, designId, signal: aborter.signal };
+      const grounding = groundingSources();
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, brandLogo, imageCapable, editImageCapable, sources: grounding, images: imagesRef.current, referencePalette: referencePalette(imagesRef.current), onImageUploaded, dials, designId, signal: aborter.signal };
       // A planned webSearch grounds the OUTLINE, and in the review flow the
       // outline is fetched here (the reviewed outline then bypasses the
       // execute-time fetch entirely) - so the search must run FIRST or its
@@ -3790,7 +4180,10 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // C33: the search's structured citations must survive into the eventual
       // execute (which drops the webSearch step), or the reviewed deck would
       // lose its Sources page.
-      setReview((r) => ({ outline, loading: false, dials, searchedSources: searchStep ? deps.sources : undefined, citations: deps.citations, themeId: r?.themeId, templateId: r?.templateId }));
+      // Only what the search ADDED joins the document chips: the images'
+      // descriptions ride in the grounding too, and would otherwise come
+      // back as document chips beside their own image chips.
+      setReview((r) => ({ outline, loading: false, dials, searchedSources: searchStep ? (deps.sources ?? []).slice(grounding.length) : undefined, citations: deps.citations, themeId: r?.themeId, templateId: r?.templateId }));
     } catch {
       if (seq === reviewSeq.current) setReview((r) => ({ outline: null, loading: false, dials, themeId: r?.themeId, templateId: r?.templateId }));
     }
@@ -3812,6 +4205,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   async function execute(plan: PlanStep[], reply: string, reviewedOutline?: DesignOutline, dials?: GenerationDials, citations?: SourceCitation[], styleThemeId?: string, styleTemplateId?: string, opts?: { fromProposal?: boolean }) {
     if (!workspaceId) return;
     setBusy(true);
+    const grounding = groundingSources();
+    // Per-run state from a run that failed after composing must not reach
+    // this one: the check note and the page span are this run's or nobody's.
+    takeDeckCheck();
+    takeDeckSpan();
     const aborter = new AbortController();
     runAbort.current = aborter;
     setStage(tr("editor.stage_preparing"));
@@ -3834,7 +4232,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // A plan resolves across tens of seconds of awaits while the editor keeps
       // the SAME store when the route switches design, so every mutation point
       // below re-checks that this is still the document the plan was made for.
-      const stillOnDesign = () => !designId || useComments.getState().designId === designId;
+      const stillOnDesign = () => !designId || designIdRef.current === designId;
       // Fallbacks that fired inside otherwise-successful steps. Reported at
       // the end rather than as toasts, so a deck that came out deterministic
       // says so instead of showing an unqualified green chip.
@@ -3846,7 +4244,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         setTurns((t) => [...t, { role: "assistant", text: msg }]);
         toast.error(msg);
       };
-      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, reviewedOutline, dials, designId, citations, styleThemeId, signal: aborter.signal, onStage: setStage, onDegraded: (w) => { if (!degraded.includes(w)) degraded.push(w); } };
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, brandLogo, imageCapable, editImageCapable, sources: grounding, images: imagesRef.current, referencePalette: referencePalette(imagesRef.current), onImageUploaded, reviewedOutline, dials, designId, citations, styleThemeId, signal: aborter.signal, onStage: setStage, onDegraded: (w) => { if (!degraded.includes(w)) degraded.push(w); } };
       // F40 E14: a template base contributes its layout system + theme. The
       // adoption happens BEFORE the resolve pass so the layout-grounded path
       // naturally picks up the adopted layouts from the document.
@@ -3859,6 +4257,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           if (!stillOnDesign()) { wrongDesign(); return; }
           if (hasLayouts) {
             useEditor.getState().adoptLayoutSet(tplFile.masters ?? [], tplFile.layouts ?? []);
+            deps.templateAdopted = true;
           }
           if (tplFile.theme) {
             deps.styleThemeRecord = tplFile.theme;
@@ -3925,24 +4324,38 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // reflect them in the panel state so the user sees (and can remove) the
       // grounding chip after the turn.
       const searched = payloads.find((p0): p0 is Extract<ResolvedPayload, { kind: "webSearch" }> => p0?.kind === "webSearch");
+      let foundFiles: TurnFile[] = [];
       if (searched && deps.sources) {
-        // Append only the sources the search ADDED: replacing the whole list
-        // with the captured copy would overwrite any edit the user made to an
-        // attachment while the generation ran.
-        const added = deps.sources.slice(sources.length);
-        if (added.length) setSources((cur) => [...cur, ...added].slice(0, maxSources));
+        // Only the sources the search ADDED join the conversation, as the
+        // assistant's own attachments on the turn that reports the run: they
+        // ground every later generation here, like a document the user sent.
+        const added = deps.sources.slice(grounding.length);
+        if (added.length) {
+          const now = Date.now();
+          const found = added.map((sc) => asChatSource({ ...sc, sentAt: now }));
+          setSources((cur) => [...cur, ...found].slice(0, maxSources));
+          foundFiles = found.map(toTurnFile);
+        }
       }
       // A planned critique step is read-only; surface its actual findings instead
       // of just a "done" chip.
       let extra = "";
       let critique: CritiqueIssue[] | undefined;
-      if (plan.some((s) => s.action === "critique")) {
+      let critiqueAt: number | undefined;
+      const critiqueStep = plan.find((s) => s.action === "critique");
+      if (critiqueStep) {
         const st = useEditor.getState();
-        const issues = critiquePage(st.doc, st.activePage);
+        // The page the step names ("check slide 2"), else the current one.
+        const named = Math.round(Number(critiqueStep.args?.pageIndex));
+        const namedOk = Number.isFinite(named) && named >= 1 && named <= st.doc.pages.length;
+        critiqueAt = namedOk ? named - 1 : st.activePage;
+        const issues = critiquePage(st.doc, critiqueAt);
         // C32: the findings render as a structured per-issue fix list on the
         // turn; the text carries just the count so nothing is said twice.
         critique = issues.length ? issues : undefined;
-        extra = issues.length ? ` ${tr("editor.critique_found_issues", { count: issues.length })}` : ` ${tr("editor.critique_page_clean")}`;
+        extra = issues.length
+          ? ` ${namedOk ? tr("editor.critique_found_issues_on_page", { count: issues.length, n: critiqueAt + 1 }) : tr("editor.critique_found_issues", { count: issues.length })}`
+          : ` ${namedOk ? tr("editor.critique_page_n_clean", { n: critiqueAt + 1 }) : tr("editor.critique_page_clean")}`;
       }
       const done = results.filter((r) => r.ok).length;
       // Every reason, not just the first: a five-step plan with three
@@ -3952,13 +4365,20 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         .map((r, i) => (!r.ok && skips[i] ? `${actionLabel(plan[i].action)}: ${skips[i]}` : null))
         .filter((v): v is string => !!v);
       const degradedNote = degraded.length ? `\n${tr("editor.without_the_model", { what: degraded.join(", ") })}` : "";
-      const text = (reply || tr("editor.done_2")) + extra + degradedNote + (notes.length ? `\n${notes.join("\n")}` : "");
-      const finalTurn: ChatTurn = { role: "assistant", text, steps: results, critique, critiqueAt: critique ? useEditor.getState().activePage : undefined };
+      const check = takeDeckCheck();
+      const text = (reply || tr("editor.done_2")) + extra + degradedNote + (notes.length ? `\n${notes.join("\n")}` : "") + (check ? `\n${check}` : "");
+      const finalTurn: ChatTurn = { role: "assistant", text, steps: results, critique, critiqueAt: critique ? critiqueAt : undefined, fresh: true, ...(foundFiles.length ? { files: foundFiles } : {}) };
       // One bubble per intent: a confirmed proposal's bubble BECOMES the
       // execution report (its chips flip from planned to actual results)
       // instead of the same reply text appearing twice in the thread.
       setTurns((t) => (opts?.fromProposal ? [...t.filter((turn) => !turn.proposed), finalTurn] : [...t, finalTurn]));
       void persistTurn("assistant", text, plan);
+      // The look: each page the generation placed, rendered as the user sees
+      // it and reviewed by a provider that can read images. Its findings land
+      // as a turn of their own once they arrive; a provider that cannot look
+      // says nothing.
+      const span = takeDeckSpan();
+      if (span && visionCapable && workspaceId) void lookAtDeck(span);
       if (done) toast.success(tr("editor.applied_n_steps", { count: done }));
       else if (!extra) toast.error(notes[0] ? notes[0] : tr("editor.nothing_was_applied_try_selecting_an_element"));
     } catch (e) {
@@ -4000,6 +4420,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
    *  names the reason when a file cannot be read, and never throws into the
    *  caller (a bad file must not take the panel down with it). */
   function attachFiles(picked: File[]) {
+    // Images take their own road: they are read here, not extracted to text.
+    const pictures = picked.filter((f) => isImageFile(f));
+    if (pictures.length) attachImages(pictures.map((file) => ({ file })));
+    const documents = picked.filter((f) => !isImageFile(f));
+    if (!documents.length) return;
     const room = maxSources - sources.length;
     if (room <= 0) {
       toast.error(tr("editor.attachment_limit_reached", { max: maxSources }));
@@ -4007,27 +4432,163 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     }
     setAttachBusy(true);
     void (async () => {
-      const out = await extractAiSources(picked, room);
+      const out = await extractAiSources(documents, room);
       if (out.rejected) toast.error(tr("editor.only_documents_can_be_attached"));
       for (const e of out.errors) toast.error(e);
-      if (out.sources.length) setSources((xs) => [...xs, ...out.sources].slice(0, maxSources));
+      if (out.sources.length) setSources((xs) => [...xs, ...out.sources.map(asChatSource)].slice(0, maxSources));
       setAttachBusy(false);
     })();
   }
 
-  async function send(textArg?: string, extraSources?: AiSource[]) {
+  /** Fetch the link in the composer's link row as a document. */
+  function fetchLink() {
+    const url = attachUrl.trim();
+    if (!/^https?:\/\//i.test(url) || attachBusy) return;
+    setAttachBusy(true);
+    void oc.aiExtractUrl({ url })
+      .then((r) => { setSources((xs) => [...xs, asChatSource({ name: r.title || url, text: r.text })].slice(0, maxSources)); setAttachUrl(""); setLinkOpen(false); })
+      .catch(() => toast.error(tr("editor.couldnt_read_that_page")))
+      .finally(() => setAttachBusy(false));
+  }
+  /** A paste into the message: a picture from the clipboard attaches as an
+   *  image, and a long text (a brief, a document's contents) attaches as a
+   *  source instead of flooding the message, the way a chat handles it. */
+  function onComposerPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const files = Array.from(e.clipboardData?.files ?? []);
+    if (files.length) {
+      e.preventDefault();
+      attachFiles(files);
+      return;
+    }
+    const text = e.clipboardData?.getData("text/plain") ?? "";
+    if (text.length > 3000 || text.split("\n").length > 30) {
+      e.preventDefault();
+      setSources((xs) => [...xs, asChatSource({ name: tr("editor.pasted_text"), text: text.trim() })].slice(0, maxSources));
+    }
+  }
+  /** Attach images: from disk, or a URL an in-app drag carried (Uploads,
+   *  Stock). Each lands as a chip at once with its size and palette; with a
+   *  provider that reads images, its description arrives behind and from
+   *  then on grounds the next generation the way a document does. */
+  function attachImages(items: ImageAttachmentSource[]) {
+    if (!workspaceId) return;
+    const room = maxAiImages - imagesRef.current.filter((im) => !im.sentAt).length;
+    if (room <= 0) {
+      toast.error(tr("editor.image_attachment_limit_reached", { max: maxAiImages }));
+      return;
+    }
+    void (async () => {
+      for (const it of items.slice(0, room)) {
+        let img: AiImageAttachment;
+        try {
+          img = await readImageAttachment(it);
+        } catch {
+          toast.error(tr("editor.couldnt_read_that_image"));
+          continue;
+        }
+        setImages((xs) => [...xs, img]);
+        if (!visionCapable || !img.preview) continue;
+        const read = oc.aiDescribeImage({ workspaceId, imageBase64: img.preview, instruction: DESCRIBE_FOR_DESIGN })
+          .then(({ text }) => setImages((xs) => xs.map((x) => (x.id === img.id ? { ...x, description: plainDescription(text) || undefined, read: true } : x))))
+          .catch(() => setImages((xs) => xs.map((x) => (x.id === img.id ? { ...x, read: true } : x))))
+          .finally(() => { readsRef.current.delete(img.id); });
+        readsRef.current.set(img.id, read);
+      }
+    })();
+  }
+  function removeImage(id: string) {
+    setImages((xs) => {
+      const gone = xs.find((x) => x.id === id);
+      if (gone?.url.startsWith("blob:")) URL.revokeObjectURL(gone.url);
+      return xs.filter((x) => x.id !== id);
+    });
+  }
+  const onImageUploaded = (id: string, url: string) => {
+    setImages((xs) => xs.map((x) => {
+      if (x.id !== id) return x;
+      if (x.url.startsWith("blob:")) URL.revokeObjectURL(x.url);
+      return { ...x, url, file: undefined };
+    }));
+  };
+  /** The staged images go out with the message: they move into its bubble
+   *  and stay in the conversation, placeable by name, while the thread keeps
+   *  no more than maxThreadImages of them. */
+  function sendStagedImages(stamp: number): AiImageAttachment[] {
+    const going = imagesRef.current.filter((im) => !im.sentAt);
+    if (!going.length) return [];
+    setImages((xs) => {
+      const marked = xs.map((im) => (im.sentAt ? im : { ...im, sentAt: stamp }));
+      const excess = Math.max(0, marked.length - maxThreadImages);
+      for (const old of marked.slice(0, excess)) if (old.url.startsWith("blob:")) URL.revokeObjectURL(old.url);
+      return marked.slice(excess);
+    });
+    sentWithLastRef.current = new Set(going.map((im) => im.id));
+    return going;
+  }
+  /** The staged documents go out with the message, into its bubble, and
+   *  stay in the conversation as grounding. */
+  function sendStagedSources(stamp: number): ChatSource[] {
+    const going = sourcesRef.current.filter((sc) => !sc.sentAt);
+    if (going.length) setSources((xs) => xs.map((sc) => (sc.sentAt ? sc : { ...sc, sentAt: stamp })));
+    return going;
+  }
+  /** What grounds a generation: every document sent in this conversation
+   *  (a deck is built from the notes and files the user handed over, however
+   *  many messages ago), and the images sent with the LATEST message that the
+   *  provider has read. An image from an earlier message is context the
+   *  planner was told about then, and still places by name; a stale
+   *  screenshot must not constrain a later deck. */
+  const groundingSources = () =>
+    [...sourcesRef.current.filter((sc) => !!sc.sentAt), ...imagesRef.current.filter((im) => sentWithLastRef.current.has(im.id)).map(imageSource).filter((x): x is AiSource => !!x)].slice(0, maxSources);
+
+  async function send(textArg?: string, opts?: { repeat?: boolean }) {
     const userText = (textArg ?? input).trim();
-    if (!workspaceId || !userText || !aiReady || busy) return;
+    // A message may be attachments alone, as in any chat: the planner is
+    // then asked to read the request from them.
+    const hasStaged = imagesRef.current.some((im) => !im.sentAt) || sourcesRef.current.some((sc) => !sc.sentAt);
+    if (!workspaceId || (!userText && !hasStaged) || !aiReady || busy) return;
     if (!textArg) setInput("");
     setPending(null);
     clearReview();
-    setTurns((t) => [...demoteProposals(t), { role: "user", text: userText }]);
-    void persistTurn("user", userText);
+    // The staged images go out with the message, into its bubble, the way
+    // any chat sends a picture with the words about it.
+    const stamp = Date.now();
+    // A repeat (Regenerate) plans the last message again: no new bubble, and
+    // what is staged stays staged for the message the user is writing.
+    const going = opts?.repeat ? [] : sendStagedImages(stamp);
+    const goingFiles = opts?.repeat ? [] : sendStagedSources(stamp);
+    if (!opts?.repeat) {
+      setTurns((t) => [...demoteProposals(t), {
+        role: "user",
+        text: userText,
+        ...(going.length ? { images: going.map(toTurnImage) } : {}),
+        ...(goingFiles.length ? { files: goingFiles.map(toTurnFile) } : {}),
+      }]);
+    } else {
+      setTurns(demoteProposals);
+    }
     setBusy(true);
     const aborter = new AbortController();
     runAbort.current = aborter;
     setStage(tr("editor.stage_planning"));
     try {
+      // A picture sent with the message is read before the plan is made, so
+      // the planner knows what it shows (a screenshot of the design, a
+      // reference) rather than only its name; bounded, so a slow provider
+      // never holds the message.
+      const reads = going.map((im) => readsRef.current.get(im.id)).filter((r): r is Promise<void> => !!r);
+      if (reads.length) {
+        setStage(tr("editor.reading_the_image"));
+        await Promise.race([Promise.all(reads), new Promise<void>((r) => setTimeout(r, 12_000))]);
+        if (aborter.signal.aborted) throw abortError();
+        setStage(tr("editor.stage_planning"));
+      }
+      // The turn persists before the reply does, so the conversation reads
+      // in order when reopened; a slow upload is not waited on for long.
+      if (!opts?.repeat) {
+        await Promise.race([persistUserTurn(userText, stamp, goingFiles), new Promise<void>((r) => setTimeout(r, 15_000))]);
+        if (aborter.signal.aborted) throw abortError();
+      }
       const st = useEditor.getState();
       const summaryDoc = {
         title: st.doc.title,
@@ -4045,14 +4606,21 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // Prefer the backend orchestrator (server-side validation/retry, FR-12);
       // fall back to the free-text path. Either way the client re-validates arg
       // types via parseAssistantReply before anything executes.
-      // With sources attached, tell the planner they exist (the executor does
-      // the grounding); the user's words alone often don't mention it.
-      // Sources staged by another surface arrive with this call: setSources
-      // has not re-rendered yet, so the state copy alone would miss them.
-      const active = extraSources?.length ? [...sources, ...extraSources].slice(0, maxSources) : sources;
-      const plannerText = active.length
-        ? `${userText}\n[Note: the user attached ${active.length} source${active.length === 1 ? "" : "s"} (${active.map((sc) => sc.name).join(", ")}; ${active.reduce((n, sc) => n + sc.text.length, 0)} chars total). To create a deck/design from them, plan generateDesign - the executor grounds the outline in the attachments automatically.]`
-        : userText;
+      // With documents attached, tell the planner they exist (the executor
+      // does the grounding); the user's words alone often don't mention it.
+      // What came with THIS message is named apart from what came before.
+      const earlierDocs = sourcesRef.current.filter((sc) => sc.sentAt && sc.sentAt !== stamp);
+      const notes = [
+        goingFiles.length
+          ? `[Note: the user attached ${goingFiles.length} document${goingFiles.length === 1 ? "" : "s"} with this message (${goingFiles.map((sc) => sc.name).join(", ")}; ${goingFiles.reduce((n, sc) => n + sc.text.length, 0)} chars total). To create a deck/design from them, plan generateDesign - the executor grounds the outline in the full attachments automatically. A question about them is answered from these excerpts:\n${documentExcerpts(goingFiles)}]`
+          : "",
+        earlierDocs.length
+          ? `[Note: documents attached earlier in this conversation still ground a generation: ${earlierDocs.map((sc) => sc.name).join(", ")}.]`
+          : "",
+        imageAttachmentsNote(imagesRef.current, imagesRef.current.filter((im) => im.sentAt === stamp)),
+      ].filter(Boolean);
+      const spoken = userText || `(The user sent attachments without words: read the request from them. A document or a picture to build from calls for generateDesign; a picture of the design calls for a review; otherwise reply with what you make of them.)`;
+      const plannerText = notes.length ? `${spoken}\n${notes.join("\n")}` : spoken;
       let res;
       try {
         const r = await oc.aiAssistant({ workspaceId, designSummary: summary, history, message: plannerText }, aborter.signal);
@@ -4075,7 +4643,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         // "just generate" escape as a quick reply, so the questions never
         // become a gate the user can't skip.
         const creationAsk = /\b(deck|presentation|slides?|poster|flyer|docs?|documents?|posts?|design|make|create|build|generate)\b/i.test(userText);
-        setTurns((t) => [...t, { role: "assistant", text: res.clarify!, quick: creationAsk ? [tr("editor.just_generate")] : undefined }]);
+        setTurns((t) => [...t, { role: "assistant", text: res.clarify!, quick: creationAsk ? [tr("editor.just_generate")] : undefined, fresh: true }]);
         void persistTurn("assistant", res.clarify);
         return;
       }
@@ -4088,12 +4656,12 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           const now = useEditor.getState();
           const issues = critiquePage(now.doc, now.activePage);
           const msg = issues.length ? tr("editor.critique_found_issues", { count: issues.length }) : tr("editor.critique_page_clean");
-          setTurns((t) => [...t, { role: "assistant", text: msg, critique: issues.length ? issues : undefined, critiqueAt: issues.length ? now.activePage : undefined }]);
+          setTurns((t) => [...t, { role: "assistant", text: msg, critique: issues.length ? issues : undefined, critiqueAt: issues.length ? now.activePage : undefined, fresh: true }]);
           void persistTurn("assistant", msg);
           return;
         }
         const reply = res.reply || tr("editor.i_couldnt_map_that_to_an_action");
-        setTurns((t) => [...t, { role: "assistant", text: reply }]);
+        setTurns((t) => [...t, { role: "assistant", text: reply, fresh: true }]);
         void persistTurn("assistant", reply);
         return;
       }
@@ -4165,8 +4733,80 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
   }
+  /** The attachments a persisted conversation carried, back into this one
+   *  as sent: a picture by its workspace URL with what the provider saw in
+   *  it, a document by its text, so a reopened conversation still places its
+   *  pictures by name and grounds a generation in its documents. */
+  function restoreAttachments(persisted: { role: string; provenance?: unknown }[]) {
+    const imgs: AiImageAttachment[] = [];
+    const docs: ChatSource[] = [];
+    persisted.forEach((t, k) => {
+      if (t.role !== "user") return;
+      const prov = t.provenance as { at?: unknown; images?: unknown; files?: unknown } | undefined;
+      const at = (typeof prov?.at === "string" && Date.parse(prov.at)) || 1;
+      if (Array.isArray(prov?.images)) {
+        (prov.images as Record<string, unknown>[]).forEach((im, j) => {
+          if (!im || typeof im.url !== "string" || typeof im.name !== "string") return;
+          const palette = Array.isArray(im.palette) ? (im.palette as unknown[]).filter((h): h is string => typeof h === "string") : [];
+          imgs.push({ id: `restored-${k}-${j}`, name: im.name, url: im.url, width: Number(im.width) || 0, height: Number(im.height) || 0, preview: "", palette, ...(typeof im.description === "string" ? { description: im.description } : {}), read: true, sentAt: at });
+        });
+      }
+      if (Array.isArray(prov?.files)) {
+        (prov.files as Record<string, unknown>[]).forEach((f, j) => {
+          if (!f || typeof f.name !== "string" || typeof f.text !== "string" || !f.text.trim()) return;
+          docs.push({ id: `restored-file-${k}-${j}`, name: f.name, text: f.text, sentAt: at });
+        });
+      }
+    });
+    if (imgs.length) setImages((xs) => [...imgs, ...xs].slice(-maxThreadImages));
+    if (docs.length) setSources((xs) => [...docs, ...xs].slice(0, maxSources));
+  }
+  // The restore effect runs once per design and reaches the current
+  // implementation through a ref (the latest-ref pattern used above).
+  const restoreAttachmentsRef = useRef(restoreAttachments);
+  useEffect(() => { restoreAttachmentsRef.current = restoreAttachments; });
+  /** The user's turn persists with what it carried: a picture from disk
+   *  becomes a workspace upload first, so a reopened conversation shows it
+   *  and can still place it; a document rides along as text (capped), so
+   *  it still grounds a generation then. A failed upload keeps the name. */
+  async function persistUserTurn(text: string, stamp: number, files: ChatSource[]) {
+    const sent = imagesRef.current.filter((im) => im.sentAt === stamp);
+    const images = await Promise.all(sent.map(async (im) => {
+      let url = im.url;
+      if (im.file && workspaceId) {
+        try {
+          const asset = await directUploadWithProgress(workspaceId, im.file, { filename: im.file.name });
+          url = resolveAssetUrl(asset.url);
+          onImageUploaded(im.id, url);
+        } catch {
+          url = "";
+        }
+      } else if (/^(blob|data):/.test(url)) {
+        url = "";
+      }
+      const latest = imagesRef.current.find((x) => x.id === im.id) ?? im;
+      return { name: im.name, width: im.width, height: im.height, ...(url ? { url } : {}), ...(latest.description ? { description: latest.description } : {}), ...(im.palette.length ? { palette: im.palette } : {}) };
+    }));
+    const extra = {
+      ...(images.length ? { images } : {}),
+      ...(files.length ? { files: files.map((sc) => ({ name: sc.name, chars: sc.text.length, text: sc.text.slice(0, PERSIST_TEXT_CHARS) })) } : {}),
+    };
+    await persistTurn("user", text, undefined, Object.keys(extra).length ? extra : undefined);
+  }
+  /** Another conversation starts with nothing attached: the documents and
+   *  pictures were the old one's. */
+  function resetAttachments() {
+    setSources(() => []);
+    setEditingSource(null);
+    for (const im of imagesRef.current) if (im.url.startsWith("blob:")) URL.revokeObjectURL(im.url);
+    setImages(() => []);
+    sentWithLastRef.current = new Set();
+    setLinkOpen(false);
+    setAttachOpen(false);
+  }
   function startNewChat() {
     setTurns([]);
+    resetAttachments();
     setPending(null);
     clearReview();
     setInput("");
@@ -4203,7 +4843,8 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       setBusy(false);
     }
   }
-  const canSend = !!input.trim() && !busy && aiReady;
+  const canSend = (!!input.trim() || staged.length > 0 || stagedSources.length > 0) && !busy && aiReady;
+  const lastUserText = [...turns].reverse().find((t) => t.role === "user" && t.text.trim())?.text ?? "";
   // A proposed turn's chips describe a PLAN, not applied work: it must not
   // enable Undo or trigger the post-generation follow-ups.
   const hasApplied = turns.some((t) => !t.proposed && t.steps?.some((s) => s.ok));
@@ -4218,7 +4859,9 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     <div
       className="relative flex min-h-0 flex-1 flex-col"
       onDragOver={(e) => {
-        if (!e.dataTransfer.types.includes("Files") || attachBusy) return;
+        // OS files, or a picture dragged in from Uploads or Stock.
+        const t = e.dataTransfer.types;
+        if ((!t.includes("Files") && !t.includes("application/x-oc-image")) || attachBusy) return;
         e.preventDefault();
         setDropActive(true);
       }}
@@ -4229,9 +4872,21 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         setDropActive(false);
       }}
       onDrop={(e) => {
-        if (!e.dataTransfer.types.includes("Files")) return;
+        const inApp = e.dataTransfer.getData("application/x-oc-image");
+        if (!e.dataTransfer.types.includes("Files") && !inApp) return;
         e.preventDefault();
         setDropActive(false);
+        if (inApp) {
+          // The same payload the canvas takes: the picture's URL, and a stock
+          // credit when it has one.
+          let provenance: Record<string, unknown> | undefined;
+          try {
+            const raw = e.dataTransfer.getData("application/x-oc-provenance");
+            if (raw) provenance = JSON.parse(raw) as Record<string, unknown>;
+          } catch { /* a malformed payload just means no credit metadata */ }
+          attachImages([{ url: inApp, name: nameFromUrl(inApp), provenance }]);
+          return;
+        }
         attachFiles(Array.from(e.dataTransfer.files ?? []));
       }}
     >
@@ -4287,7 +4942,14 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       )}
 
       {/* Message thread (the only scrolling region). */}
-      <div ref={scrollRef} className="oc-scroll -mx-1 flex-1 space-y-3 overflow-y-auto px-1 py-1">
+      <div
+        ref={scrollRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          setAwayFromBottom(el.scrollHeight - el.scrollTop - el.clientHeight > 160);
+        }}
+        className="oc-scroll -mx-1 flex-1 space-y-4 overflow-y-auto px-1 py-1"
+      >
         {turns.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-4 px-2 text-center">
             <div className="grid h-11 w-11 place-items-center rounded-full bg-brand-600 text-white shadow-sm"><Sparkles size={20} /></div>
@@ -4324,6 +4986,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                 ["tone", dialTones],
                 ["audience", dialAudiences],
                 ["scenario", dialScenarios],
+                ["look", dialLooks],
               ] as const).map(([key, options]) => (
                 <label key={key} className="flex flex-col gap-0.5 text-start text-[10px] text-neutral-500">
                   {trOr(`editor.dial_${key}`, key)}
@@ -4350,18 +5013,72 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         ) : (
           turns.map((t, i) =>
             t.role === "user" ? (
-              <div key={i} className="flex justify-end">
-                <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-brand-600 px-3 py-2 text-sm text-white">{t.text}</div>
+              <div key={i} className="group flex flex-col items-end">
+                <div className="max-w-[88%] rounded-2xl rounded-br-md bg-neutral-100 px-3.5 py-2 text-sm leading-6 text-neutral-900">
+                  {/* The pictures this message went out with; a restored turn
+                      shows their names, the pictures having lived in the
+                      session that sent them. */}
+                  {t.images && t.images.length > 0 && (
+                    <div className="mb-1.5 flex flex-wrap gap-1.5">
+                      {t.images.map((im) => im.url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={im.id} src={im.url} alt={im.name} title={im.name} className="max-h-32 max-w-full rounded-lg object-contain ring-1 ring-black/10" />
+                      ) : (
+                        <span key={im.id} className="flex items-center gap-1 rounded-md bg-neutral-200 px-1.5 py-0.5 text-[11px] text-neutral-700"><ImagePlus size={11} /> {im.name}</span>
+                      ))}
+                    </div>
+                  )}
+                  {t.files && t.files.length > 0 && (
+                    <div className="mb-1.5 flex flex-wrap gap-1">
+                      {t.files.map((f) => (
+                        <span key={f.id} title={f.name} className="flex max-w-full items-center gap-1 rounded-md bg-neutral-200 px-1.5 py-0.5 text-[11px] text-neutral-700"><FileText size={11} className="shrink-0" /> <span className="truncate">{f.name}</span> · {charsLabel(f.chars)}</span>
+                      ))}
+                    </div>
+                  )}
+                  <CollapsibleText text={t.text} />
+                </div>
+                {/* Message actions, on hover or focus: edit puts the words
+                    back in the composer to change and resend. */}
+                {t.text.trim() && (
+                  <div className="mt-0.5 flex items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                    <button
+                      onClick={() => { setInput(t.text); requestAnimationFrame(() => { const el = inputRef.current; if (el) { el.focus(); autosize(el); } }); }}
+                      disabled={busy}
+                      title={tr("editor.edit_and_resend")}
+                      aria-label={tr("editor.edit_and_resend")}
+                      className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                    <button
+                      onClick={() => { void navigator.clipboard?.writeText(t.text).then(() => toast.success(tr("editor.copied"))).catch(() => {}); }}
+                      title={tr("editor.copy_message")}
+                      aria-label={tr("editor.copy_message")}
+                      className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+                    >
+                      <Copy size={12} />
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
-              <div key={i} className="flex items-start gap-2">
+              <div key={i} className="group flex items-start gap-2.5">
                 {AssistantAvatar}
-                <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-neutral-100 px-3 py-2 text-sm text-neutral-800">
-                  <span className="whitespace-pre-wrap">{t.text}</span>
+                <div className="min-w-0 flex-1 pt-0.5 text-sm leading-6 text-neutral-800">
+                  <RevealingMarkdown text={t.text} animate={!!t.fresh} />
+                  {/* The pages a web search found, as the assistant's own
+                      attachments on the turn that reports the run. */}
+                  {t.files && t.files.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {t.files.map((f) => (
+                        <span key={f.id} title={f.name} className="flex max-w-full items-center gap-1 rounded-md bg-neutral-100 px-1.5 py-0.5 text-[10px] text-neutral-600"><FileText size={11} className="shrink-0" /> <span className="truncate">{f.name}</span> · {charsLabel(f.chars)}</span>
+                      ))}
+                    </div>
+                  )}
                   {t.steps && t.steps.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {t.steps.map((s, j) => (
-                        <span key={j} className={`rounded px-1.5 py-0.5 text-[10px] ${t.proposed ? "bg-neutral-200 text-neutral-600" : s.ok ? "bg-emerald-100 text-emerald-700" : "bg-neutral-200 text-neutral-500 line-through"}`}>{actionLabel(s.action)}</span>
+                        <span key={j} className={`rounded-md px-1.5 py-0.5 text-[10px] ${t.proposed ? "bg-neutral-100 text-neutral-600" : s.ok ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500 line-through"}`}>{actionLabel(s.action)}</span>
                       ))}
                     </div>
                   )}
@@ -4373,7 +5090,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                     ) : (
                       <ul className="mt-1.5 flex flex-col gap-1">
                         {t.critique.map((issue) => (
-                          <li key={issue.id} className="flex items-start gap-1.5 rounded-md bg-surface px-2 py-1 text-[11px] text-neutral-600">
+                          <li key={issue.id} className="flex items-start gap-1.5 rounded-md border border-neutral-200 bg-surface px-2 py-1 text-[11px] text-neutral-600">
                             <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${ISSUE_DOT[issue.severity]}`} />
                             <button onClick={() => issue.nodeId && highlightNode(issue.nodeId)} disabled={!issue.nodeId} className="min-w-0 flex-1 text-start hover:text-brand-ink disabled:cursor-default" title={issue.nodeId ? tr("editor.show_on_canvas") : undefined}>{issue.message}</button>
                             {issue.fix && (
@@ -4407,6 +5124,32 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                       ))}
                     </div>
                   )}
+                  {/* Message actions, shown on hover or focus, as a chat does. */}
+                  {!t.proposed && t.text.trim() && (
+                    <div className="mt-0.5 flex items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                      <button
+                        onClick={() => { void navigator.clipboard?.writeText(t.text).then(() => toast.success(tr("editor.copied"))).catch(() => {}); }}
+                        title={tr("editor.copy_message")}
+                        aria-label={tr("editor.copy_message")}
+                        className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+                      >
+                        <Copy size={12} />
+                      </button>
+                      {/* Regenerate plans the last message again; the
+                          outcome lands as a new reply, and Undo still
+                          reverts anything the first one applied. */}
+                      {i === turns.length - 1 && !busy && !pending && lastUserText && (
+                        <button
+                          onClick={() => void send(lastUserText, { repeat: true })}
+                          title={tr("editor.ask_again_for_this_message")}
+                          aria-label={tr("editor.regenerate")}
+                          className="flex items-center gap-1 rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+                        >
+                          <RotateCcw size={12} />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ),
@@ -4415,15 +5158,15 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         {busy && (
           // role=status so the wait is announced, not just drawn: a screen
           // reader user pressed Enter and heard nothing until the reply landed.
-          <div className="flex items-start gap-2" role="status" aria-live="polite">
+          <div className="flex items-start gap-2.5" role="status" aria-live="polite">
             {AssistantAvatar}
-            <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm bg-neutral-100 px-3 py-2.5">
+            <div className="flex min-h-7 items-center gap-2 text-sm text-neutral-600">
               <span className="flex items-center gap-1">
                 <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.3s]" />
                 <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.15s]" />
                 <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400" />
               </span>
-              <span className="text-xs text-neutral-600">{stage ?? tr("editor.thinking")}</span>
+              <span className="text-xs">{stage ?? tr("editor.thinking")}</span>
               <button onClick={stopRun} className="rounded-full border border-neutral-300 px-2 py-0.5 text-[11px] font-medium text-neutral-600 hover:border-neutral-400 hover:text-neutral-800">
                 {tr("editor.stop")}
               </button>
@@ -4433,9 +5176,9 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         {/* The refinement phase runs AFTER the deck lands, so it needs its own
             line: without it, slides silently rewrite themselves. */}
         {!busy && fillProgress && (
-          <div className="flex items-start gap-2" role="status" aria-live="polite">
+          <div className="flex items-start gap-2.5" role="status" aria-live="polite">
             {AssistantAvatar}
-            <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm bg-neutral-100 px-3 py-2.5 text-xs text-neutral-600">
+            <div className="flex min-h-7 items-center gap-2 text-xs text-neutral-600">
               <span>{tr("editor.writing_slide_of", { done: fillProgress.done + 1, total: fillProgress.total })}</span>
               <button onClick={stopRun} className="rounded-full border border-neutral-300 px-2 py-0.5 text-[11px] font-medium text-neutral-600 hover:border-neutral-400 hover:text-neutral-800">
                 {tr("editor.stop")}
@@ -4478,7 +5221,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                   // citations it produced, exactly as the review path does.
                   const searched = review?.searchedSources;
                   const cites = review?.citations;
-                  if (searched) setSources(searched.slice(0, maxSources));
+                  if (searched?.length) { const now = Date.now(); setSources((cur) => [...cur, ...searched.map((sc) => asChatSource({ ...sc, sentAt: now }))].slice(0, maxSources)); }
                   const planToRun = searched ? p.plan.filter((st) => st.action !== "webSearch") : p.plan;
                   setPending(null);
                   clearReview();
@@ -4500,6 +5243,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                   ["tone", dialTones],
                   ["audience", dialAudiences],
                   ["scenario", dialScenarios],
+                  ["look", dialLooks],
                 ] as const).map(([key, options]) => (
                   <label key={key} className="flex flex-col gap-0.5 text-[10px] text-neutral-500">
                     {trOr(`editor.dial_${key}`, key)}
@@ -4611,7 +5355,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                         // found sources as chips.
                         const searched = review.searchedSources;
                         const cites = review.citations;
-                        if (searched) setSources(searched.slice(0, maxSources));
+                        if (searched?.length) { const now = Date.now(); setSources((cur) => [...cur, ...searched.map((sc) => asChatSource({ ...sc, sentAt: now }))].slice(0, maxSources)); }
                         clearReview();
                         const planToRun = searched ? p?.plan.filter((s) => s.action !== "webSearch") ?? [] : p?.plan ?? [];
                         if (p && clean.pages.length) void execute(planToRun, p.reply, clean, dials, cites, review.themeId, review.templateId, { fromProposal: true });
@@ -4683,176 +5427,194 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       {/* C30 Magic Switch: re-shape the current content into another form
           (appended, never replacing). Shown on multi-page documents, where a
           form switch is worth offering. */}
-      {switchPageCount >= 2 && !pending && !busy && aiReady && (
-        <div className="mt-2 flex shrink-0 flex-wrap items-center gap-1.5">
-          <span className="text-[11px] text-neutral-400">{tr("editor.magic_switch")}:</span>
-          {([["doc", tr("editor.switch_to_doc")], ["social", tr("editor.switch_to_social_posts")], ["poster", tr("editor.switch_to_poster")]] as const).map(([k, label]) => (
-            <button
-              key={k}
-              onClick={() => void execute([{ action: "magicSwitch", args: { designType: k }, status: "planned" }], tr("editor.reshaping_your_content", { form: label }))}
-              className="rounded-full border border-neutral-200 bg-surface px-2.5 py-1 text-[11px] text-neutral-600 hover:border-brand-300 hover:text-brand-ink"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
 
-      {/* Source attachments (FR-23/T15): paste text, fetch URLs, or pick files
-          (multiple, cap 8, mixable in one sitting); each is editable before
-          the next generation grounds its outline in ALL of them. */}
-      {sources.map((sc, i) => (
-        <div key={`${sc.name}-${i}`} className="mt-2 flex shrink-0 flex-col gap-1 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1.5 text-[11px] text-brand-ink">
-          <div className="flex items-center gap-2">
-            <FileText size={12} className="shrink-0" />
-            <span className="min-w-0 flex-1 truncate" title={sc.name}>{sc.name} · {Math.round(sc.text.length / 1000)}k chars</span>
-            <button
-              onClick={() => setEditingSource(editingSource === i ? null : i)}
-              aria-label={tr("editor.edit_extracted_text")}
-              className="rounded p-0.5 hover:bg-brand-100"
-            >
-              <Pencil size={12} />
-            </button>
-            <button onClick={() => { setSources((xs) => xs.filter((_, j) => j !== i)); setEditingSource(null); }} aria-label={tr("editor.remove_attached_content")} className="rounded p-0.5 hover:bg-brand-100"><X size={12} /></button>
-          </div>
-          {editingSource === i && (
-            <textarea
-              value={sc.text}
-              rows={6}
-              onChange={(e) => setSources((xs) => xs.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
-              className="w-full resize-y rounded-md border border-brand-200 bg-surface px-2 py-1.5 text-xs text-neutral-800 outline-none focus:border-brand-400"
-            />
-          )}
-        </div>
-      ))}
-      {attachOpen && sources.length >= maxSources && (
-        <p className="mt-2 shrink-0 rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-[10px] text-neutral-500">
-          {tr("editor.attachment_limit_reached", { max: maxSources })}
-        </p>
-      )}
-      {attachOpen && sources.length < maxSources && (
+      {/* Composer, pinned to the bottom: what is attached, the message, the
+          tools, in one box the way a chat has them. Attachments stage here
+          and go out with the message; the + menu adds files and links, and a
+          long paste or a pasted picture attaches itself. */}
+      <div className="relative mt-2 shrink-0">
+        {awayFromBottom && turns.length > 0 && (
+          <button
+            onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); }}
+            title={tr("editor.scroll_to_latest")}
+            aria-label={tr("editor.scroll_to_latest")}
+            className="absolute -top-10 left-1/2 z-10 grid h-8 w-8 -translate-x-1/2 place-items-center rounded-full border border-neutral-200 bg-surface text-neutral-600 shadow-md hover:text-neutral-900"
+          >
+            <ArrowDown size={14} />
+          </button>
+        )}
         <div
-          className="mt-2 flex shrink-0 flex-col gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 p-2"
+          className="rounded-2xl border border-neutral-300 bg-surface px-2.5 pb-1.5 pt-2 focus-within:border-brand-400"
           onKeyDown={(e) => {
-            // Escape closes it and returns focus to the control that opened
-            // it, rather than stranding the user inside a panel they cannot
-            // dismiss from the keyboard.
-            if (e.key !== "Escape") return;
+            // Escape closes the menu or the link row and returns to the message.
+            if (e.key !== "Escape" || (!attachOpen && !linkOpen)) return;
             e.stopPropagation();
             setAttachOpen(false);
-            attachToggleRef.current?.focus();
+            setLinkOpen(false);
+            inputRef.current?.focus();
           }}
         >
-          {/* The cap is 8 and sources mix freely, which nothing on screen said:
-              users read the panel closing after one add as a limit of one. */}
-          <p className="text-[10px] text-neutral-500">
-            {sources.length
-              ? tr("editor.attachments_added_of_max", { n: sources.length, max: maxSources })
-              : tr("editor.attach_up_to_max_sources", { max: maxSources })}
-          </p>
-          <textarea
-            placeholder={tr("editor.paste_text_or_notes_to_build_from")}
-            rows={3}
-            className="w-full resize-none rounded-md border border-neutral-200 bg-surface px-2 py-1.5 text-xs outline-none focus:border-brand-400"
-            onBlur={(e) => {
-              const t = e.target.value.trim();
-              // The panel STAYS open: attaching is usually building a set
-              // (a note, two links, a file), and closing after each one made
-              // the user reopen it every time. The chips above show what has
-              // landed; the paperclip closes it when they are done.
-              if (t) { setSources((xs) => [...xs, { name: tr("editor.pasted_text"), text: t }]); e.target.value = ""; }
-            }}
-          />
-          <div className="flex items-center gap-1.5">
-            <input
-              value={attachUrl}
-              onChange={(e) => setAttachUrl(e.target.value)}
-              placeholder="https://a-page-to-import…"
-              className="min-w-0 flex-1 rounded-md border border-neutral-200 bg-surface px-2 py-1.5 text-xs outline-none focus:border-brand-400"
+          {(staged.length > 0 || stagedSources.length > 0 || attachBusy) && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {staged.map((im) => (
+                <div key={im.id} className="group/chip relative flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-1 pe-2 text-[11px] text-neutral-700">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={im.url} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover ring-1 ring-black/5" />
+                  <div className="min-w-0 max-w-[9rem]">
+                    <div className="truncate font-medium" title={im.name}>{im.name}</div>
+                    <div className="flex items-center gap-1 text-[10px] text-neutral-500">
+                      {im.palette.slice(0, 4).map((hex, k) => (
+                        <span key={`${k}-${hex}`} title={hex} className="inline-block h-2 w-2 shrink-0 rounded-full ring-1 ring-black/10" style={{ background: hex }} />
+                      ))}
+                      <span className="truncate" title={im.description ?? undefined}>
+                        {!visionCapable
+                          ? tr("editor.image_attached_as_picture_only")
+                          : im.description
+                            ? im.description
+                            : im.read || !im.preview
+                              ? tr("editor.image_not_described")
+                              : tr("editor.reading_the_image")}
+                      </span>
+                    </div>
+                  </div>
+                  <button onClick={() => removeImage(im.id)} aria-label={tr("editor.remove_attached_content")} className="absolute -end-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full border border-neutral-200 bg-surface text-neutral-500 shadow-sm hover:text-neutral-900"><X size={11} /></button>
+                </div>
+              ))}
+              {stagedSources.map((sc) => (
+                <div key={sc.id} className="relative flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-[11px] text-neutral-700">
+                  <FileText size={13} className="shrink-0 text-neutral-500" />
+                  <div className="min-w-0 max-w-[9rem]">
+                    <div className="truncate font-medium" title={sc.name}>{sc.name}</div>
+                    <div className="text-[10px] text-neutral-500">{charsLabel(sc.text.length)}</div>
+                  </div>
+                  <button
+                    onClick={() => setEditingSource(editingSource === sc.id ? null : sc.id)}
+                    aria-label={tr("editor.edit_extracted_text")}
+                    title={tr("editor.edit_extracted_text")}
+                    className={`rounded p-0.5 hover:bg-neutral-200 ${editingSource === sc.id ? "text-brand-ink" : "text-neutral-500"}`}
+                  >
+                    <Pencil size={11} />
+                  </button>
+                  <button onClick={() => { setSources((xs) => xs.filter((x) => x.id !== sc.id)); if (editingSource === sc.id) setEditingSource(null); }} aria-label={tr("editor.remove_attached_content")} className="absolute -end-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full border border-neutral-200 bg-surface text-neutral-500 shadow-sm hover:text-neutral-900"><X size={11} /></button>
+                </div>
+              ))}
+              {attachBusy && (
+                <div className="flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-[11px] text-neutral-500"><Spinner /> {tr("editor.fetching")}</div>
+              )}
+            </div>
+          )}
+          {editingSource && stagedSources.some((sc) => sc.id === editingSource) && (
+            <textarea
+              value={stagedSources.find((sc) => sc.id === editingSource)?.text ?? ""}
+              rows={5}
+              onChange={(e) => setSources((xs) => xs.map((x) => (x.id === editingSource ? { ...x, text: e.target.value } : x)))}
+              className="mb-2 w-full resize-y rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-xs text-neutral-800 outline-none focus:border-brand-400"
             />
-            <button
-              disabled={attachBusy || !/^https?:\/\//i.test(attachUrl.trim())}
-              onClick={() => {
-                const url = attachUrl.trim();
-                setAttachBusy(true);
-                void oc.aiExtractUrl({ url })
-                  .then((r) => { setSources((xs) => [...xs, { name: r.title || url, text: r.text }]); setAttachUrl(""); })
-                  .catch(() => toast.error(tr("editor.couldnt_read_that_page")))
-                  .finally(() => setAttachBusy(false));
-              }}
-              className="rounded-md bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-surface disabled:opacity-40"
-            >
-              {attachBusy ? tr("editor.fetching") : tr("editor.fetch")}
-            </button>
-            {/* A real button, not a label wrapping a display:none input: that
-                combination is focusable by neither, so attaching a local file
-                was mouse-only. Same ref-and-click pattern the uploads panel
-                and the dashboard already use. */}
-            <button
-              type="button"
-              onClick={() => attachFileRef.current?.click()}
-              className="rounded-md border border-neutral-200 bg-surface px-2.5 py-1.5 text-xs text-neutral-700 hover:bg-neutral-100"
-            >
-              {tr("editor.file")}
-            </button>
-            <label className="hidden">
-              {tr("editor.file")}
+          )}
+          {linkOpen && (
+            <div className="mb-2 flex items-center gap-1.5">
+              <LinkIcon size={13} className="shrink-0 text-neutral-500" />
               <input
-                ref={attachFileRef}
-                type="file"
-                multiple
-                accept={attachableAccept}
-                className="hidden"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files ?? []);
-                  e.target.value = "";
-                  attachFiles(files);
-                }}
+                value={attachUrl}
+                autoFocus
+                onChange={(e) => setAttachUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && /^https?:\/\//i.test(attachUrl.trim())) { e.preventDefault(); fetchLink(); } }}
+                placeholder="https://a-page-to-import…"
+                className="min-w-0 flex-1 rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs outline-none focus:border-brand-400"
               />
-            </label>
-          </div>
-        </div>
-      )}
-
-      {/* Composer, pinned to the bottom. */}
-      <div className="mt-2 shrink-0">
-        <div className="flex items-end gap-1.5 rounded-2xl border border-neutral-300 bg-surface px-2 py-1.5 focus-within:border-brand-400">
-          <button
-            ref={attachToggleRef}
-            onClick={() => setAttachOpen((v) => !v)}
-            title={tr("editor.attach_content_to_build_from_paste_url_or_fi")}
-            aria-label={tr("editor.attach_content")}
-            aria-expanded={attachOpen}
-            className={`mb-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg ${attachOpen || sources.length ? "bg-brand-50 text-brand-ink" : "text-neutral-400 hover:bg-neutral-100"}`}
-          >
-            <Paperclip size={15} />
-          </button>
+              <button
+                disabled={attachBusy || !/^https?:\/\//i.test(attachUrl.trim())}
+                onClick={fetchLink}
+                className="rounded-lg bg-neutral-900 px-2.5 py-1 text-xs font-medium text-surface disabled:opacity-40"
+              >
+                {attachBusy ? tr("editor.fetching") : tr("editor.fetch")}
+              </button>
+              <button onClick={() => { setLinkOpen(false); setAttachUrl(""); }} aria-label={tr("editor.cancel")} className="rounded p-1 text-neutral-500 hover:bg-neutral-100"><X size={12} /></button>
+            </div>
+          )}
           <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => { setInput(e.target.value); autosize(e.currentTarget); }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(); } }}
+            onPaste={onComposerPaste}
             rows={1}
             placeholder={tr("editor.ask_anything")}
             disabled={!aiReady}
-            className="max-h-[140px] flex-1 resize-none bg-transparent py-1 text-sm outline-none placeholder:text-neutral-400 disabled:opacity-50"
+            className="max-h-[160px] w-full resize-none bg-transparent px-1 py-1 text-sm leading-6 outline-none placeholder:text-neutral-400 disabled:opacity-50"
           />
-          <button onClick={() => void send()} disabled={!canSend} title={tr("editor.send_enter")} aria-label={tr("editor.send_enter")} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-600 text-white transition hover:bg-brand-700 disabled:opacity-40">
-            <Send size={15} />
-          </button>
+          <div className="mt-1 flex items-center gap-1">
+            <div className="relative">
+              <button
+                ref={attachToggleRef}
+                onClick={() => setAttachOpen((v) => !v)}
+                title={tr("editor.attach_content_to_build_from_paste_url_or_fi")}
+                aria-label={tr("editor.attach_content")}
+                aria-expanded={attachOpen}
+                aria-haspopup="menu"
+                className={`grid h-7 w-7 place-items-center rounded-full border ${attachOpen ? "border-brand-400 bg-brand-50 text-brand-ink" : "border-neutral-300 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"}`}
+              >
+                <Plus size={15} />
+              </button>
+              {attachOpen && (
+                <div role="menu" className="absolute bottom-9 start-0 z-20 w-60 rounded-xl border border-neutral-200 bg-surface p-1 text-xs text-neutral-700 shadow-lg">
+                  <p className="px-2 py-1 text-[10px] text-neutral-400">
+                    {sources.length
+                      ? tr("editor.attachments_added_of_max", { n: sources.length, max: maxSources })
+                      : tr("editor.attach_up_to_max_sources", { max: maxSources })}
+                  </p>
+                  <button role="menuitem" onClick={() => { setAttachOpen(false); attachFileRef.current?.click(); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-start hover:bg-neutral-100"><Paperclip size={13} /> {tr("editor.add_photos_and_files")}</button>
+                  <button role="menuitem" onClick={() => { setAttachOpen(false); setLinkOpen(true); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-start hover:bg-neutral-100"><LinkIcon size={13} /> {tr("editor.add_a_link")}</button>
+                  <p className="px-2 py-1 text-[10px] text-neutral-400">{tr("editor.paste_to_attach_hint")}</p>
+                  {/* Magic Switch (C30): the whole document re-shaped into
+                      another form, offered where the other tools are. */}
+                  {switchPageCount >= 2 && !pending && (
+                    <>
+                      <p className="mt-1 border-t border-neutral-100 px-2 pb-0.5 pt-1.5 text-[10px] text-neutral-400">{tr("editor.magic_switch")}</p>
+                      {([["doc", tr("editor.switch_to_doc")], ["social", tr("editor.switch_to_social_posts")], ["poster", tr("editor.switch_to_poster")]] as const).map(([k, label]) => (
+                        <button
+                          key={k}
+                          role="menuitem"
+                          onClick={() => { setAttachOpen(false); void execute([{ action: "magicSwitch", args: { designType: k }, status: "planned" }], tr("editor.reshaping_your_content", { form: label })); }}
+                          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-start hover:bg-neutral-100"
+                        >
+                          <Wand2 size={13} /> {label}
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            <input
+              ref={attachFileRef}
+              type="file"
+              multiple
+              accept={`${attachableAccept},${attachableImageAccept}`}
+              className="hidden"
+              aria-label={tr("editor.add_photos_and_files")}
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                e.target.value = "";
+                attachFiles(files);
+              }}
+            />
+            <span className="flex-1" />
+            <button
+              onClick={() => void genVector()}
+              disabled={!input.trim() || busy || !aiReady}
+              title={tr("editor.draw_the_whole_design_as_an_editable_vector")}
+              className="flex items-center gap-1 rounded-full border border-neutral-200 bg-surface px-2 py-0.5 text-[10px] text-neutral-500 hover:border-brand-300 hover:text-brand-ink disabled:opacity-40"
+            >
+              <Spline size={11} /> {tr("editor.vector_design")}
+              <span className="rounded bg-brand-100 px-1 text-[9px] font-medium text-brand-ink">{tr("editor.beta")}</span>
+            </button>
+            <button onClick={() => void send()} disabled={!canSend} title={tr("editor.send_enter")} aria-label={tr("editor.send_enter")} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-600 text-white transition hover:bg-brand-700 disabled:opacity-40">
+              <Send size={15} />
+            </button>
+          </div>
         </div>
-        <div className="mt-1 flex items-center justify-between px-1">
-          <p className="text-[10px] text-neutral-400">{tr("editor.enter_to_send_shift_enter_for_a_new_line")}</p>
-          <button
-            onClick={() => void genVector()}
-            disabled={!canSend}
-            title={tr("editor.draw_the_whole_design_as_an_editable_vector")}
-            className="flex items-center gap-1 rounded-full border border-neutral-200 bg-surface px-2 py-0.5 text-[10px] text-neutral-500 hover:border-brand-300 hover:text-brand-ink disabled:opacity-40"
-          >
-            <Spline size={11} /> {tr("editor.vector_design")}
-            <span className="rounded bg-brand-100 px-1 text-[9px] font-medium text-brand-ink">{tr("editor.beta")}</span>
-          </button>
-        </div>
+        <p className="mt-1 px-2 text-[10px] text-neutral-400">{tr("editor.enter_to_send_shift_enter_for_a_new_line")}</p>
       </div>
     </div>
   );
@@ -5144,7 +5906,7 @@ export function PolishPanel() {
 // loads, so these only need the ids, URL flags, and defaults to stay usable.
 const FALLBACK_PRESETS: AiProviderPreset[] = [
   { id: "openai", label: "OpenAI", baseUrl: "", defaultModel: "gpt-4o-mini", defaultImageModel: "dall-e-3", capabilities: { text: true, image: true, describeImage: true, editImage: true } },
-  { id: "anthropic", label: "Anthropic (Claude)", baseUrl: "", defaultModel: "claude-opus-4-8", capabilities: { text: true, image: false, describeImage: true, editImage: false } },
+  { id: "anthropic", label: "Anthropic (Claude)", baseUrl: "", defaultModel: "claude-opus-5", capabilities: { text: true, image: false, describeImage: true, editImage: false } },
   { id: "deepseek", label: "DeepSeek", baseUrl: "", defaultModel: "deepseek-chat", capabilities: { text: true, image: false, describeImage: false, editImage: false } },
   { id: "moonshot", label: "Moonshot (Kimi)", baseUrl: "", defaultModel: "kimi-latest", capabilities: { text: true, image: false, describeImage: true, editImage: false } },
   { id: "zhipu", label: "Zhipu AI (GLM)", baseUrl: "", defaultModel: "glm-4.6", defaultImageModel: "cogview-4-250304", capabilities: { text: true, image: true, describeImage: false, editImage: false } },
@@ -5163,7 +5925,7 @@ const FALLBACK_PRESETS: AiProviderPreset[] = [
 // self-host binary swap.
 let providerCatalogCache: AiProviderPreset[] | null = null;
 
-export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
+export function AiPanel({ workspaceId, designId = null }: { workspaceId: string | null; designId?: string | null }) {
   // Re-render when the doc changes so the brand-voice indicator stays current.
   useEditor((s) => s.rev);
   // The active design's brand voice, already loaded by EditorApp via
@@ -5189,6 +5951,48 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
     const body = byRole("body") ?? byRole("text") ?? byRole("para") ?? fonts[fonts.length - 1]?.fontFamily;
     return { heading, body };
   }, [brandFontList]);
+  // The brand's primary logo, with the URL its asset serves at, so a
+  // generated deck carries it on every page. The kit stores only the asset id;
+  // the workspace's asset list supplies the URL, fetched once per kit change.
+  const brandLogos = useBrand((s) => s.kit?.logos ?? null);
+  const firstLogoAssetId = brandLogos?.[0]?.assetId ?? null;
+  const firstLogoMinSize = brandLogos?.[0]?.minSizePx;
+  const firstLogoDarkId = brandLogos?.[0]?.variants?.dark ?? null;
+  // The resolved URL (and the picture's aspect, once it has loaded) is keyed
+  // by the asset it belongs to, so a kit change invalidates it at render time
+  // (the key no longer matches) with no synchronous state write in the effect.
+  const [resolvedLogo, setResolvedLogo] = useState<{ assetId: string; url: string; aspect?: number; dark?: { assetId: string; url: string; aspect?: number } } | null>(null);
+  useEffect(() => {
+    if (!workspaceId || !firstLogoAssetId) return;
+    let cancelled = false;
+    oc.listAssets(workspaceId)
+      .then((assets) => {
+        if (cancelled) return;
+        const list = assets as UploadedAsset[];
+        const hit = list.find((a) => a.id === firstLogoAssetId);
+        if (!hit?.url) return;
+        // The dark-ground version rides along when the kit names one and the
+        // asset still exists.
+        const darkHit = firstLogoDarkId ? list.find((a) => a.id === firstLogoDarkId) : undefined;
+        const dark = darkHit?.url ? { assetId: darkHit.id, url: darkHit.url } : undefined;
+        setResolvedLogo({ assetId: hit.id, url: hit.url, ...(dark ? { dark } : {}) });
+        // The box the composer fits the logo into should match the picture,
+        // so it sits on the margin instead of centered in a guessed box.
+        if (typeof Image !== "undefined") {
+          const measure = (url: string, apply: (aspect: number) => void) => {
+            const img = new Image();
+            img.onload = () => { if (!cancelled && img.naturalWidth > 0 && img.naturalHeight > 0) apply(img.naturalWidth / img.naturalHeight); };
+            img.src = resolveAssetUrl(url);
+          };
+          measure(hit.url, (aspect) => setResolvedLogo((cur) => (cur && cur.assetId === hit.id ? { ...cur, aspect } : cur)));
+          if (dark) measure(dark.url, (aspect) => setResolvedLogo((cur) => (cur && cur.assetId === hit.id && cur.dark ? { ...cur, dark: { ...cur.dark, aspect } } : cur)));
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [workspaceId, firstLogoAssetId, firstLogoDarkId]);
+  const brandLogo: DeckLogo | null =
+    firstLogoAssetId && resolvedLogo?.assetId === firstLogoAssetId ? { ...resolvedLogo, ...(firstLogoMinSize ? { minSizePx: firstLogoMinSize } : {}) } : null;
   // Let the user bypass brand-voice grounding for the very next action.
   const [ignoreVoice, setIgnoreVoice] = useState(false);
   const voiceClause = !ignoreVoice ? brandVoiceClause(brandVoice) : "";
@@ -5268,6 +6072,8 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   // generated designs). DeepSeek/Anthropic are text-only; OpenAI/custom can.
   const imageCapable = !!config?.capabilities?.image;
   const editImageCapable = !!config?.capabilities?.editImage;
+  // Whether the provider can read images: gates the look at a fresh deck.
+  const visionCapable = !!config?.capabilities?.describeImage;
 
   return (
     <PanelShell title="AI" fill={chatView} roomy>
@@ -5373,7 +6179,7 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
           {/* Single conversational surface: one thread plans and applies every
               capability (write, image, whole-design, restyle, chart, critique).
               The model routes the intent to the right tool from the catalog. */}
-          <AssistantPanel workspaceId={workspaceId} aiReady voiceClause={voiceClause} brandPalette={brandPalette} brandFonts={brandFonts} imageCapable={imageCapable} editImageCapable={editImageCapable} />
+          <AssistantPanel workspaceId={workspaceId} designId={designId} aiReady voiceClause={voiceClause} brandPalette={brandPalette} brandFonts={brandFonts} brandLogo={brandLogo} imageCapable={imageCapable} editImageCapable={editImageCapable} visionCapable={visionCapable} />
         </div>
       )}
     </PanelShell>

@@ -1,5 +1,4 @@
 {
- "kind": "deck-outline",
  "id": "deck-conference-talk",
  "title": "Conference Talk",
  "categories": [
@@ -13,63 +12,2801 @@
   "tech"
  ],
  "styleTags": [
-  "dark",
-  "tech"
+  "bold",
+  "poster",
+  "dark"
  ],
- "themeId": "theme-neon",
  "size": [
   1920,
   1080
  ],
- "rank": 84,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Anton",
+   "weight": 400
+  },
+  {
+   "role": "body",
+   "family": "Geist",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Covered By Your Grace",
+   "weight": 400
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#151515",
+      0
+     ],
+     [
+      "#000000",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1620,
+     "y": -120,
+     "w": 300,
+     "h": 300,
+     "fill": "#E9FF33",
+     "bleed": true,
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 1822,
+     "y": 370,
+     "w": 7,
+     "h": 7,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1305,
+     "y": 36,
+     "w": 8,
+     "h": 8,
+     "fill": "#E9FF33",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1740,
+     "y": 606,
+     "w": 6,
+     "h": 6,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1666,
+     "y": 43,
+     "w": 8,
+     "h": 8,
+     "fill": "#E9FF33",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1593,
+     "y": 678,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9FF33",
+     "opacity": 0.38999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1172,
+     "y": 339,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1846,
+     "y": 617,
+     "w": 4,
+     "h": 4,
+     "fill": "#E9FF33",
+     "opacity": 0.53
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#E9FF33",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Nova Systems",
+     "family": "Geist",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 57,
+     "text": "one idea, defended",
+     "family": "Covered By Your Grace",
+     "size": 44,
+     "weight": 400,
+     "color": "#E9FF33",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 262,
+     "text": "Make the platform\nboring",
+     "family": "Anton",
+     "size": 120,
+     "weight": 400,
+     "color": "#FFFFFF",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 738,
+     "w": 900,
+     "h": 80,
+     "text": "One idea, defended: the best platform team is the one nobody talks about. Eighteen months of getting there.",
+     "family": "Geist",
+     "size": 28,
+     "weight": 400,
+     "color": "#A9A9A9",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Tomas Reyes, Engineering Lead  ·  PlatformConf 2026",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#A9A9A9",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 10",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#A9A9A9",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#1F1F1F",
+     "radius": 0,
+     "stroke": "#2E2E2E",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "18",
+     "family": "Anton",
+     "size": 26,
+     "weight": 400,
+     "color": "#E9FF33",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 246,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "months",
+     "family": "Geist",
+     "size": 16,
+     "weight": 500,
+     "color": "#A9A9A9",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 396,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#1F1F1F",
+     "radius": 0,
+     "stroke": "#2E2E2E",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 416,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "3",
+     "family": "Anton",
+     "size": 26,
+     "weight": 400,
+     "color": "#E9FF33",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 546,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "failures",
+     "family": "Geist",
+     "size": 16,
+     "weight": 500,
+     "color": "#A9A9A9",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 696,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#1F1F1F",
+     "radius": 0,
+     "stroke": "#2E2E2E",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "1",
+     "family": "Anton",
+     "size": 26,
+     "weight": 400,
+     "color": "#E9FF33",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 846,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "idea",
+     "family": "Geist",
+     "size": 16,
+     "weight": 500,
+     "color": "#A9A9A9",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 170,
+     "w": 700,
+     "h": 700,
+     "fill": "#E9FF33",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1220,
+     "y": 240,
+     "w": 560,
+     "h": 560,
+     "fill": "#E9FF33",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 878,
+     "w": 720,
+     "h": 46,
+     "text": "the on-call phone has not rung since March",
+     "family": "Covered By Your Grace",
+     "size": 37,
+     "weight": 400,
+     "color": "#E9FF33",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day22-owl",
+     "x": 1210,
+     "y": 230,
+     "w": 580,
+     "h": 580,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "The claim",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#151515",
+      0
+     ],
+     [
+      "#000000",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1620,
+     "y": -120,
+     "w": 300,
+     "h": 300,
+     "fill": "#E9FF33",
+     "bleed": true,
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 1822,
+     "y": 370,
+     "w": 7,
+     "h": 7,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1305,
+     "y": 36,
+     "w": 8,
+     "h": 8,
+     "fill": "#E9FF33",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1740,
+     "y": 606,
+     "w": 6,
+     "h": 6,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1666,
+     "y": 43,
+     "w": 8,
+     "h": 8,
+     "fill": "#E9FF33",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1172,
+     "y": 339,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1846,
+     "y": 617,
+     "w": 4,
+     "h": 4,
+     "fill": "#E9FF33",
+     "opacity": 0.53
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 84,
+     "w": 900,
+     "h": 30,
+     "text": "@tomasreyes  ·  PlatformConf 2026",
+     "family": "Geist",
+     "size": 22,
+     "weight": 600,
+     "color": "#E9FF33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 160,
+     "w": 1728,
+     "h": 204,
+     "text": "The best platform team\nis the one",
+     "family": "Anton",
+     "size": 96,
+     "weight": 400,
+     "color": "#FFFFFF",
+     "lineHeight": 1,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 384,
+     "w": 1728,
+     "h": 557,
+     "text": "nobody\ntalks about.",
+     "family": "Anton",
+     "size": 290,
+     "weight": 400,
+     "color": "#E9FF33",
+     "lineHeight": 0.92,
+     "upper": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#2E2E2E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Talk: the boring platform",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#A9A9A9",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 10",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#A9A9A9",
+     "lineHeight": 1.3,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Statement",
+   "bg": "#E9FF33",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1740,
+     "y": -140,
+     "w": 260,
+     "h": 260,
+     "fill": "#0B0B0B",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#C4D91C"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Talk: the boring platform",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 10",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 57,
+     "text": "one idea, defended",
+     "family": "Covered By Your Grace",
+     "size": 44,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 307,
+     "w": 120,
+     "h": 6,
+     "fill": "#0B0B0B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 353,
+     "w": 1560,
+     "h": 292,
+     "text": "Every platform team we know is proud of the incident it handled well. We wanted to be proud of the one that never happened.",
+     "family": "Anton",
+     "size": 84,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 685,
+     "w": 1000,
+     "h": 32,
+     "text": "The problem everyone in this room has",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 912,
+     "w": 760,
+     "h": 44,
+     "text": "hands up if you have a war room channel",
+     "family": "Covered By Your Grace",
+     "size": 35,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#E9FF33",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1740,
+     "y": -140,
+     "w": 260,
+     "h": 260,
+     "fill": "#0B0B0B",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "What we tried",
+     "family": "Geist",
+     "size": 20,
+     "weight": 600,
+     "color": "#0B0B0B",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 83,
+     "text": "The failures that taught us",
+     "family": "Anton",
+     "size": 68,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#C4D91C"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Talk: the boring platform",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 10",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 251,
+     "w": 560,
+     "h": 580,
+     "fill": "#F3FF99",
+     "radius": 0,
+     "stroke": "#C4D91C",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 251,
+     "w": 560,
+     "h": 6,
+     "fill": "#0B0B0B",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 299,
+     "w": 80,
+     "h": 80,
+     "fill": "#c5ce7d"
+    },
+    {
+     "kind": "icon",
+     "icon": "presentation",
+     "x": 156,
+     "y": 319,
+     "w": 40,
+     "h": 40,
+     "color": "#0B0B0B"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 415,
+     "w": 480,
+     "h": 100,
+     "text": "More dashboards",
+     "family": "Anton",
+     "size": 34,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 527,
+     "w": 480,
+     "h": 160,
+     "text": "We built forty. Nobody looked at thirty-eight of them. A dashboard is a question somebody asked once.",
+     "family": "Geist",
+     "size": 22,
+     "weight": 400,
+     "color": "#3F4712",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 747,
+     "w": 480,
+     "h": 1,
+     "fill": "#C4D91C"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 771,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 251,
+     "w": 560,
+     "h": 580,
+     "fill": "#F3FF99",
+     "radius": 0,
+     "stroke": "#C4D91C",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 251,
+     "w": 560,
+     "h": 6,
+     "fill": "#4A5600",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 299,
+     "w": 80,
+     "h": 80,
+     "fill": "#d1dd7a"
+    },
+    {
+     "kind": "icon",
+     "icon": "bell",
+     "x": 740,
+     "y": 319,
+     "w": 40,
+     "h": 40,
+     "color": "#4A5600"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 415,
+     "w": 480,
+     "h": 100,
+     "text": "More alerts",
+     "family": "Anton",
+     "size": 34,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 527,
+     "w": 480,
+     "h": 160,
+     "text": "We doubled them. On-call muted half within a month. Volume is not signal.",
+     "family": "Geist",
+     "size": 22,
+     "weight": 400,
+     "color": "#3F4712",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 747,
+     "w": 480,
+     "h": 1,
+     "fill": "#C4D91C"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 771,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 251,
+     "w": 560,
+     "h": 580,
+     "fill": "#F3FF99",
+     "radius": 0,
+     "stroke": "#C4D91C",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 251,
+     "w": 560,
+     "h": 6,
+     "fill": "#0B0B0B",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 299,
+     "w": 80,
+     "h": 80,
+     "fill": "#c5ce7d"
+    },
+    {
+     "kind": "icon",
+     "icon": "flame",
+     "x": 1324,
+     "y": 319,
+     "w": 40,
+     "h": 40,
+     "color": "#0B0B0B"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 415,
+     "w": 480,
+     "h": 100,
+     "text": "A war room",
+     "family": "Anton",
+     "size": 34,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 527,
+     "w": 480,
+     "h": 160,
+     "text": "We staffed one for a quarter. It made incidents feel handled and did nothing to make them rarer.",
+     "family": "Geist",
+     "size": 22,
+     "weight": 400,
+     "color": "#3F4712",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 747,
+     "w": 480,
+     "h": 1,
+     "fill": "#C4D91C"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 771,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 912,
+     "w": 760,
+     "h": 44,
+     "text": "forty dashboards. we counted twice.",
+     "family": "Covered By Your Grace",
+     "size": 35,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Quote",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#151515",
+      0
+     ],
+     [
+      "#000000",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1620,
+     "y": -120,
+     "w": 300,
+     "h": 300,
+     "fill": "#E9FF33",
+     "bleed": true,
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 1822,
+     "y": 370,
+     "w": 7,
+     "h": 7,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1305,
+     "y": 36,
+     "w": 8,
+     "h": 8,
+     "fill": "#E9FF33",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1740,
+     "y": 606,
+     "w": 6,
+     "h": 6,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1666,
+     "y": 43,
+     "w": 8,
+     "h": 8,
+     "fill": "#E9FF33",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1593,
+     "y": 678,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9FF33",
+     "opacity": 0.38999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1172,
+     "y": 339,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1846,
+     "y": 617,
+     "w": 4,
+     "h": 4,
+     "fill": "#E9FF33",
+     "opacity": 0.53
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#2E2E2E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Talk: the boring platform",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#A9A9A9",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 10",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#A9A9A9",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 260,
+     "h": 260,
+     "text": "“",
+     "family": "Anton",
+     "size": 280,
+     "weight": 400,
+     "color": "#E9FF33",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 400,
+     "w": 1400,
+     "h": 236,
+     "text": "I muted half the alerts in month two.\nNobody noticed for a quarter.\nThat was the day we knew.",
+     "family": "Anton",
+     "size": 58,
+     "weight": 400,
+     "color": "#FFFFFF",
+     "lineHeight": 1.26
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 116,
+     "y": 696,
+     "w": 84,
+     "h": 84,
+     "fill": "#2A2A2A"
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 704,
+     "w": 800,
+     "h": 32,
+     "text": "Ana Ferreira",
+     "family": "Geist",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 740,
+     "w": 800,
+     "h": 28,
+     "text": "On-call engineer, Nova Systems. Said at the retro that started all of this.",
+     "family": "Geist",
+     "size": 20,
+     "weight": 400,
+     "color": "#A9A9A9",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 878,
+     "w": 720,
+     "h": 46,
+     "text": "we kept the quote and deleted the alerts",
+     "family": "Covered By Your Grace",
+     "size": 37,
+     "weight": 400,
+     "color": "#E9FF33",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "op-peep-77",
+     "x": 128,
+     "y": 704,
+     "w": 60,
+     "h": 68
+    }
+   ]
+  },
+  {
+   "name": "Process",
+   "bg": "#E9FF33",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1740,
+     "y": -140,
+     "w": 260,
+     "h": 260,
+     "fill": "#0B0B0B",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "What worked",
+     "family": "Geist",
+     "size": 20,
+     "weight": 600,
+     "color": "#0B0B0B",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 83,
+     "text": "The approach, step by step",
+     "family": "Anton",
+     "size": 68,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#C4D91C"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Talk: the boring platform",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 10",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 281,
+     "w": 88,
+     "h": 88,
+     "fill": "#0B0B0B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 281,
+     "w": 88,
+     "h": 88,
+     "text": "1",
+     "family": "Anton",
+     "size": 34,
+     "weight": 400,
+     "color": "#FFFFFF",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 200,
+     "y": 324,
+     "w": 322,
+     "h": 2,
+     "fill": "#C4D91C"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 413,
+     "w": 402,
+     "h": 44,
+     "text": "One timeline",
+     "family": "Anton",
+     "size": 32,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 467,
+     "w": 378,
+     "h": 150,
+     "text": "Every change and every alert in one place. The first week, three incidents explained themselves.",
+     "family": "Geist",
+     "size": 21,
+     "weight": 400,
+     "color": "#3F4712",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 538,
+     "y": 281,
+     "w": 88,
+     "h": 88,
+     "fill": "#151515"
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 281,
+     "w": 88,
+     "h": 88,
+     "text": "2",
+     "family": "Anton",
+     "size": 34,
+     "weight": 400,
+     "color": "#FFFFFF",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 642,
+     "y": 324,
+     "w": 322,
+     "h": 2,
+     "fill": "#C4D91C"
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 413,
+     "w": 402,
+     "h": 44,
+     "text": "Ten alerts",
+     "family": "Anton",
+     "size": 32,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 467,
+     "w": 378,
+     "h": 150,
+     "text": "We kept the ten that had ever paged for a real cause and deleted the rest. Pages fell by 70%.",
+     "family": "Geist",
+     "size": 21,
+     "weight": 400,
+     "color": "#3F4712",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 980,
+     "y": 281,
+     "w": 88,
+     "h": 88,
+     "fill": "#151515"
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 281,
+     "w": 88,
+     "h": 88,
+     "text": "3",
+     "family": "Anton",
+     "size": 34,
+     "weight": 400,
+     "color": "#FFFFFF",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1084,
+     "y": 324,
+     "w": 322,
+     "h": 2,
+     "fill": "#C4D91C"
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 413,
+     "w": 402,
+     "h": 44,
+     "text": "Change budgets",
+     "family": "Anton",
+     "size": 32,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 467,
+     "w": 378,
+     "h": 150,
+     "text": "Any service over its error budget stops deploying until it is back. Nobody argued after the second month.",
+     "family": "Geist",
+     "size": 21,
+     "weight": 400,
+     "color": "#3F4712",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1422,
+     "y": 281,
+     "w": 88,
+     "h": 88,
+     "fill": "#151515"
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 281,
+     "w": 88,
+     "h": 88,
+     "text": "4",
+     "family": "Anton",
+     "size": 34,
+     "weight": 400,
+     "color": "#FFFFFF",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 413,
+     "w": 402,
+     "h": 44,
+     "text": "Narratives, not reviews",
+     "family": "Anton",
+     "size": 32,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 467,
+     "w": 378,
+     "h": 150,
+     "text": "The timeline writes the first paragraph. The review became a conversation instead of a blank page.",
+     "family": "Geist",
+     "size": 21,
+     "weight": 400,
+     "color": "#3F4712",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 868,
+     "w": 760,
+     "h": 88,
+     "text": "the order matters. the timeline pays for the rest.",
+     "family": "Covered By Your Grace",
+     "size": 35,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Figures",
+   "bg": "#E9FF33",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1740,
+     "y": -140,
+     "w": 260,
+     "h": 260,
+     "fill": "#0B0B0B",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The evidence",
+     "family": "Geist",
+     "size": 20,
+     "weight": 600,
+     "color": "#0B0B0B",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 83,
+     "text": "The numbers from production",
+     "family": "Anton",
+     "size": 68,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#C4D91C"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Talk: the boring platform",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 10",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 251,
+     "w": 414,
+     "h": 560,
+     "fill": "#F3FF99",
+     "radius": 0,
+     "stroke": "#C4D91C",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 251,
+     "w": 414,
+     "h": 6,
+     "fill": "#0B0B0B",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 307,
+     "w": 342,
+     "h": 128,
+     "text": "−70%",
+     "family": "Anton",
+     "size": 112,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 447,
+     "w": 342,
+     "h": 34,
+     "text": "Pages per week",
+     "family": "Geist",
+     "size": 24,
+     "weight": 600,
+     "color": "#0B0B0B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 132,
+     "y": 501,
+     "w": 190,
+     "h": 40,
+     "label": "18 months",
+     "fill": "#c9d37f",
+     "color": "#0B0B0B",
+     "family": "Geist",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 571,
+     "w": 342,
+     "h": 140,
+     "text": "From 41 to 12, with three times the services.",
+     "family": "Geist",
+     "size": 20,
+     "weight": 400,
+     "color": "#3F4712",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 251,
+     "w": 414,
+     "h": 560,
+     "fill": "#F3FF99",
+     "radius": 0,
+     "stroke": "#C4D91C",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 251,
+     "w": 414,
+     "h": 6,
+     "fill": "#4A5600",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 307,
+     "w": 342,
+     "h": 128,
+     "text": "9 min",
+     "family": "Anton",
+     "size": 112,
+     "weight": 400,
+     "color": "#4A5600",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 447,
+     "w": 342,
+     "h": 34,
+     "text": "Median time to cause",
+     "family": "Geist",
+     "size": 24,
+     "weight": 600,
+     "color": "#0B0B0B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 570,
+     "y": 501,
+     "w": 190,
+     "h": 40,
+     "label": "Was 52",
+     "fill": "#d5e17d",
+     "color": "#4A5600",
+     "family": "Geist",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 571,
+     "w": 342,
+     "h": 140,
+     "text": "Measured from the first alert to the change named in the channel.",
+     "family": "Geist",
+     "size": 20,
+     "weight": 400,
+     "color": "#3F4712",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 251,
+     "w": 414,
+     "h": 560,
+     "fill": "#F3FF99",
+     "radius": 0,
+     "stroke": "#C4D91C",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 251,
+     "w": 414,
+     "h": 6,
+     "fill": "#0B0B0B",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 307,
+     "w": 342,
+     "h": 128,
+     "text": "99.97%",
+     "family": "Anton",
+     "size": 89.60000000000001,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 447,
+     "w": 342,
+     "h": 34,
+     "text": "Uptime",
+     "family": "Geist",
+     "size": 24,
+     "weight": 600,
+     "color": "#0B0B0B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1008,
+     "y": 501,
+     "w": 190,
+     "h": 40,
+     "label": "Was 99.6%",
+     "fill": "#c9d37f",
+     "color": "#0B0B0B",
+     "family": "Geist",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 571,
+     "w": 342,
+     "h": 140,
+     "text": "Twelve months, every customer-facing service.",
+     "family": "Geist",
+     "size": 20,
+     "weight": 400,
+     "color": "#3F4712",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 251,
+     "w": 414,
+     "h": 560,
+     "fill": "#F3FF99",
+     "radius": 0,
+     "stroke": "#C4D91C",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 251,
+     "w": 414,
+     "h": 6,
+     "fill": "#4A5600",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 307,
+     "w": 342,
+     "h": 128,
+     "text": "0",
+     "family": "Anton",
+     "size": 112,
+     "weight": 400,
+     "color": "#4A5600",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 447,
+     "w": 342,
+     "h": 34,
+     "text": "Weekend deploys",
+     "family": "Geist",
+     "size": 24,
+     "weight": 600,
+     "color": "#0B0B0B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1446,
+     "y": 501,
+     "w": 190,
+     "h": 40,
+     "label": "Was 14 a month",
+     "fill": "#d5e17d",
+     "color": "#4A5600",
+     "family": "Geist",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 571,
+     "w": 342,
+     "h": 140,
+     "text": "Nobody misses them.",
+     "family": "Geist",
+     "size": 20,
+     "weight": 400,
+     "color": "#3F4712",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 868,
+     "w": 760,
+     "h": 88,
+     "text": "twelve months, every customer-facing service, no rounding",
+     "family": "Covered By Your Grace",
+     "size": 35,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Section",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#151515",
+      0
+     ],
+     [
+      "#000000",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1620,
+     "y": -120,
+     "w": 300,
+     "h": 300,
+     "fill": "#E9FF33",
+     "bleed": true,
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 1822,
+     "y": 370,
+     "w": 7,
+     "h": 7,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1305,
+     "y": 36,
+     "w": 8,
+     "h": 8,
+     "fill": "#E9FF33",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1740,
+     "y": 606,
+     "w": 6,
+     "h": 6,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1666,
+     "y": 43,
+     "w": 8,
+     "h": 8,
+     "fill": "#E9FF33",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1593,
+     "y": 678,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9FF33",
+     "opacity": 0.38999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1172,
+     "y": 339,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1846,
+     "y": 617,
+     "w": 4,
+     "h": 4,
+     "fill": "#E9FF33",
+     "opacity": 0.53
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 330,
+     "w": 120,
+     "h": 4,
+     "fill": "#E9FF33"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 358,
+     "w": 1100,
+     "h": 212,
+     "text": "What to do\nMonday",
+     "family": "Anton",
+     "size": 96,
+     "weight": 400,
+     "color": "#FFFFFF",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 590,
+     "w": 900,
+     "h": 90,
+     "text": "Three things, none of them a dashboard. Each one fits in a morning, and the first one is free.",
+     "family": "Geist",
+     "size": 28,
+     "weight": 400,
+     "color": "#A9A9A9",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1240,
+     "y": 280,
+     "w": 560,
+     "h": 560,
+     "fill": "#E9FF33",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1296,
+     "y": 336,
+     "w": 448,
+     "h": 448,
+     "fill": "#E9FF33",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 1000,
+     "h": 50,
+     "text": "the part you can take home",
+     "family": "Covered By Your Grace",
+     "size": 44,
+     "weight": 400,
+     "color": "#E9FF33",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#2E2E2E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Talk: the boring platform",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#A9A9A9",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "08 / 10",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#A9A9A9",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 831,
+     "w": 720,
+     "h": 93,
+     "text": "start with the timeline. it pays for the other two.",
+     "family": "Covered By Your Grace",
+     "size": 37,
+     "weight": 400,
+     "color": "#E9FF33",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day13-it-girl",
+     "x": 1200,
+     "y": 380,
+     "w": 640,
+     "h": 400,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#E9FF33",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1740,
+     "y": -140,
+     "w": 260,
+     "h": 260,
+     "fill": "#0B0B0B",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "What you should do Monday",
+     "family": "Geist",
+     "size": 20,
+     "weight": 600,
+     "color": "#0B0B0B",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 83,
+     "text": "Three things to try this week",
+     "family": "Anton",
+     "size": 68,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#C4D91C"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Talk: the boring platform",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "09 / 10",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 251,
+     "w": 560,
+     "h": 580,
+     "fill": "#F3FF99",
+     "radius": 0,
+     "stroke": "#C4D91C",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 251,
+     "w": 560,
+     "h": 6,
+     "fill": "#0B0B0B",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 299,
+     "w": 80,
+     "h": 80,
+     "fill": "#c5ce7d"
+    },
+    {
+     "kind": "icon",
+     "icon": "clock",
+     "x": 156,
+     "y": 319,
+     "w": 40,
+     "h": 40,
+     "color": "#0B0B0B"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 415,
+     "w": 480,
+     "h": 100,
+     "text": "Build the timeline",
+     "family": "Anton",
+     "size": 34,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 527,
+     "w": 480,
+     "h": 160,
+     "text": "Even a shared channel where every deploy and every alert is posted. Read it backwards at the next incident.",
+     "family": "Geist",
+     "size": 22,
+     "weight": 400,
+     "color": "#3F4712",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 747,
+     "w": 480,
+     "h": 1,
+     "fill": "#C4D91C"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 771,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 251,
+     "w": 560,
+     "h": 580,
+     "fill": "#F3FF99",
+     "radius": 0,
+     "stroke": "#C4D91C",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 251,
+     "w": 560,
+     "h": 6,
+     "fill": "#4A5600",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 299,
+     "w": 80,
+     "h": 80,
+     "fill": "#d1dd7a"
+    },
+    {
+     "kind": "icon",
+     "icon": "bell",
+     "x": 740,
+     "y": 319,
+     "w": 40,
+     "h": 40,
+     "color": "#4A5600"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 415,
+     "w": 480,
+     "h": 100,
+     "text": "Delete an alert",
+     "family": "Anton",
+     "size": 34,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 527,
+     "w": 480,
+     "h": 160,
+     "text": "Find one that has never paged for a real cause. Delete it. Tell the team why. Repeat on Tuesday.",
+     "family": "Geist",
+     "size": 22,
+     "weight": 400,
+     "color": "#3F4712",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 747,
+     "w": 480,
+     "h": 1,
+     "fill": "#C4D91C"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 771,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 251,
+     "w": 560,
+     "h": 580,
+     "fill": "#F3FF99",
+     "radius": 0,
+     "stroke": "#C4D91C",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 251,
+     "w": 560,
+     "h": 6,
+     "fill": "#0B0B0B",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 299,
+     "w": 80,
+     "h": 80,
+     "fill": "#c5ce7d"
+    },
+    {
+     "kind": "icon",
+     "icon": "pencil",
+     "x": 1324,
+     "y": 319,
+     "w": 40,
+     "h": 40,
+     "color": "#0B0B0B"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 415,
+     "w": 480,
+     "h": 100,
+     "text": "Write the narrative first",
+     "family": "Anton",
+     "size": 34,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 527,
+     "w": 480,
+     "h": 160,
+     "text": "At the next incident, write what happened in three sentences before the review meeting. Watch the meeting get shorter.",
+     "family": "Geist",
+     "size": 22,
+     "weight": 400,
+     "color": "#3F4712",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 747,
+     "w": 480,
+     "h": 1,
+     "fill": "#C4D91C"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 771,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#3F4712",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 912,
+     "w": 760,
+     "h": 44,
+     "text": "if you only do one, delete the alert",
+     "family": "Covered By Your Grace",
+     "size": 35,
+     "weight": 400,
+     "color": "#0B0B0B",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#151515",
+      0
+     ],
+     [
+      "#000000",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1620,
+     "y": -120,
+     "w": 300,
+     "h": 300,
+     "fill": "#E9FF33",
+     "bleed": true,
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 1822,
+     "y": 370,
+     "w": 7,
+     "h": 7,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1305,
+     "y": 36,
+     "w": 8,
+     "h": 8,
+     "fill": "#E9FF33",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1740,
+     "y": 606,
+     "w": 6,
+     "h": 6,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1666,
+     "y": 43,
+     "w": 8,
+     "h": 8,
+     "fill": "#E9FF33",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1593,
+     "y": 678,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9FF33",
+     "opacity": 0.38999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1172,
+     "y": 339,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9FF33",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1846,
+     "y": 617,
+     "w": 4,
+     "h": 4,
+     "fill": "#E9FF33",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#E9FF33",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#E9FF33",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#E9FF33",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Nova Systems",
+     "family": "Geist",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 57,
+     "text": "go and make something boring",
+     "family": "Covered By Your Grace",
+     "size": 44,
+     "weight": 400,
+     "color": "#E9FF33",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 142,
+     "text": "Thank you",
+     "family": "Anton",
+     "size": 120,
+     "weight": 400,
+     "color": "#FFFFFF",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 476,
+     "w": 940,
+     "h": 120,
+     "text": "Slides, the alert audit template and the timeline setup guide are at the link. Find me at the platform track table.",
+     "family": "Geist",
+     "size": 28,
+     "weight": 400,
+     "color": "#A9A9A9",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "world",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#E9FF33"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "novasystems.example/boring",
+     "family": "Geist",
+     "size": 24,
+     "weight": 500,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#E9FF33"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "tomas@novasystems.example",
+     "family": "Geist",
+     "size": 24,
+     "weight": 500,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#E9FF33"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "@tomasreyes",
+     "family": "Geist",
+     "size": 24,
+     "weight": 500,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Get the slides",
+     "fill": "#E9FF33",
+     "color": "#0B0B0B",
+     "family": "Geist",
+     "size": 22,
+     "weight": 700,
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "10 / 10",
+     "family": "Geist",
+     "size": 18,
+     "weight": 500,
+     "color": "#A9A9A9",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 878,
+     "w": 720,
+     "h": 46,
+     "text": "I will be the calm one at the table",
+     "family": "Covered By Your Grace",
+     "size": 37,
+     "weight": 400,
+     "color": "#E9FF33",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-relaxing",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n11",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n12",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n13",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p1-n7",
+   "kind": "text",
+   "label": "Speaker handle",
+   "hint": "Your handle, and the event"
+  },
+  {
+   "node": "p1-n8",
+   "kind": "text",
+   "label": "The claim, up to the turn",
+   "hint": "The sentence, stopping where the surprise starts"
+  },
+  {
+   "node": "p1-n9",
+   "kind": "text",
+   "label": "The claim, the turn",
+   "hint": "The words you want them to leave with, two short lines"
+  },
+  {
+   "node": "p9-n16",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p9-n18",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p9-n20",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Conference Talk",
-  "theme": "punchy, story-driven",
-  "pages": [
-   {
-    "title": "The claim",
-    "points": [
-     "The one idea this talk defends"
-    ],
-    "visualRole": "cover",
-    "note": "State the claim, then make them doubt it before you prove it."
-   },
-   {
-    "title": "The problem everyone has",
-    "points": [
-     "The pain the room recognizes"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "What we tried",
-    "points": [
-     "The failures that taught us"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "What worked",
-    "points": [
-     "The approach, step by step"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "The evidence",
-    "points": [
-     "The numbers from production"
-    ],
-    "visualRole": "data"
-   },
-   {
-    "title": "What you should do Monday",
-    "points": [
-     "Three things to try this week"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 84
 }

@@ -168,4 +168,4 @@ Remaining:
 
 ## Editor parity backlog
 
-The editor closed every audited capability gap: all 56 tracked items ship, and the one deliberately out-of-scope item (semantic/embedding element search) is not planned. The completed, code-audited record is archived at [`../shipped/editor-parity-backlog.md`](../shipped/editor-parity-backlog.md). Start a fresh backlog if new capability gaps surface.
+The editor closed every audited capability gap: all 56 tracked items ship, and the one deliberately out-of-scope item (semantic/embedding element search) is not planned. The completed, code-audited record is archived at [`../shipped/editor-parity-backlog.md`](../shipped/editor-parity-backlog.md). Start a fresh backlog if new capability gaps surface. Ergonomics found in hands-on use (rulers, alignment, brand colours, layers) are tracked in [`editor-ergonomics-backlog.md`](editor-ergonomics-backlog.md).

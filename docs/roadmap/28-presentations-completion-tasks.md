@@ -57,6 +57,13 @@ The rules from `28-presentations-leverage-tasks.md` apply unchanged. In brief:
 | C36 | 7 Collab+Share | Named share links + per-link analytics | done 2026-08-26 |
 | C37 | 7 Collab+Share | Public embeddable deck player | done 2026-08-26 |
 | C38 | 7 Collab+Share | Reuse slides from another deck (theme-matched) | done 2026-08-26 |
+| C39 | 8 Templates | Presentation kits: six sixteen-slide systems in the seed, and a slide picker for multi-page templates | done 2026-09-29 |
+| C40 | 8 Templates | Kits brought to the design templates' finish: gradient grounds, halos, pack drawings, sparkle, accent faces, stroked cards | done 2026-09-30 |
+| C41 | 8 Templates | Aspen Creek Team Offsite rebuilt at the kit finish: twelve slides (three days, lodge, tracks, hosts, logistics, pack list, agreements) | done 2026-09-30 |
+| C42 | 8 Templates | Kit library (`scripts/lib/deck-kit.mjs`): the 31 topic decks and 7 single slides rebuilt on the six looks with their own copy; type sizes to fit | done 2026-09-30 |
+| C43 | 8 Templates | The three signature decks (Vivid Tech Review, Editorial Strategy, Main Street Startup Pitch) as their own looks over the library, nine slides each, with their signature slides kept | done 2026-09-30 |
+| C44 | 8 Templates | Every remaining presentation template (31 topic decks, 7 single slides) given a look, a signature slide, per-slide drawings and a voice of its own, in six authored-and-reviewed batches; the library grew fourteen ornaments, five layouts and the fixes each batch surfaced | done 2026-09-30 |
+| C45 | 8 Templates | Renderer fixes the batches surfaced: authored strokes (the compiler wrote a field the schema lacks), SVG group transforms and hidden containers in the stock importer, path strokes and text decoration in the Go raster, nice value-axis ticks in both renderers | done 2026-09-30 |
 
 Dependencies: C02 before C03/C04 (one schema bump, then UI); C17 before C18 and C20 (captions feed both); C06 before C07/C08/C09/C10; C12 before C11 (channel plumbing first); C36 before C37 (links carry the embed surface).
 

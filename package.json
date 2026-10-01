@@ -42,7 +42,13 @@
     "bench:paint": "node scripts/bench-paint.mjs",
     "gen:ai-tools": "node scripts/gen-ai-tools.mjs",
     "test:frontend": "npm run test -w frontend",
-    "gen:compose-fixture": "node scripts/gen-compose-fixture.mjs"
+    "gen:compose-fixture": "node scripts/gen-compose-fixture.mjs",
+    "gen:kit-looks": "node scripts/gen-kit-looks.mjs",
+    "gen:kit-packset": "node scripts/gen-kit-packset.mjs",
+    "gen:kit-vocab": "node scripts/gen-kit-vocab.mjs",
+    "gen:deck-icons": "node scripts/gen-deck-icons.mjs",
+    "gen:deck-illustrations": "node scripts/gen-deck-illustrations.mjs",
+    "gen:brand-starter": "node scripts/build-brand-starter.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

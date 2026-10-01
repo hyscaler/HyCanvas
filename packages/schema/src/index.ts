@@ -23,6 +23,9 @@ export * from "./visitor";
 // Forward-compatibility helpers for unknown/newer node types.
 export * from "./unknown-nodes";
 
+// Version-independent repairs for what an earlier writer got wrong.
+export * from "./repair";
+
 // Published JSON Schema (draft 2020-12) generation.
 export * from "./json-schema";
 

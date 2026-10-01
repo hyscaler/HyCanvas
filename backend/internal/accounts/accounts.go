@@ -181,6 +181,7 @@ func (s *Service) CreateWorkspace(ctx context.Context, userID, name, kind string
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	s.workspaceCreated(ctx, wsID, userID)
 	return &Workspace{
 		ID: wsID, Kind: kind, Name: name, Slug: slug, OwnerID: userID,
 		CreatedAt: created.UTC().Format("2006-01-02T15:04:05.000Z07:00"),
@@ -298,7 +299,15 @@ type Service struct {
 	// already have an account; optional, wired post-construction to avoid an
 	// accounts<->engagement import cycle.
 	notifier Notifier
+	// onWorkspace runs after a workspace is created; see WithWorkspaceHook.
+	onWorkspace WorkspaceHook
 }
+
+// WorkspaceHook runs after a workspace has been created and committed: the
+// personal workspace of a signup or a first OIDC login, and a team, org or
+// classroom workspace from CreateWorkspace. It receives the workspace and its
+// owner and cannot fail the request; today it seeds the starter brand kit.
+type WorkspaceHook func(ctx context.Context, workspaceID, ownerID string)
 
 func NewService(db DBTX, jwtSecret string) *Service {
 	return &Service{db: db, jwtSecret: jwtSecret, aiSecret: jwtSecret, smtp: smtpFromEnv()}
@@ -309,6 +318,20 @@ func NewService(db DBTX, jwtSecret string) *Service {
 func (s *Service) WithNotifier(n Notifier) *Service {
 	s.notifier = n
 	return s
+}
+
+// WithWorkspaceHook wires the hook that runs after every workspace creation.
+// Nil-safe; returns the service. Set once at boot, before serving.
+func (s *Service) WithWorkspaceHook(h WorkspaceHook) *Service {
+	s.onWorkspace = h
+	return s
+}
+
+// workspaceCreated fires the workspace hook, outside the creating transaction.
+func (s *Service) workspaceCreated(ctx context.Context, workspaceID, ownerID string) {
+	if s.onWorkspace != nil {
+		s.onWorkspace(ctx, workspaceID, ownerID)
+	}
 }
 
 // WithMFASecret sets the AES key material used to encrypt the TOTP secret at
@@ -587,6 +610,7 @@ func (s *Service) Signup(ctx context.Context, email, password, name string) (*Au
 	if err := tx.Commit(ctx); err != nil {
 		return nil, nil, nil, err
 	}
+	s.workspaceCreated(ctx, wsID, userID)
 
 	access, err := jwt.Sign(userID, sessionID, s.jwtSecret, AccessTTL)
 	if err != nil {

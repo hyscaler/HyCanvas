@@ -12,6 +12,7 @@ import (
 
 	"hycanvas/backend/internal/accounts"
 	"hycanvas/backend/internal/ai"
+	"hycanvas/backend/internal/aistudio"
 	"hycanvas/backend/internal/uploads"
 )
 
@@ -60,10 +61,12 @@ func mountAI(api chi.Router, svc *ai.Service, acct *accounts.Service, up *upload
 		r.Put("/workspaces/{id}/ai-config", aiSetConfigHandler(svc, acct))
 		r.Delete("/workspaces/{id}/ai-config", aiDeleteConfigHandler(svc, acct))
 		r.Post("/workspaces/{id}/ai-config/test", aiTestConfigHandler(svc, acct))
+		r.Post("/workspaces/{id}/ai-config/models", aiListModelsHandler(svc, acct))
 		r.Get("/workspaces/{id}/ai-image-config", aiGetImageConfigHandler(svc, acct))
 		r.Put("/workspaces/{id}/ai-image-config", aiSetImageConfigHandler(svc, acct))
 		r.Delete("/workspaces/{id}/ai-image-config", aiDeleteImageConfigHandler(svc, acct))
 		r.Post("/workspaces/{id}/ai-image-config/test", aiTestImageConfigHandler(svc, acct))
+		r.Post("/workspaces/{id}/ai-image-config/models", aiListImageModelsHandler(svc, acct))
 		r.Get("/workspaces/{id}/ai-policy", aiGetPolicyHandler(svc, acct))
 		r.Put("/workspaces/{id}/ai-policy", aiSetPolicyHandler(svc, acct))
 		r.Get("/workspaces/{id}/ai-usage", aiGetUsageHandler(svc, acct))
@@ -90,12 +93,12 @@ func aiFailure(err error) (status int, title, detail, code string) {
 		return http.StatusForbidden, "Forbidden", err.Error(), "ai_policy_blocked"
 	case errors.Is(err, ai.ErrImageUnsupported):
 		return http.StatusBadRequest, "Bad Request", "your AI provider cannot generate images; add a dedicated image provider in AI settings, or switch to an image-capable provider", "ai_image_unsupported"
-	case errors.Is(err, ai.ErrDescribeImageUnsupported):
+	case errors.Is(err, ai.ErrDescribeImageUnsupported), errors.Is(err, aistudio.ErrReviewUnsupported):
 		return http.StatusBadRequest, "Bad Request", "no configured provider can read images; add an image provider that supports vision, or switch to a provider that does", "ai_describe_image_unsupported"
 	case errors.Is(err, ai.ErrEditImageUnsupported):
 		return http.StatusBadRequest, "Bad Request", "your AI provider does not support image editing; switch to a provider with image editing (e.g. OpenAI) in AI settings", "ai_image_edit_unsupported"
 	case errors.Is(err, ai.ErrSecretRequired):
-		return http.StatusBadRequest, "Bad Request", "this provider signs its requests and needs a secret access key as well as the access key ID", "ai_secret_required"
+		return http.StatusBadRequest, "Bad Request", "this provider signs its requests and needs both an access key and a secret key", "ai_secret_required"
 	case errors.Is(err, ai.ErrBaseURLRequired):
 		return http.StatusBadRequest, "Bad Request", "this provider needs a base URL; enter your endpoint URL in AI settings", "ai_base_url_required"
 	case errors.Is(err, ai.ErrKeyRequired):
@@ -110,6 +113,15 @@ func aiFailure(err error) (status int, title, detail, code string) {
 		// account, a mistyped model, a rate limit.
 		if errors.Is(err, ai.ErrProviderUnreachable) {
 			return http.StatusBadGateway, "Bad Gateway", "could not reach the AI provider; check the base URL, and that the server can reach that host", "ai_provider_unreachable"
+		}
+		if errors.Is(err, ai.ErrReplyTruncated) {
+			return http.StatusBadGateway, "Bad Gateway", ai.ErrReplyTruncated.Error(), "ai_reply_truncated"
+		}
+		// A credential the provider knows but will not let use THIS model
+		// (an IAM policy naming other inference profiles, model access not
+		// enabled): the fix is in the model field, not the key.
+		if errors.Is(err, ai.ErrModelForbidden) {
+			return http.StatusBadGateway, "Bad Gateway", "the AI provider refused the configured model for this key; choose a model the key is allowed to use, or grant it access in the provider's console", "ai_provider_model_forbidden"
 		}
 		var up *ai.UpstreamError
 		upstream := 0
@@ -158,6 +170,8 @@ func aiProblem(w http.ResponseWriter, r *http.Request, err error) {
 		problemWithCode(w, r, status, title, detail, "ai_key_required")
 	case "ai_provider_unreachable":
 		problemWithCode(w, r, status, title, detail, "ai_provider_unreachable")
+	case "ai_reply_truncated":
+		problemWithCode(w, r, status, title, detail, "ai_reply_truncated")
 	case "ai_not_configured":
 		problemWithCode(w, r, status, title, detail, "ai_not_configured")
 	case "ai_provider_auth_failed":
@@ -166,6 +180,8 @@ func aiProblem(w http.ResponseWriter, r *http.Request, err error) {
 		problemWithCode(w, r, status, title, detail, "ai_provider_quota_exhausted")
 	case "ai_provider_model_not_found":
 		problemWithCode(w, r, status, title, detail, "ai_provider_model_not_found")
+	case "ai_provider_model_forbidden":
+		problemWithCode(w, r, status, title, detail, "ai_provider_model_forbidden")
 	case "ai_provider_rate_limited":
 		problemWithCode(w, r, status, title, detail, "ai_provider_rate_limited")
 	case "ai_provider_failed":
@@ -287,6 +303,81 @@ func aiTestConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFu
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+// aiModelsBody is a candidate config plus the field the list is for.
+type aiModelsBody struct {
+	aiConfigBody
+	// Purpose narrows the catalog: "text" for the chat model field, "image"
+	// for the image model field, empty for everything the provider lists.
+	Purpose string `json:"purpose"`
+}
+
+// aiListModelsHandler lists the models a provider serves, for the settings
+// form's model field. With a body it reads the CANDIDATE's host and key and
+// saves nothing, so the list can be fetched the moment the key is typed;
+// without one it reads the stored config. Admin-only, like the connection
+// test: the request carries the credential.
+//
+// Listing costs no tokens and is not metered. A provider with no catalog on
+// this route answers supported:false rather than an error, so the field stays
+// free text with a reason; a rejected key comes back as the same classified
+// problem a call would raise.
+func aiListModelsHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		if !aiAssert(r, acct, id, "admin") {
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "admin access required", "admin_access_required")
+			return
+		}
+		var body aiModelsBody
+		present, err := decodeCandidate(r, &body)
+		if err != nil {
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
+			return
+		}
+		purpose := strings.ToLower(strings.TrimSpace(body.Purpose))
+		if purpose != "" && purpose != ai.PurposeText && purpose != ai.PurposeImage {
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
+			return
+		}
+		var list ai.ModelList
+		if present && body.Provider != "" {
+			list, err = svc.ListModels(r.Context(), id, body.input(), purpose)
+		} else {
+			list, err = svc.ListStoredModels(r.Context(), id, purpose)
+		}
+		if err != nil {
+			aiProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, list)
+	}
+}
+
+// aiListImageModelsHandler lists the image models a CANDIDATE dedicated image
+// provider serves; the image provider exists only for image calls, so the
+// list is always the image one.
+func aiListImageModelsHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		if !aiAssert(r, acct, id, "admin") {
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "admin access required", "admin_access_required")
+			return
+		}
+		var body aiImageConfigBody
+		present, err := decodeCandidate(r, &body)
+		if err != nil || !present || body.Provider == "" {
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
+			return
+		}
+		list, err := svc.ListImageModels(r.Context(), id, body.input())
+		if err != nil {
+			imageConfigProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, list)
 	}
 }
 

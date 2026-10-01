@@ -73,24 +73,35 @@ export function wcag(fg: Color, bg: Color): WcagResult {
 export function fixToAA(fg: Color, bg: Color, target = 4.5): Color {
   if (contrastRatio(fg, bg) >= target) return fg;
   const bgLum = relativeLuminance(bg);
-  // Move away from the background's luminance: darken on light bg, lighten on dark.
-  const goDarker = bgLum > 0.5;
   const hsl = rgbToHsl(fg);
-  let best: Color = fg;
-  let bestRatio = contrastRatio(fg, bg);
-  // Walk lightness in fine steps toward the contrasting extreme.
-  const steps = 100;
-  for (let i = 1; i <= steps; i++) {
-    const l = goDarker
-      ? clamp01(hsl.l * (1 - i / steps))
-      : clamp01(hsl.l + (1 - hsl.l) * (i / steps));
-    const candidate = hslToRgb({ ...hsl, l });
-    const r = contrastRatio(candidate, bg);
-    if (r > bestRatio) {
-      bestRatio = r;
-      best = candidate;
+  // Walk lightness in fine steps toward one extreme; the first candidate to
+  // clear the target wins, else the best miss along the way.
+  const walk = (goDarker: boolean): { hit: Color | null; best: Color; bestRatio: number } => {
+    let best: Color = fg;
+    let bestRatio = contrastRatio(fg, bg);
+    const steps = 100;
+    for (let i = 1; i <= steps; i++) {
+      const l = goDarker
+        ? clamp01(hsl.l * (1 - i / steps))
+        : clamp01(hsl.l + (1 - hsl.l) * (i / steps));
+      const candidate = hslToRgb({ ...hsl, l });
+      const r = contrastRatio(candidate, bg);
+      if (r > bestRatio) {
+        bestRatio = r;
+        best = candidate;
+      }
+      if (r >= target) return { hit: candidate, best, bestRatio };
     }
-    if (r >= target) return candidate;
-  }
-  return best;
+    return { hit: null, best, bestRatio };
+  };
+  // Move away from the background's luminance first: darken on a light
+  // ground, lighten on a dark one.
+  const natural = walk(bgLum > 0.5);
+  if (natural.hit) return natural.hit;
+  // A mid-tone ground can leave that direction short of the target while
+  // the other clears it: a light accent on a sky blue reaches AA only by
+  // going dark. Try the other way before settling for the best miss.
+  const other = walk(bgLum <= 0.5);
+  if (other.hit) return other.hit;
+  return natural.bestRatio >= other.bestRatio ? natural.best : other.best;
 }

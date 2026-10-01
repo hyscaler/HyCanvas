@@ -2,7 +2,7 @@
 // pointer interaction, click/shift-click selection, marquee, move-drag (one
 // gesture = one undo step), and wheel pan / ctrl-wheel zoom about the cursor.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { MousePointer2, PenTool, Pencil, Minus, MoveUpRight, Square, Circle, Type, MessageSquarePlus, Copy, ClipboardPaste, CopyPlus, Trash2, Group, Ungroup, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, FlipHorizontal2, FlipVertical2, Paintbrush, PaintBucket, Lock, LockOpen, Eye, EyeOff, BoxSelect, Wallpaper, ImageUp, Crop } from "lucide-react";
 import type { CharStyle, Color, Node as SchemaNode, Page, Paragraph, ParagraphStyle, TextNode, Transform } from "@hc/schema";
 import { isDecorative, resolveReadingOrder } from "@hc/schema";
@@ -24,6 +24,7 @@ import {
   type EditPara,
 } from "@/lib/textEditModel";
 import { useCallbackRef } from "@/lib/useCallbackRef";
+import { rulerTicks } from "@/lib/rulerTicks";
 import { overlay } from "@/lib/theme.generated";
 import { useEditorCanvas, type CanvasApi } from "@/lib/useEditorCanvas";
 import { useEditor, ocClipPrefix } from "@/store/editor";
@@ -52,28 +53,89 @@ import { tr } from "@/lib/i18n";
 // unscaled, and unskewed; otherwise the overlay would not match the render.
 const RULER = 22; // ruler strip thickness in px
 
-/** Page-unit tick spacing so marks sit ~60px apart on screen at the current zoom. */
-function niceStep(zoom: number): number {
-  const target = 60 / Math.max(0.01, zoom);
-  return [5, 10, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000].find((c) => c >= target) ?? 10000;
-}
+// The pointer's page position, published for the rulers alone. A module
+// store rather than component state: the canvas re-rendering on every pointer
+// move would be far more work than the two ruler strips repainting.
+const pointerBus = (() => {
+  let pos: { x: number; y: number } | null = null;
+  const subs = new Set<() => void>();
+  return {
+    get: () => pos,
+    set(p: { x: number; y: number } | null) {
+      if (p === pos || (p && pos && Math.abs(p.x - pos.x) < 0.01 && Math.abs(p.y - pos.y) < 0.01)) return;
+      pos = p;
+      for (const cb of subs) cb();
+    },
+    subscribe(cb: () => void) {
+      subs.add(cb);
+      return () => { subs.delete(cb); };
+    },
+  };
+})();
 
-/** Tick marks + labels inside a ruler strip (coordinates relative to the strip). */
+/** A ruler strip: labelled majors with minors between them, the selection's
+ *  extent as a band, and the pointer's position as a marker with its
+ *  coordinate (coordinates relative to the strip). */
 function Ruler({ axis, api, page }: { axis: "x" | "y"; api: CanvasApi; page: { width: number; height: number } }) {
   useEditor((s) => s.viewport);
   useEditor((s) => s.rev);
-  const step = niceStep(api.viewport().zoom);
+  const selection = useEditor((s) => s.selection);
+  const pointer = useSyncExternalStore(pointerBus.subscribe, pointerBus.get, () => null);
+  const zoom = api.viewport().zoom;
   const dim = axis === "x" ? page.width : page.height;
+  const plan = rulerTicks(zoom, dim);
+  const along = (p: number) => (axis === "x" ? api.toScreen({ x: p, y: 0 }).x : api.toScreen({ x: 0, y: p }).y) - RULER;
   const ticks: React.ReactElement[] = [];
-  for (let p = 0; p <= dim + 0.5; p += step) {
+  for (const p of plan.minors) {
+    const s = along(p);
+    ticks.push(
+      axis === "x"
+        ? <line key={`m${p}`} x1={s} y1={RULER - 3} x2={s} y2={RULER} stroke={overlay.ruler} strokeWidth={1} opacity={0.7} />
+        : <line key={`m${p}`} x1={RULER - 3} y1={s} x2={RULER} y2={s} stroke={overlay.ruler} strokeWidth={1} opacity={0.7} />,
+    );
+  }
+  for (const p of plan.majors) {
+    const s = along(p);
     if (axis === "x") {
-      const s = api.toScreen({ x: p, y: 0 }).x - RULER;
       ticks.push(<line key={p} x1={s} y1={RULER - 6} x2={s} y2={RULER} stroke={overlay.ruler} strokeWidth={1} />);
       ticks.push(<text key={`t${p}`} x={s + 2} y={9} fontSize={8} fill={overlay.ruler}>{Math.round(p)}</text>);
     } else {
-      const s = api.toScreen({ x: 0, y: p }).y - RULER;
       ticks.push(<line key={p} x1={RULER - 6} y1={s} x2={RULER} y2={s} stroke={overlay.ruler} strokeWidth={1} />);
       ticks.push(<text key={`t${p}`} x={2} y={s + 3} fontSize={8} fill={overlay.ruler}>{Math.round(p)}</text>);
+    }
+  }
+  // The selection's extent, so its edges can be read against the scale.
+  const box = selection.length ? unionAABB(useEditor.getState().doc, selection) : null;
+  if (box) {
+    const a = along(axis === "x" ? box.x : box.y);
+    const b = along(axis === "x" ? box.x + box.width : box.y + box.height);
+    ticks.push(
+      axis === "x"
+        ? <rect key="sel" x={Math.min(a, b)} y={0} width={Math.abs(b - a)} height={RULER} fill={overlay.selection} opacity={0.14} />
+        : <rect key="sel" x={0} y={Math.min(a, b)} width={RULER} height={Math.abs(b - a)} fill={overlay.selection} opacity={0.14} />,
+    );
+    for (const [k, s] of [["s0", a], ["s1", b]] as const) {
+      ticks.push(
+        axis === "x"
+          ? <line key={k} x1={s} y1={0} x2={s} y2={RULER} stroke={overlay.selection} strokeWidth={1} />
+          : <line key={k} x1={0} y1={s} x2={RULER} y2={s} stroke={overlay.selection} strokeWidth={1} />,
+      );
+    }
+  }
+  // The pointer, with its coordinate, so a position can be read before a
+  // drop rather than after.
+  if (pointer) {
+    const v = axis === "x" ? pointer.x : pointer.y;
+    const s = along(v);
+    const label = String(Math.round(v));
+    if (axis === "x") {
+      ticks.push(<line key="pt" x1={s} y1={0} x2={s} y2={RULER} stroke={overlay.guideActive} strokeWidth={1} />);
+      ticks.push(<rect key="ptb" x={s + 2} y={RULER - 11} width={label.length * 5 + 4} height={10} rx={2} fill={overlay.guideActive} />);
+      ticks.push(<text key="ptt" x={s + 4} y={RULER - 3} fontSize={8} fill="#fff">{label}</text>);
+    } else {
+      ticks.push(<line key="pt" x1={0} y1={s} x2={RULER} y2={s} stroke={overlay.guideActive} strokeWidth={1} />);
+      ticks.push(<rect key="ptb" x={1} y={s + 2} width={RULER - 2} height={10} rx={2} fill={overlay.guideActive} />);
+      ticks.push(<text key="ptt" x={3} y={s + 10} fontSize={8} fill="#fff">{label}</text>);
     }
   }
   return <svg className="absolute inset-0 h-full w-full overflow-hidden">{ticks}</svg>;
@@ -1725,6 +1787,7 @@ export function Canvas() {
   }
 
   function onPointerLeave() {
+    pointerBus.set(null);
     // Drop the hover-move cursor + outline when the pointer leaves the surface.
     if (hoverMoveRef.current) {
       hoverMoveRef.current = false;
@@ -1889,6 +1952,8 @@ export function Canvas() {
   });
 
   function onPointerMove(e: React.PointerEvent) {
+    // The rulers follow the pointer whatever the tool or gesture.
+    pointerBus.set(api.toPage(localPoint(e)));
     // Keep the multi-touch tracker current, then drive an active pinch (FR-31):
     // zoom by the finger-distance ratio and pan so the start page-anchor stays
     // under the moving midpoint (the wheel-zoom-about-cursor math).

@@ -518,3 +518,96 @@ func TestAssistantTurnMustSayOrDoSomething(t *testing.T) {
 		t.Fatalf("clarify should become the reply, got %+v err=%v", r, err)
 	}
 }
+
+func TestClipRunesNeverEndsOnAConnective(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"What is working vs. what is not", "What is working"},
+		{"Growth in the north and the south of the region", "Growth in the north"},
+		{"A short label", "A short label"},
+	}
+	for _, c := range cases {
+		if got := clipRunes(c.in, 24); got != c.want {
+			t.Errorf("clipRunes(%q, 24) = %q; want %q", c.in, got, c.want)
+		}
+	}
+}
+
+func TestSplitFigureKeepsOneToken(t *testing.T) {
+	cases := []struct{ v, u, wantV, wantU string }{
+		{"48 hrs", "hours", "48", "hours"},
+		{"48 hrs", "", "48", "hrs"},
+		{"$1.8 million", "", "$1.8", "million"},
+		{"310k /mo", "", "310k", "/mo"},
+		{"Top 10", "", "Top 10", ""},
+		{"3.2M", "riders", "3.2M", "riders"},
+		{"\u219367%", "", "67%", ""},
+		{"48\u00a0hrs", "", "48", "hrs"},
+	}
+	for _, c := range cases {
+		v, u := splitFigure(c.v, c.u)
+		if v != c.wantV || u != c.wantU {
+			t.Errorf("splitFigure(%q, %q) = %q, %q; want %q, %q", c.v, c.u, v, u, c.wantV, c.wantU)
+		}
+	}
+	p := OutlineItem{Title: "t", Archetype: "bigNumber", Stat: &Stat{Value: "48 hrs", Unit: "hours", Label: "x"}}
+	normalizeArchetypeFields(&p)
+	if p.Stat == nil || p.Stat.Value != "48" || p.Stat.Unit != "hours" {
+		t.Fatalf("normalized stat = %+v", p.Stat)
+	}
+}
+
+func TestNormalizeCompositionMirrorsTheClient(t *testing.T) {
+	p := OutlineItem{Title: "How it flows", Archetype: "composition", Composition: &Composition{
+		Cells: []CompositionCell{
+			{Col: 0, Span: 5, Row: 0, Rows: 3, Kind: "heading", Text: "Orders in", Tone: "tint"},
+			{Col: 7, Span: 9, Row: 0, Rows: 3, Kind: "list", Points: []string{"Picked", "Packed", "Out the door"}, Tone: "deep"},
+			{Col: 2, Span: 4, Row: 1, Rows: 2, Kind: "body", Text: "overlaps the first"},
+			{Col: 0, Span: 12, Row: 4, Rows: 2, Kind: "figure", Value: "48 hrs", Unit: "hours", Text: "door to door"},
+			{Col: 0, Span: 3, Row: 3, Rows: 1, Kind: "icon"},
+			{Col: 3, Span: 3, Row: 3, Rows: 1, Kind: "nonsense", Text: "x"},
+		},
+		Links: [][]int{{0, 1}, {0, 2}, {1, 1}, {3, 0}, {0, 1}},
+	}}
+	normalizeArchetypeFields(&p)
+	if p.Archetype != "composition" || p.Composition == nil {
+		t.Fatalf("composition dropped: %+v", p)
+	}
+	kinds := []string{}
+	for _, c := range p.Composition.Cells {
+		kinds = append(kinds, c.Kind)
+	}
+	if got, want := fmt.Sprint(kinds), "[heading list figure]"; got != want {
+		t.Fatalf("kinds = %s; want %s", got, want)
+	}
+	if c := p.Composition.Cells[1]; c.Col != 7 || c.Span != 5 || c.Tone != "deep" {
+		t.Fatalf("list cell = %+v", c)
+	}
+	if c := p.Composition.Cells[2]; c.Value != "48" || c.Unit != "hours" || c.Text != "door to door" {
+		t.Fatalf("figure cell = %+v", c)
+	}
+	if got, want := fmt.Sprint(p.Composition.Links), "[[0 1] [2 0]]"; got != want {
+		t.Fatalf("links = %s; want %s", got, want)
+	}
+	empty := OutlineItem{Title: "x", Archetype: "composition", Points: []string{"a"}, Composition: &Composition{Cells: []CompositionCell{{Col: 0, Span: 4, Row: 0, Rows: 1, Kind: "heading"}}}}
+	normalizeArchetypeFields(&empty)
+	if empty.Archetype != "bullets" {
+		t.Fatalf("no surviving cell should fall back to bullets, got %s", empty.Archetype)
+	}
+}
+
+func TestOutlineLookIsKeptWhenKnownAndDroppedWhenNot(t *testing.T) {
+	o := DesignOutline{Title: "t", Look: "editorial", Pages: []OutlineItem{{Title: "x", Archetype: "bullets", Points: []string{"a"}}}}
+	if err := validateOutline(&o); err != nil {
+		t.Fatal(err)
+	}
+	if o.Look != "editorial" {
+		t.Fatalf("look = %q", o.Look)
+	}
+	o.Look = "fancy"
+	if err := validateOutline(&o); err != nil {
+		t.Fatal(err)
+	}
+	if o.Look != "" {
+		t.Fatalf("unknown look should be dropped, got %q", o.Look)
+	}
+}

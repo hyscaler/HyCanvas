@@ -1,5 +1,4 @@
 {
- "kind": "deck-outline",
  "id": "deck-investor-update",
  "title": "Investor Update",
  "categories": [
@@ -14,54 +13,4880 @@
  ],
  "styleTags": [
   "minimal",
-  "professional"
+  "modern",
+  "clean"
  ],
- "themeId": "theme-porcelain",
  "size": [
   1920,
   1080
  ],
- "rank": 54,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Schibsted Grotesk",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Public Sans",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Kalam",
+   "weight": 700
+  },
+  {
+   "role": "label",
+   "family": "DM Mono",
+   "weight": 500
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#2B2C31",
+      0
+     ],
+     [
+      "#151618",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1227,
+     "y": 380,
+     "w": 9,
+     "h": 9,
+     "fill": "#E9A63F",
+     "opacity": 0.76
+    },
+    {
+     "kind": "ellipse",
+     "x": 1429,
+     "y": 468,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9A63F",
+     "opacity": 0.63
+    },
+    {
+     "kind": "ellipse",
+     "x": 1261,
+     "y": 823,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9A63F",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1516,
+     "y": 289,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9A63F",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1383,
+     "y": 304,
+     "w": 8,
+     "h": 8,
+     "fill": "#E9A63F",
+     "opacity": 0.36
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#E9A63F",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Beacon",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#F4F3EF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 42,
+     "text": "monthly update, no spin",
+     "family": "Kalam",
+     "size": 32,
+     "weight": 700,
+     "color": "#E9A63F",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 237,
+     "text": "September\nin one page",
+     "family": "Schibsted Grotesk",
+     "size": 108,
+     "weight": 700,
+     "color": "#F4F3EF",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 713,
+     "w": 900,
+     "h": 80,
+     "text": "Revenue, burn and runway, what went right, what went wrong, and the three things we need from you.",
+     "family": "Public Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#ABAAA5",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Sam Whitfield, Chief Executive  ·  4 October 2026",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#ABAAA5",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#ABAAA5",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 170,
+     "w": 700,
+     "h": 700,
+     "fill": "#E9A63F",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1220,
+     "y": 240,
+     "w": 560,
+     "h": 560,
+     "fill": "#E9A63F",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 890,
+     "w": 720,
+     "h": 34,
+     "text": "read the letter first, the rest is the receipts",
+     "family": "Kalam",
+     "size": 27,
+     "weight": 700,
+     "color": "#E9A63F",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day21-lantern",
+     "x": 1210,
+     "y": 230,
+     "w": 580,
+     "h": 580,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "The letter",
+   "bg": "#F4F3EF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The letter  ·  4 October 2026",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#8E5A0A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 72,
+     "text": "Dear investors,",
+     "family": "Schibsted Grotesk",
+     "size": 58,
+     "weight": 700,
+     "color": "#232326",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Beacon  ·  Investor update, September",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#63646A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#63646A",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 240,
+     "w": 1060,
+     "h": 156,
+     "text": "September was the fourth month in a row above 8% growth. Revenue closed at $412K, expansion was a third of it, and logo churn fell to 1.1%, the lowest we have recorded. Burn did not move.",
+     "family": "Public Sans",
+     "size": 26,
+     "weight": 400,
+     "color": "#232326",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 410,
+     "w": 1060,
+     "h": 156,
+     "text": "We lost the platform lead we had courted since June to a counter-offer we chose not to match. The search has restarted with a new firm, and the data pipeline roadmap slips by three weeks. Nothing else on the plan moved.",
+     "family": "Public Sans",
+     "size": 26,
+     "weight": 400,
+     "color": "#232326",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 580,
+     "w": 1060,
+     "h": 156,
+     "text": "Three asks, on the last page: one introduction, two customer intros, and thirty minutes on pricing. If you have time for one, make it the pricing call; we think the self-serve tier is underpriced by half.",
+     "family": "Public Sans",
+     "size": 26,
+     "weight": 400,
+     "color": "#232326",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 764,
+     "w": 600,
+     "h": 56,
+     "text": "Sam",
+     "family": "Kalam",
+     "size": 44,
+     "weight": 700,
+     "color": "#8E5A0A",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 826,
+     "w": 800,
+     "h": 26,
+     "text": "Sam Whitfield, Chief Executive, Beacon",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#63646A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1252,
+     "y": 240,
+     "w": 1,
+     "h": 600,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 1316,
+     "y": 240,
+     "w": 508,
+     "h": 28,
+     "text": "In numbers",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#8E5A0A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1316,
+     "y": 292,
+     "w": 508,
+     "h": 72,
+     "text": "$412K",
+     "family": "DM Mono",
+     "size": 64,
+     "weight": 500,
+     "color": "#8E5A0A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1316,
+     "y": 372,
+     "w": 508,
+     "h": 30,
+     "text": "Monthly recurring revenue",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#232326",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1316,
+     "y": 406,
+     "w": 508,
+     "h": 26,
+     "text": "+9% month over month",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#8E5A0A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1316,
+     "y": 452,
+     "w": 508,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 1316,
+     "y": 488,
+     "w": 508,
+     "h": 72,
+     "text": "$310K",
+     "family": "DM Mono",
+     "size": 64,
+     "weight": 500,
+     "color": "#8E5A0A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1316,
+     "y": 568,
+     "w": 508,
+     "h": 30,
+     "text": "Net burn",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#232326",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1316,
+     "y": 602,
+     "w": 508,
+     "h": 26,
+     "text": "flat, as planned",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#8E5A0A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1316,
+     "y": 648,
+     "w": 508,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 1316,
+     "y": 684,
+     "w": 508,
+     "h": 72,
+     "text": "21 mo",
+     "family": "DM Mono",
+     "size": 64,
+     "weight": 500,
+     "color": "#8E5A0A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1316,
+     "y": 764,
+     "w": 508,
+     "h": 30,
+     "text": "Runway at this burn",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#232326",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1316,
+     "y": 798,
+     "w": 508,
+     "h": 26,
+     "text": "before any pipeline closes",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#8E5A0A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 923,
+     "w": 760,
+     "h": 33,
+     "text": "if you read one slide, read this one",
+     "family": "Kalam",
+     "size": 26,
+     "weight": 700,
+     "color": "#8E5A0A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Figures",
+   "bg": "#F4F3EF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Metrics",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#8E5A0A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 72,
+     "text": "The four numbers",
+     "family": "Schibsted Grotesk",
+     "size": 58,
+     "weight": 700,
+     "color": "#232326",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Beacon  ·  Investor update, September",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#63646A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#63646A",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 240,
+     "w": 414,
+     "h": 560,
+     "fill": "#EBEAE4",
+     "radius": 4,
+     "stroke": "#D8D6D0",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 240,
+     "w": 414,
+     "h": 6,
+     "fill": "#B4700F",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 296,
+     "w": 342,
+     "h": 112,
+     "text": "$412K",
+     "family": "Schibsted Grotesk",
+     "size": 96,
+     "weight": 700,
+     "color": "#8E5A0A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 436,
+     "w": 342,
+     "h": 34,
+     "text": "Monthly recurring revenue",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#232326",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 132,
+     "y": 490,
+     "w": 190,
+     "h": 40,
+     "label": "+9% month over month",
+     "fill": "#e1d4be",
+     "color": "#8E5A0A",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 560,
+     "w": 342,
+     "h": 140,
+     "text": "Fourth straight month above 8%; expansion was a third of it.",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#63646A",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 240,
+     "w": 414,
+     "h": 560,
+     "fill": "#EBEAE4",
+     "radius": 4,
+     "stroke": "#D8D6D0",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 240,
+     "w": 414,
+     "h": 6,
+     "fill": "#4B4C53",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 296,
+     "w": 342,
+     "h": 112,
+     "text": "$310K",
+     "family": "Schibsted Grotesk",
+     "size": 96,
+     "weight": 700,
+     "color": "#4B4C53",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 436,
+     "w": 342,
+     "h": 34,
+     "text": "Net burn",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#232326",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 570,
+     "y": 490,
+     "w": 190,
+     "h": 40,
+     "label": "Flat",
+     "fill": "#cececa",
+     "color": "#4B4C53",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 560,
+     "w": 342,
+     "h": 140,
+     "text": "Two hires offset by the office move; contractors down to one.",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#63646A",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 240,
+     "w": 414,
+     "h": 560,
+     "fill": "#EBEAE4",
+     "radius": 4,
+     "stroke": "#D8D6D0",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 240,
+     "w": 414,
+     "h": 6,
+     "fill": "#B4700F",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 296,
+     "w": 342,
+     "h": 112,
+     "text": "21",
+     "family": "Schibsted Grotesk",
+     "size": 96,
+     "weight": 700,
+     "color": "#8E5A0A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 436,
+     "w": 342,
+     "h": 34,
+     "text": "Months of runway",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#232326",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1008,
+     "y": 490,
+     "w": 190,
+     "h": 40,
+     "label": "Plan holds",
+     "fill": "#e1d4be",
+     "color": "#8E5A0A",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 560,
+     "w": 342,
+     "h": 140,
+     "text": "At current burn, before any of the pipeline closes.",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#63646A",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 240,
+     "w": 414,
+     "h": 560,
+     "fill": "#EBEAE4",
+     "radius": 4,
+     "stroke": "#D8D6D0",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 240,
+     "w": 414,
+     "h": 6,
+     "fill": "#4B4C53",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 296,
+     "w": 342,
+     "h": 112,
+     "text": "112%",
+     "family": "Schibsted Grotesk",
+     "size": 96,
+     "weight": 700,
+     "color": "#4B4C53",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 436,
+     "w": 342,
+     "h": 34,
+     "text": "Net revenue retention",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#232326",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1446,
+     "y": 490,
+     "w": 190,
+     "h": 40,
+     "label": "+2 pts",
+     "fill": "#cececa",
+     "color": "#4B4C53",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 560,
+     "w": 342,
+     "h": 140,
+     "text": "Churn fell to 1.1%; two accounts doubled seats.",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#63646A",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 923,
+     "w": 760,
+     "h": 33,
+     "text": "cash and contracted, nothing forecast",
+     "family": "Kalam",
+     "size": 26,
+     "weight": 700,
+     "color": "#8E5A0A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Chart",
+   "bg": "#F4F3EF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Metrics",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#8E5A0A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1100,
+     "h": 72,
+     "text": "Revenue and burn, six months",
+     "family": "Schibsted Grotesk",
+     "size": 58,
+     "weight": 700,
+     "color": "#232326",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Beacon  ·  Investor update, September",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#63646A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#63646A",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 216,
+     "w": 1100,
+     "h": 70,
+     "text": "Revenue has grown every month since April; burn has not moved. The gap is closing on schedule.",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 400,
+     "color": "#63646A",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "chart",
+     "x": 96,
+     "y": 304,
+     "w": 1140,
+     "h": 560,
+     "chartType": "line",
+     "fontSize": 18,
+     "categories": [
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep"
+     ],
+     "series": [
+      {
+       "name": "MRR",
+       "values": [
+        268,
+        292,
+        318,
+        346,
+        378,
+        412
+       ],
+       "color": "#B4700F"
+      },
+      {
+       "name": "Net burn",
+       "values": [
+        322,
+        312,
+        298,
+        315,
+        308,
+        310
+       ],
+       "color": "#4B4C53"
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 260,
+     "w": 504,
+     "h": 80,
+     "text": "$412K",
+     "family": "Schibsted Grotesk",
+     "size": 64,
+     "weight": 700,
+     "color": "#8E5A0A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 348,
+     "w": 504,
+     "h": 60,
+     "text": "MRR at month end",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#63646A",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1320,
+     "y": 412,
+     "w": 504,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 440,
+     "w": 504,
+     "h": 80,
+     "text": "1.1%",
+     "family": "Schibsted Grotesk",
+     "size": 64,
+     "weight": 700,
+     "color": "#8E5A0A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 528,
+     "w": 504,
+     "h": 60,
+     "text": "Logo churn, the lowest yet",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#63646A",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1320,
+     "y": 592,
+     "w": 504,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 620,
+     "w": 504,
+     "h": 80,
+     "text": "Q2 2027",
+     "family": "Schibsted Grotesk",
+     "size": 64,
+     "weight": 700,
+     "color": "#8E5A0A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 708,
+     "w": 504,
+     "h": 60,
+     "text": "Default-alive at this trajectory",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#63646A",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 923,
+     "w": 760,
+     "h": 33,
+     "text": "one axis for both lines, so the gap is honest",
+     "family": "Kalam",
+     "size": 26,
+     "weight": 700,
+     "color": "#8E5A0A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Big figure",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#2B2C31",
+      0
+     ],
+     [
+      "#151618",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1227,
+     "y": 380,
+     "w": 9,
+     "h": 9,
+     "fill": "#E9A63F",
+     "opacity": 0.76
+    },
+    {
+     "kind": "ellipse",
+     "x": 1429,
+     "y": 468,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9A63F",
+     "opacity": 0.63
+    },
+    {
+     "kind": "ellipse",
+     "x": 1261,
+     "y": 823,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9A63F",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1516,
+     "y": 289,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9A63F",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1383,
+     "y": 304,
+     "w": 8,
+     "h": 8,
+     "fill": "#E9A63F",
+     "opacity": 0.36
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#3F4046"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Beacon  ·  Investor update, September",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#ABAAA5",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#ABAAA5",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 580,
+     "y": 90,
+     "w": 760,
+     "h": 760,
+     "fill": "#E9A63F",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 656,
+     "y": 166,
+     "w": 608,
+     "h": 608,
+     "fill": "#E9A63F",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1728,
+     "h": 28,
+     "text": "Default alive",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#E9A63F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1728,
+     "h": 240,
+     "text": "Q2 2027",
+     "family": "Schibsted Grotesk",
+     "size": 220,
+     "weight": 700,
+     "color": "#E9A63F",
+     "lineHeight": 1,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 570,
+     "w": 1200,
+     "h": 90,
+     "text": "The month revenue covers burn at this trajectory, before a raise and before any of the pipeline closes.",
+     "family": "Public Sans",
+     "size": 30,
+     "weight": 400,
+     "color": "#F4F3EF",
+     "lineHeight": 1.4,
+     "align": "center"
+    },
+    {
+     "kind": "button",
+     "x": 830,
+     "y": 690,
+     "w": 260,
+     "h": 48,
+     "label": "one month ahead",
+     "fill": "#554734",
+     "color": "#E9A63F",
+     "family": "Public Sans",
+     "size": 19,
+     "weight": 700
+    }
+   ]
+  },
+  {
+   "name": "Two columns",
+   "bg": "#F4F3EF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Highlights and lowlights",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#8E5A0A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 72,
+     "text": "What went right, what went wrong",
+     "family": "Schibsted Grotesk",
+     "size": 58,
+     "weight": 700,
+     "color": "#232326",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Beacon  ·  Investor update, September",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#63646A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#63646A",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 240,
+     "w": 848,
+     "h": 600,
+     "fill": "#EBEAE4",
+     "radius": 4,
+     "stroke": "#D8D6D0",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 856,
+     "y": 284,
+     "w": 40,
+     "h": 40,
+     "color": "#8E5A0A"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 288,
+     "w": 688,
+     "h": 28,
+     "text": "Right",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#8E5A0A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 332,
+     "w": 752,
+     "h": 112,
+     "text": "The self-serve tier started paying",
+     "family": "Schibsted Grotesk",
+     "size": 40,
+     "weight": 700,
+     "color": "#232326",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 500,
+     "w": 752,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 524,
+     "w": 752,
+     "h": 40,
+     "text": "Thirty-one upgrades without a sales call",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#232326",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 600,
+     "w": 752,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 624,
+     "w": 752,
+     "h": 40,
+     "text": "Payback under four months on that cohort",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#232326",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 700,
+     "w": 752,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 724,
+     "w": 752,
+     "h": 40,
+     "text": "Support tickets per account down 40%",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#232326",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 976,
+     "y": 240,
+     "w": 848,
+     "h": 600,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#2B2C31",
+        0
+       ],
+       [
+        "#151618",
+        1
+       ]
+      ]
+     },
+     "radius": 4
+    },
+    {
+     "kind": "icon",
+     "icon": "alert-triangle",
+     "x": 1736,
+     "y": 284,
+     "w": 40,
+     "h": 40,
+     "color": "#E9A63F"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 288,
+     "w": 688,
+     "h": 28,
+     "text": "Wrong",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#E9A63F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 332,
+     "w": 752,
+     "h": 112,
+     "text": "We lost the platform lead we wanted",
+     "family": "Schibsted Grotesk",
+     "size": 40,
+     "weight": 700,
+     "color": "#F4F3EF",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 500,
+     "w": 752,
+     "h": 1,
+     "fill": "#3F4046"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 524,
+     "w": 752,
+     "h": 40,
+     "text": "Counter-offer we could not match",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#F4F3EF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 600,
+     "w": 752,
+     "h": 1,
+     "fill": "#3F4046"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 624,
+     "w": 752,
+     "h": 40,
+     "text": "Search restarted with a new firm",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#F4F3EF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 700,
+     "w": 752,
+     "h": 1,
+     "fill": "#3F4046"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 724,
+     "w": 752,
+     "h": 40,
+     "text": "Roadmap slips by three weeks",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#F4F3EF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 891,
+     "w": 760,
+     "h": 65,
+     "text": "the counter-offer was 40% over band; we held the band",
+     "family": "Kalam",
+     "size": 26,
+     "weight": 700,
+     "color": "#8E5A0A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#F4F3EF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#232326",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Asks",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#8E5A0A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 72,
+     "text": "Three things we need",
+     "family": "Schibsted Grotesk",
+     "size": 58,
+     "weight": 700,
+     "color": "#232326",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Beacon  ·  Investor update, September",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#63646A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#63646A",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 240,
+     "w": 560,
+     "h": 580,
+     "fill": "#EBEAE4",
+     "radius": 4,
+     "stroke": "#D8D6D0",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 240,
+     "w": 560,
+     "h": 6,
+     "fill": "#B4700F",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 288,
+     "w": 80,
+     "h": 80,
+     "fill": "#e0d2b9"
+    },
+    {
+     "kind": "icon",
+     "icon": "user",
+     "x": 156,
+     "y": 308,
+     "w": 40,
+     "h": 40,
+     "color": "#8E5A0A"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 404,
+     "w": 480,
+     "h": 100,
+     "text": "One introduction",
+     "family": "Schibsted Grotesk",
+     "size": 34,
+     "weight": 700,
+     "color": "#232326",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 516,
+     "w": 480,
+     "h": 160,
+     "text": "A head of platform engineering, ideally someone who has scaled a data pipeline past a billion events a day.",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#63646A",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 736,
+     "w": 480,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 760,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#63646A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 240,
+     "w": 560,
+     "h": 580,
+     "fill": "#EBEAE4",
+     "radius": 4,
+     "stroke": "#D8D6D0",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 240,
+     "w": 560,
+     "h": 6,
+     "fill": "#4B4C53",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 288,
+     "w": 80,
+     "h": 80,
+     "fill": "#cbcac7"
+    },
+    {
+     "kind": "icon",
+     "icon": "briefcase",
+     "x": 740,
+     "y": 308,
+     "w": 40,
+     "h": 40,
+     "color": "#4B4C53"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 404,
+     "w": 480,
+     "h": 100,
+     "text": "Two customer intros",
+     "family": "Schibsted Grotesk",
+     "size": 34,
+     "weight": 700,
+     "color": "#232326",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 516,
+     "w": 480,
+     "h": 160,
+     "text": "Logistics or fleet operators with more than 500 vehicles. Two names would change Q4.",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#63646A",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 736,
+     "w": 480,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 760,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#63646A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 240,
+     "w": 560,
+     "h": 580,
+     "fill": "#EBEAE4",
+     "radius": 4,
+     "stroke": "#D8D6D0",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 240,
+     "w": 560,
+     "h": 6,
+     "fill": "#B4700F",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 288,
+     "w": 80,
+     "h": 80,
+     "fill": "#e0d2b9"
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 1324,
+     "y": 308,
+     "w": 40,
+     "h": 40,
+     "color": "#8E5A0A"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 404,
+     "w": 480,
+     "h": 100,
+     "text": "Thirty minutes of advice",
+     "family": "Schibsted Grotesk",
+     "size": 34,
+     "weight": 700,
+     "color": "#232326",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 516,
+     "w": 480,
+     "h": 160,
+     "text": "Pricing for the self-serve tier. We think we are underpriced by half and want a second opinion.",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#63646A",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 736,
+     "w": 480,
+     "h": 1,
+     "fill": "#D8D6D0"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 760,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#63646A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 923,
+     "w": 760,
+     "h": 33,
+     "text": "one reply with one name is enough",
+     "family": "Kalam",
+     "size": 26,
+     "weight": 700,
+     "color": "#8E5A0A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#2B2C31",
+      0
+     ],
+     [
+      "#151618",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F4F3EF",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1227,
+     "y": 380,
+     "w": 9,
+     "h": 9,
+     "fill": "#E9A63F",
+     "opacity": 0.76
+    },
+    {
+     "kind": "ellipse",
+     "x": 1429,
+     "y": 468,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9A63F",
+     "opacity": 0.63
+    },
+    {
+     "kind": "ellipse",
+     "x": 1261,
+     "y": 823,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9A63F",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1516,
+     "y": 289,
+     "w": 5,
+     "h": 5,
+     "fill": "#E9A63F",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1383,
+     "y": 304,
+     "w": 8,
+     "h": 8,
+     "fill": "#E9A63F",
+     "opacity": 0.36
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#E9A63F",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#E9A63F",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#E9A63F",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Beacon",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#F4F3EF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 42,
+     "text": "Thank you for reading",
+     "family": "Kalam",
+     "size": 32,
+     "weight": 700,
+     "color": "#E9A63F",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 129,
+     "text": "Thank you",
+     "family": "Schibsted Grotesk",
+     "size": 108,
+     "weight": 700,
+     "color": "#F4F3EF",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 463,
+     "w": 940,
+     "h": 120,
+     "text": "Reply to this deck with anything; we read every note. The data room is updated with the September actuals.",
+     "family": "Public Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#ABAAA5",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#E9A63F"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "sam@beacon.example",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#F4F3EF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "world",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#E9A63F"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "beacon.example/investors",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#F4F3EF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "calendar",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#E9A63F"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "Next update: 4 November",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#F4F3EF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Open the data room",
+     "fill": "#E9A63F",
+     "color": "#232326",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 700,
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "08 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#ABAAA5",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 890,
+     "w": 720,
+     "h": 34,
+     "text": "bad news gets a call before it gets a slide",
+     "family": "Kalam",
+     "size": 27,
+     "weight": 700,
+     "color": "#E9A63F",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day6-open-vault",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n69",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n71",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n72",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n73",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p1-n19",
+   "kind": "text",
+   "label": "Salutation",
+   "hint": "Who the letter is to"
+  },
+  {
+   "node": "p1-n23",
+   "kind": "text",
+   "label": "Paragraph 1",
+   "hint": "The month in one breath"
+  },
+  {
+   "node": "p1-n24",
+   "kind": "text",
+   "label": "Paragraph 2",
+   "hint": "What went wrong, plainly"
+  },
+  {
+   "node": "p1-n25",
+   "kind": "text",
+   "label": "Paragraph 3",
+   "hint": "What you need from the reader"
+  },
+  {
+   "node": "p1-n26",
+   "kind": "text",
+   "label": "Signature",
+   "hint": "Your first name"
+  },
+  {
+   "node": "p1-n27",
+   "kind": "text",
+   "label": "Name and title",
+   "hint": "Who signs"
+  },
+  {
+   "node": "p1-n30",
+   "kind": "text",
+   "label": "Figure 1",
+   "hint": "One number"
+  },
+  {
+   "node": "p1-n31",
+   "kind": "text",
+   "label": "Label 1",
+   "hint": "What it measures"
+  },
+  {
+   "node": "p1-n34",
+   "kind": "text",
+   "label": "Figure 2",
+   "hint": "One number"
+  },
+  {
+   "node": "p1-n35",
+   "kind": "text",
+   "label": "Label 2",
+   "hint": "What it measures"
+  },
+  {
+   "node": "p1-n38",
+   "kind": "text",
+   "label": "Figure 3",
+   "hint": "One number"
+  },
+  {
+   "node": "p1-n39",
+   "kind": "text",
+   "label": "Label 3",
+   "hint": "What it measures"
+  },
+  {
+   "node": "p4-n73",
+   "kind": "text",
+   "label": "Eyebrow",
+   "hint": "What the figure measures"
+  },
+  {
+   "node": "p4-n74",
+   "kind": "text",
+   "label": "Figure",
+   "hint": "The one number"
+  },
+  {
+   "node": "p4-n75",
+   "kind": "text",
+   "label": "Caption",
+   "hint": "One sentence on what it means"
+  },
+  {
+   "node": "p4-n76-label",
+   "kind": "text",
+   "label": "Comparison",
+   "hint": "Against what"
+  },
+  {
+   "node": "p7-n76",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p7-n78",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p7-n80",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Investor Update",
-  "theme": "concise, no spin",
-  "pages": [
-   {
-    "title": "The month",
-    "points": [
-     "The one-paragraph summary"
-    ],
-    "visualRole": "cover"
-   },
-   {
-    "title": "Metrics",
-    "points": [
-     "Revenue, burn, runway, and growth"
-    ],
-    "visualRole": "data"
-   },
-   {
-    "title": "Highlights",
-    "points": [
-     "What went right"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Lowlights",
-    "points": [
-     "What went wrong and what we changed"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Asks",
-    "points": [
-     "Intros, hires, and advice we need"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 54
 }

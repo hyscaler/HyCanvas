@@ -35,6 +35,9 @@ type Service struct {
 	db     DBTX
 	access Access
 	store  DesignStore
+	// starterAssets stores the starter kit's logo artwork (starter.go); nil
+	// seeds the kit without logos.
+	starterAssets StarterAssets
 }
 
 // NewService wires the brand service (kit-management). Call WithDesignScope to
@@ -207,7 +210,7 @@ func (s *Service) CreateKit(ctx context.Context, workspaceID, userID, name strin
 	}
 	n := strings.TrimSpace(name)
 	if n == "" {
-		n = "Untitled brand kit"
+		n = untitledKitName
 	}
 	existing, err := s.listForWorkspace(ctx, workspaceID)
 	if err != nil {

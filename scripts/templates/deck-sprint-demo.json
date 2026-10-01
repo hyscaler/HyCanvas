@@ -1,5 +1,4 @@
 {
- "kind": "deck-outline",
  "id": "deck-sprint-demo",
  "title": "Sprint Demo",
  "categories": [
@@ -13,54 +12,3168 @@
   "agile"
  ],
  "styleTags": [
-  "tech"
+  "modern",
+  "bold",
+  "dark"
  ],
- "themeId": "theme-circuit",
  "size": [
   1920,
   1080
  ],
- "rank": 62,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "JetBrains Mono",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Atkinson Hyperlegible Next",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "VT323",
+   "weight": 400
+  },
+  {
+   "role": "label",
+   "family": "JetBrains Mono",
+   "weight": 500
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#0D0E0B",
+      0
+     ],
+     [
+      "#050604",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": ">_",
+     "family": "JetBrains Mono",
+     "size": 620,
+     "weight": 500,
+     "color": "#1f201c",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#3DF37C",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Nova Systems",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 600,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 52,
+     "text": "// show, then tell",
+     "family": "VT323",
+     "size": 40,
+     "weight": 400,
+     "color": "#3DF37C",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 195,
+     "text": "Sprint 42: the goal\nwe committed to",
+     "family": "JetBrains Mono",
+     "size": 88,
+     "weight": 800,
+     "color": "#ECEAE2",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 671,
+     "w": 900,
+     "h": 80,
+     "text": "Two demos, the numbers under the hood, and what we pull into sprint 43 and what we park.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 28,
+     "weight": 400,
+     "color": "#9C9A90",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Tomas Reyes, Engineering Lead  ·  17 October 2026",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#161811",
+     "radius": 6,
+     "stroke": "#292B23",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "14",
+     "family": "JetBrains Mono",
+     "size": 26,
+     "weight": 800,
+     "color": "#3DF37C",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 246,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "stories done",
+     "family": "JetBrains Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 396,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#161811",
+     "radius": 6,
+     "stroke": "#292B23",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 416,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "2",
+     "family": "JetBrains Mono",
+     "size": 26,
+     "weight": 800,
+     "color": "#3DF37C",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 546,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "carried",
+     "family": "JetBrains Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 696,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#161811",
+     "radius": 6,
+     "stroke": "#292B23",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "0",
+     "family": "JetBrains Mono",
+     "size": 26,
+     "weight": 800,
+     "color": "#3DF37C",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 846,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "bugs opened",
+     "family": "JetBrains Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 170,
+     "w": 700,
+     "h": 700,
+     "fill": "#3DF37C",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1220,
+     "y": 240,
+     "w": 560,
+     "h": 560,
+     "fill": "#3DF37C",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 881,
+     "w": 720,
+     "h": 43,
+     "text": "real incidents, nothing rehearsed",
+     "family": "VT323",
+     "size": 34,
+     "weight": 400,
+     "color": "#3DF37C",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day38-macintosh",
+     "x": 1210,
+     "y": 230,
+     "w": 580,
+     "h": 580,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Section",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#0D0E0B",
+      0
+     ],
+     [
+      "#050604",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": ">_",
+     "family": "JetBrains Mono",
+     "size": 620,
+     "weight": 500,
+     "color": "#1f201c",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 330,
+     "w": 120,
+     "h": 4,
+     "fill": "#3DF37C"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 358,
+     "w": 1100,
+     "h": 112,
+     "text": "Show first",
+     "family": "JetBrains Mono",
+     "size": 96,
+     "weight": 800,
+     "color": "#ECEAE2",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 490,
+     "w": 900,
+     "h": 90,
+     "text": "Two demos on staging, against last week's real incidents. Slides only for what the terminal cannot show.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 28,
+     "weight": 400,
+     "color": "#9C9A90",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1240,
+     "y": 280,
+     "w": 560,
+     "h": 560,
+     "fill": "#3DF37C",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1296,
+     "y": 336,
+     "w": 448,
+     "h": 448,
+     "fill": "#3DF37C",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 1000,
+     "h": 50,
+     "text": "// part one",
+     "family": "VT323",
+     "size": 40,
+     "weight": 400,
+     "color": "#3DF37C",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Sprint 42 demo",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day41-desktop",
+     "x": 1300,
+     "y": 340,
+     "w": 440,
+     "h": 440,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Text and picture",
+   "bg": "#151711",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": ">_",
+     "family": "JetBrains Mono",
+     "size": 620,
+     "weight": 500,
+     "color": "#20221c",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#2E3027"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Demo one",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#3DF37C",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 960,
+     "h": 109,
+     "text": "Incident narrative, first draft",
+     "family": "JetBrains Mono",
+     "size": 46,
+     "weight": 800,
+     "color": "#EEECE4",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#2E3027"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Sprint 42 demo",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A5A398",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A5A398",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 305,
+     "w": 34,
+     "h": 34,
+     "fill": "#23452a"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 305,
+     "w": 34,
+     "h": 34,
+     "text": "1",
+     "family": "JetBrains Mono",
+     "size": 17,
+     "weight": 800,
+     "color": "#3DF37C",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 301,
+     "w": 840,
+     "h": 44,
+     "text": "The feature",
+     "family": "JetBrains Mono",
+     "size": 32,
+     "weight": 800,
+     "color": "#EEECE4",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 353,
+     "w": 840,
+     "h": 70,
+     "text": "Open an incident and the timeline writes the first paragraph: what changed, when, and the first symptom.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 400,
+     "color": "#A5A398",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 483,
+     "w": 34,
+     "h": 34,
+     "fill": "#23452a"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 483,
+     "w": 34,
+     "h": 34,
+     "text": "2",
+     "family": "JetBrains Mono",
+     "size": 17,
+     "weight": 800,
+     "color": "#3DF37C",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 479,
+     "w": 840,
+     "h": 44,
+     "text": "The flow",
+     "family": "JetBrains Mono",
+     "size": 32,
+     "weight": 800,
+     "color": "#EEECE4",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 531,
+     "w": 840,
+     "h": 70,
+     "text": "Deploy at 14:02, latency alert at 14:09, narrative drafted at 14:09:30. The on-call reads instead of digging.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 400,
+     "color": "#A5A398",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 661,
+     "w": 34,
+     "h": 34,
+     "fill": "#23452a"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 661,
+     "w": 34,
+     "h": 34,
+     "text": "3",
+     "family": "JetBrains Mono",
+     "size": 17,
+     "weight": 800,
+     "color": "#3DF37C",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 657,
+     "w": 840,
+     "h": 44,
+     "text": "Edge cases handled",
+     "family": "JetBrains Mono",
+     "size": 32,
+     "weight": 800,
+     "color": "#EEECE4",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 709,
+     "w": 840,
+     "h": 70,
+     "text": "Overlapping deploys, missing traces, and a timeline with nothing in it all produce an honest sentence.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 400,
+     "color": "#A5A398",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1080,
+     "y": 196,
+     "w": 744,
+     "h": 690,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#464435",
+        0
+       ],
+       [
+        "#1D1F18",
+        1
+       ]
+      ]
+     },
+     "radius": 9
+    },
+    {
+     "kind": "ellipse",
+     "x": 1202,
+     "y": 291,
+     "w": 500,
+     "h": 500,
+     "fill": "#3DF37C",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1252,
+     "y": 341,
+     "w": 400,
+     "h": 400,
+     "fill": "#3DF37C",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 916,
+     "w": 760,
+     "h": 40,
+     "text": "watch the paragraph appear at 14:09:30",
+     "family": "VT323",
+     "size": 32,
+     "weight": 400,
+     "color": "#3DF37C",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day17-walkie-talkie",
+     "x": 1160,
+     "y": 270,
+     "w": 584,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Split",
+   "bg": "#151711",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 0,
+     "w": 900,
+     "h": 1080,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#0D0E0B",
+        0
+       ],
+       [
+        "#050604",
+        1
+       ]
+      ]
+     },
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 559,
+     "y": 393,
+     "w": 8,
+     "h": 8,
+     "fill": "#3DF37C",
+     "opacity": 0.59
+    },
+    {
+     "kind": "ellipse",
+     "x": 99,
+     "y": 250,
+     "w": 7,
+     "h": 7,
+     "fill": "#3DF37C",
+     "opacity": 0.45999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 208,
+     "y": 57,
+     "w": 5,
+     "h": 5,
+     "fill": "#3DF37C",
+     "opacity": 0.54
+    },
+    {
+     "kind": "ellipse",
+     "x": 361,
+     "y": 201,
+     "w": 9,
+     "h": 9,
+     "fill": "#3DF37C",
+     "opacity": 0.43999999999999995
+    },
+    {
+     "kind": "ellipse",
+     "x": 463,
+     "y": 185,
+     "w": 8,
+     "h": 8,
+     "fill": "#3DF37C",
+     "opacity": 0.54
+    },
+    {
+     "kind": "ellipse",
+     "x": 744,
+     "y": 411,
+     "w": 5,
+     "h": 5,
+     "fill": "#3DF37C",
+     "opacity": 0.6799999999999999
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 130,
+     "w": 700,
+     "h": 28,
+     "text": "Under the hood, before",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#3DF37C",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 184,
+     "w": 720,
+     "h": 240,
+     "text": "Eleven seconds\nfor ten thousand\ntraces.",
+     "family": "JetBrains Mono",
+     "size": 58,
+     "weight": 800,
+     "color": "#ECEAE2",
+     "lineHeight": 1.08
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 470,
+     "w": 12,
+     "h": 12,
+     "fill": "#3DF37C",
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 460,
+     "w": 660,
+     "h": 70,
+     "text": "Every first sentence needs ten thousand traces. The row store took eleven seconds to hand them over.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 400,
+     "color": "#9C9A90",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 570,
+     "w": 12,
+     "h": 12,
+     "fill": "#3DF37C",
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 560,
+     "w": 660,
+     "h": 70,
+     "text": "Eleven seconds is longer than the on-call waits before opening the dashboards anyway.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 400,
+     "color": "#9C9A90",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 670,
+     "w": 12,
+     "h": 12,
+     "fill": "#3DF37C",
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 660,
+     "w": 660,
+     "h": 70,
+     "text": "One table, no partitions, and every incident querying the same hot rows at once.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 400,
+     "color": "#9C9A90",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 900,
+     "y": 0,
+     "w": 6,
+     "h": 1080,
+     "fill": "#3DF37C",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 130,
+     "w": 800,
+     "h": 28,
+     "text": "Demo two",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#3DF37C",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 184,
+     "w": 820,
+     "h": 160,
+     "text": "The trace store,\nrebuilt.",
+     "family": "JetBrains Mono",
+     "size": 58,
+     "weight": 800,
+     "color": "#EEECE4",
+     "lineHeight": 1.08
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 370,
+     "w": 800,
+     "h": 110,
+     "text": "Traces now land in a columnar store partitioned by hour: two engineers, three weeks, one migration script. The old row store stays read-only until December.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 400,
+     "color": "#A5A398",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 980,
+     "y": 520,
+     "w": 44,
+     "h": 44,
+     "fill": "#23492c"
+    },
+    {
+     "kind": "icon",
+     "icon": "bolt",
+     "x": 990,
+     "y": 530,
+     "w": 24,
+     "h": 24,
+     "color": "#3DF37C"
+    },
+    {
+     "kind": "text",
+     "x": 1044,
+     "y": 526,
+     "w": 700,
+     "h": 34,
+     "text": "Ten thousand traces in 0.9 seconds",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#EEECE4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 980,
+     "y": 596,
+     "w": 44,
+     "h": 44,
+     "fill": "#23492c"
+    },
+    {
+     "kind": "icon",
+     "icon": "database",
+     "x": 990,
+     "y": 606,
+     "w": 24,
+     "h": 24,
+     "color": "#3DF37C"
+    },
+    {
+     "kind": "text",
+     "x": 1044,
+     "y": 602,
+     "w": 700,
+     "h": 34,
+     "text": "Old row store still answers, read-only",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#EEECE4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 980,
+     "y": 672,
+     "w": 44,
+     "h": 44,
+     "fill": "#23492c"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 990,
+     "y": 682,
+     "w": 24,
+     "h": 24,
+     "color": "#3DF37C"
+    },
+    {
+     "kind": "text",
+     "x": 1044,
+     "y": 678,
+     "w": 700,
+     "h": 34,
+     "text": "Rehearsed twice in staging",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#EEECE4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1410,
+     "y": 650,
+     "w": 300,
+     "h": 300,
+     "fill": "#3DF37C",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 680,
+     "w": 240,
+     "h": 240,
+     "fill": "#3DF37C",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Sprint 42 demo",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A5A398",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A5A398",
+     "lineHeight": 1.3,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day44-hdd",
+     "x": 1440,
+     "y": 690,
+     "w": 240,
+     "h": 220,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Demo frame",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#0D0E0B",
+      0
+     ],
+     [
+      "#050604",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1100,
+     "h": 28,
+     "text": "What you just saw  ·  edge cases and the figure that moved",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#3DF37C",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 150,
+     "w": 1728,
+     "h": 706,
+     "fill": "#161811",
+     "radius": 6,
+     "stroke": "#292B23",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 150,
+     "w": 1728,
+     "h": 56,
+     "fill": "#20221A",
+     "radius": 6
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 200,
+     "w": 1728,
+     "h": 6,
+     "fill": "#20221A"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 206,
+     "w": 1728,
+     "h": 1,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "ellipse",
+     "x": 122,
+     "y": 170,
+     "w": 16,
+     "h": 16,
+     "fill": "#9C9A90"
+    },
+    {
+     "kind": "ellipse",
+     "x": 150,
+     "y": 170,
+     "w": 16,
+     "h": 16,
+     "fill": "#D9C79B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 178,
+     "y": 170,
+     "w": 16,
+     "h": 16,
+     "fill": "#3DF37C"
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 167,
+     "w": 1488,
+     "h": 24,
+     "text": "tomas@nova: ~/sprint-42/demos",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 960,
+     "y": 207,
+     "w": 1,
+     "h": 612,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 244,
+     "w": 768,
+     "h": 32,
+     "text": "$ demo incident-narrative",
+     "family": "JetBrains Mono",
+     "size": 24,
+     "weight": 500,
+     "color": "#3DF37C",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 290,
+     "w": 768,
+     "h": 122,
+     "text": "Incident narrative,\nfirst draft",
+     "family": "JetBrains Mono",
+     "size": 54,
+     "weight": 800,
+     "color": "#ECEAE2",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 432,
+     "w": 768,
+     "h": 1,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       146,
+       476
+      ],
+      [
+       149,
+       473
+      ],
+      [
+       155,
+       479
+      ],
+      [
+       169,
+       465
+      ],
+      [
+       172,
+       468
+      ],
+      [
+       155,
+       485
+      ]
+     ],
+     "fill": "#3DF37C",
+     "closed": true
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 458,
+     "w": 722,
+     "h": 36,
+     "text": "Two deploys overlapping the alert",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 500,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       146,
+       530
+      ],
+      [
+       149,
+       527
+      ],
+      [
+       155,
+       533
+      ],
+      [
+       169,
+       519
+      ],
+      [
+       172,
+       522
+      ],
+      [
+       155,
+       539
+      ]
+     ],
+     "fill": "#3DF37C",
+     "closed": true
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 512,
+     "w": 722,
+     "h": 36,
+     "text": "An incident with no traces attached",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 500,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       146,
+       584
+      ],
+      [
+       149,
+       581
+      ],
+      [
+       155,
+       587
+      ],
+      [
+       169,
+       573
+      ],
+      [
+       172,
+       576
+      ],
+      [
+       155,
+       593
+      ]
+     ],
+     "fill": "#3DF37C",
+     "closed": true
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 566,
+     "w": 722,
+     "h": 36,
+     "text": "A timeline with nothing on it yet",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 500,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 630,
+     "w": 768,
+     "h": 1,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 654,
+     "w": 300,
+     "h": 22,
+     "text": "before",
+     "family": "JetBrains Mono",
+     "size": 15,
+     "weight": 600,
+     "color": "#D9C79B",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 524,
+     "y": 654,
+     "w": 300,
+     "h": 22,
+     "text": "after",
+     "family": "JetBrains Mono",
+     "size": 15,
+     "weight": 600,
+     "color": "#3DF37C",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 690,
+     "w": 300,
+     "h": 66,
+     "text": "25 min",
+     "family": "JetBrains Mono",
+     "size": 56,
+     "weight": 800,
+     "color": "#9C9A90",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 138,
+     "y": 716,
+     "w": 214,
+     "h": 5,
+     "fill": "#D9C79B",
+     "opacity": 0.9
+    },
+    {
+     "kind": "rect",
+     "x": 406,
+     "y": 716,
+     "w": 46,
+     "h": 4,
+     "fill": "#3DF37C",
+     "radius": 2
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       448,
+       706
+      ],
+      [
+       468,
+       718
+      ],
+      [
+       448,
+       730
+      ]
+     ],
+     "fill": "#3DF37C",
+     "closed": true
+    },
+    {
+     "kind": "text",
+     "x": 524,
+     "y": 676,
+     "w": 388,
+     "h": 92,
+     "text": "30 s",
+     "family": "JetBrains Mono",
+     "size": 84,
+     "weight": 800,
+     "color": "#3DF37C",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 764,
+     "w": 340,
+     "h": 26,
+     "text": "on-call digging before a first summary",
+     "family": "JetBrains Mono",
+     "size": 17,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 524,
+     "y": 764,
+     "w": 388,
+     "h": 26,
+     "text": "the on-call reads, then goes to the fix",
+     "family": "JetBrains Mono",
+     "size": 17,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 244,
+     "w": 768,
+     "h": 32,
+     "text": "$ demo trace-store",
+     "family": "JetBrains Mono",
+     "size": 24,
+     "weight": 500,
+     "color": "#3DF37C",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 290,
+     "w": 768,
+     "h": 122,
+     "text": "The trace store,\nrebuilt",
+     "family": "JetBrains Mono",
+     "size": 54,
+     "weight": 800,
+     "color": "#ECEAE2",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 1008,
+     "y": 432,
+     "w": 768,
+     "h": 1,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       1010,
+       476
+      ],
+      [
+       1013,
+       473
+      ],
+      [
+       1019,
+       479
+      ],
+      [
+       1033,
+       465
+      ],
+      [
+       1036,
+       468
+      ],
+      [
+       1019,
+       485
+      ]
+     ],
+     "fill": "#3DF37C",
+     "closed": true
+    },
+    {
+     "kind": "text",
+     "x": 1054,
+     "y": 458,
+     "w": 722,
+     "h": 36,
+     "text": "Ten thousand traces under a second",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 500,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       1010,
+       530
+      ],
+      [
+       1013,
+       527
+      ],
+      [
+       1019,
+       533
+      ],
+      [
+       1033,
+       519
+      ],
+      [
+       1036,
+       522
+      ],
+      [
+       1019,
+       539
+      ]
+     ],
+     "fill": "#3DF37C",
+     "closed": true
+    },
+    {
+     "kind": "text",
+     "x": 1054,
+     "y": 512,
+     "w": 722,
+     "h": 36,
+     "text": "Migration ran twice in staging, once in prod",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 500,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       1010,
+       584
+      ],
+      [
+       1013,
+       581
+      ],
+      [
+       1019,
+       587
+      ],
+      [
+       1033,
+       573
+      ],
+      [
+       1036,
+       576
+      ],
+      [
+       1019,
+       593
+      ]
+     ],
+     "fill": "#3DF37C",
+     "closed": true
+    },
+    {
+     "kind": "text",
+     "x": 1054,
+     "y": 566,
+     "w": 722,
+     "h": 36,
+     "text": "Old row store still answers, read-only",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 500,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1008,
+     "y": 630,
+     "w": 768,
+     "h": 1,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 654,
+     "w": 300,
+     "h": 22,
+     "text": "before",
+     "family": "JetBrains Mono",
+     "size": 15,
+     "weight": 600,
+     "color": "#D9C79B",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1388,
+     "y": 654,
+     "w": 300,
+     "h": 22,
+     "text": "after",
+     "family": "JetBrains Mono",
+     "size": 15,
+     "weight": 600,
+     "color": "#3DF37C",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 690,
+     "w": 300,
+     "h": 66,
+     "text": "11 s",
+     "family": "JetBrains Mono",
+     "size": 56,
+     "weight": 800,
+     "color": "#9C9A90",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1002,
+     "y": 716,
+     "w": 146,
+     "h": 5,
+     "fill": "#D9C79B",
+     "opacity": 0.9
+    },
+    {
+     "kind": "rect",
+     "x": 1270,
+     "y": 716,
+     "w": 46,
+     "h": 4,
+     "fill": "#3DF37C",
+     "radius": 2
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       1312,
+       706
+      ],
+      [
+       1332,
+       718
+      ],
+      [
+       1312,
+       730
+      ]
+     ],
+     "fill": "#3DF37C",
+     "closed": true
+    },
+    {
+     "kind": "text",
+     "x": 1388,
+     "y": 676,
+     "w": 388,
+     "h": 92,
+     "text": "0.9 s",
+     "family": "JetBrains Mono",
+     "size": 84,
+     "weight": 800,
+     "color": "#3DF37C",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 764,
+     "w": 340,
+     "h": 26,
+     "text": "ten thousand traces on the row store",
+     "family": "JetBrains Mono",
+     "size": 17,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1388,
+     "y": 764,
+     "w": 388,
+     "h": 26,
+     "text": "the same query on the columnar store",
+     "family": "JetBrains Mono",
+     "size": 17,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 818,
+     "w": 1728,
+     "h": 38,
+     "fill": "#3DF37C",
+     "radius": 6
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 818,
+     "w": 1728,
+     "h": 6,
+     "fill": "#3DF37C"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 827,
+     "w": 900,
+     "h": 22,
+     "text": "[sprint-42]  0:incident-narrative  1:trace-store*",
+     "family": "JetBrains Mono",
+     "size": 17,
+     "weight": 600,
+     "color": "#050604",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 900,
+     "y": 827,
+     "w": 900,
+     "h": 22,
+     "text": "14 done  ·  2 carried  ·  0 bugs  ·  17 Oct",
+     "family": "JetBrains Mono",
+     "size": 17,
+     "weight": 600,
+     "color": "#050604",
+     "lineHeight": 1.2,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 839,
+     "w": 720,
+     "h": 85,
+     "text": "figures from Tuesday's run, not a rehearsal",
+     "family": "VT323",
+     "size": 34,
+     "weight": 400,
+     "color": "#3DF37C",
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Sprint 42 demo",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Figures",
+   "bg": "#151711",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": ">_",
+     "family": "JetBrains Mono",
+     "size": 620,
+     "weight": 500,
+     "color": "#20221c",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#2E3027"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The numbers",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#3DF37C",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 70,
+     "text": "Velocity, bugs and the trend",
+     "family": "JetBrains Mono",
+     "size": 56,
+     "weight": 800,
+     "color": "#EEECE4",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#2E3027"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Sprint 42 demo",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A5A398",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A5A398",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 238,
+     "w": 414,
+     "h": 560,
+     "fill": "#1D1F18",
+     "radius": 6,
+     "stroke": "#2E3027",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 238,
+     "w": 414,
+     "h": 6,
+     "fill": "#3DF37C",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 294,
+     "w": 342,
+     "h": 116,
+     "text": "38",
+     "family": "JetBrains Mono",
+     "size": 100,
+     "weight": 800,
+     "color": "#3DF37C",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 434,
+     "w": 342,
+     "h": 34,
+     "text": "Points completed",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#EEECE4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 132,
+     "y": 488,
+     "w": 190,
+     "h": 40,
+     "label": "+4 on sprint 41",
+     "fill": "#23452a",
+     "color": "#3DF37C",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 558,
+     "w": 342,
+     "h": 140,
+     "text": "Third sprint in a row above the rolling average.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 20,
+     "weight": 400,
+     "color": "#A5A398",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 238,
+     "w": 414,
+     "h": 560,
+     "fill": "#1D1F18",
+     "radius": 6,
+     "stroke": "#2E3027",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 238,
+     "w": 414,
+     "h": 6,
+     "fill": "#D9C79B",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 294,
+     "w": 342,
+     "h": 116,
+     "text": "0",
+     "family": "JetBrains Mono",
+     "size": 100,
+     "weight": 800,
+     "color": "#D9C79B",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 434,
+     "w": 342,
+     "h": 34,
+     "text": "Bugs opened",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#EEECE4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 570,
+     "y": 488,
+     "w": 190,
+     "h": 40,
+     "label": "−3",
+     "fill": "#3f3d30",
+     "color": "#D9C79B",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 558,
+     "w": 342,
+     "h": 140,
+     "text": "First clean sprint since June; the trace store tests paid off.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 20,
+     "weight": 400,
+     "color": "#A5A398",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 238,
+     "w": 414,
+     "h": 560,
+     "fill": "#1D1F18",
+     "radius": 6,
+     "stroke": "#2E3027",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 238,
+     "w": 414,
+     "h": 6,
+     "fill": "#3DF37C",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 294,
+     "w": 342,
+     "h": 116,
+     "text": "0.9 s",
+     "family": "JetBrains Mono",
+     "size": 100,
+     "weight": 800,
+     "color": "#3DF37C",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 434,
+     "w": 342,
+     "h": 34,
+     "text": "Narrative draft time",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#EEECE4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1008,
+     "y": 488,
+     "w": 190,
+     "h": 40,
+     "label": "Target 1.0 s",
+     "fill": "#23452a",
+     "color": "#3DF37C",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 558,
+     "w": 342,
+     "h": 140,
+     "text": "Down from eleven seconds on the old store.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 20,
+     "weight": 400,
+     "color": "#A5A398",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 238,
+     "w": 414,
+     "h": 560,
+     "fill": "#1D1F18",
+     "radius": 6,
+     "stroke": "#2E3027",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 238,
+     "w": 414,
+     "h": 6,
+     "fill": "#D9C79B",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 294,
+     "w": 342,
+     "h": 116,
+     "text": "2",
+     "family": "JetBrains Mono",
+     "size": 100,
+     "weight": 800,
+     "color": "#D9C79B",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 434,
+     "w": 342,
+     "h": 34,
+     "text": "Stories carried",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#EEECE4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1446,
+     "y": 488,
+     "w": 190,
+     "h": 40,
+     "label": "Same as last sprint",
+     "fill": "#3f3d30",
+     "color": "#D9C79B",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 558,
+     "w": 342,
+     "h": 140,
+     "text": "Both waiting on the vendor contract for APAC.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 20,
+     "weight": 400,
+     "color": "#A5A398",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 876,
+     "w": 760,
+     "h": 80,
+     "text": "one clean sprint is a good week, three is a trend",
+     "family": "VT323",
+     "size": 32,
+     "weight": 400,
+     "color": "#3DF37C",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Quote",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#0D0E0B",
+      0
+     ],
+     [
+      "#050604",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": ">_",
+     "family": "JetBrains Mono",
+     "size": 620,
+     "weight": 500,
+     "color": "#1f201c",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Sprint 42 demo",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 260,
+     "h": 260,
+     "text": "“",
+     "family": "JetBrains Mono",
+     "size": 280,
+     "weight": 800,
+     "color": "#3DF37C",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 400,
+     "w": 1100,
+     "h": 205,
+     "text": "It wrote the paragraph I would have\nwritten at minute twenty. I read it\nat minute one and went to the fix.",
+     "family": "JetBrains Mono",
+     "size": 50,
+     "weight": 800,
+     "color": "#ECEAE2",
+     "lineHeight": 1.26
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 116,
+     "y": 665,
+     "w": 84,
+     "h": 84,
+     "fill": "#20221A"
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 673,
+     "w": 800,
+     "h": 32,
+     "text": "Ines Kowalczyk",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 709,
+     "w": 800,
+     "h": 28,
+     "text": "On-call, platform team. Used the draft on Tuesday's 14:09 alert",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 20,
+     "weight": 400,
+     "color": "#9C9A90",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 881,
+     "w": 720,
+     "h": 43,
+     "text": "the real alert, not a fixture",
+     "family": "VT323",
+     "size": 34,
+     "weight": 400,
+     "color": "#3DF37C",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "op-peep-50",
+     "x": 128,
+     "y": 673,
+     "w": 60,
+     "h": 68
+    }
+   ]
+  },
+  {
+   "name": "Two columns",
+   "bg": "#151711",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": ">_",
+     "family": "JetBrains Mono",
+     "size": 620,
+     "weight": 500,
+     "color": "#20221c",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#2E3027"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Next sprint",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#3DF37C",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 70,
+     "text": "What we pull, what we park",
+     "family": "JetBrains Mono",
+     "size": 56,
+     "weight": 800,
+     "color": "#EEECE4",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#2E3027"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Nova Systems  ·  Sprint 42 demo",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A5A398",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "08 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A5A398",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 238,
+     "w": 848,
+     "h": 600,
+     "fill": "#1D1F18",
+     "radius": 6,
+     "stroke": "#2E3027",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 856,
+     "y": 282,
+     "w": 40,
+     "h": 40,
+     "color": "#3DF37C"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 286,
+     "w": 688,
+     "h": 28,
+     "text": "Pull",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#3DF37C",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 330,
+     "w": 752,
+     "h": 112,
+     "text": "Narrative to ten beta customers",
+     "family": "JetBrains Mono",
+     "size": 40,
+     "weight": 800,
+     "color": "#EEECE4",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 498,
+     "w": 752,
+     "h": 1,
+     "fill": "#2E3027"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 522,
+     "w": 752,
+     "h": 40,
+     "text": "Feedback form inside the incident view",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#EEECE4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 598,
+     "w": 752,
+     "h": 1,
+     "fill": "#2E3027"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 622,
+     "w": 752,
+     "h": 40,
+     "text": "Two more edge cases from the demo",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#EEECE4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 698,
+     "w": 752,
+     "h": 1,
+     "fill": "#2E3027"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 722,
+     "w": 752,
+     "h": 40,
+     "text": "Trace store cutover for the last region",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#EEECE4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 976,
+     "y": 238,
+     "w": 848,
+     "h": 600,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#0D0E0B",
+        0
+       ],
+       [
+        "#050604",
+        1
+       ]
+      ]
+     },
+     "radius": 6
+    },
+    {
+     "kind": "icon",
+     "icon": "clock",
+     "x": 1736,
+     "y": 282,
+     "w": 40,
+     "h": 40,
+     "color": "#3DF37C"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 286,
+     "w": 688,
+     "h": 28,
+     "text": "Park",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#3DF37C",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 330,
+     "w": 752,
+     "h": 112,
+     "text": "Everything APAC until the contract signs",
+     "family": "JetBrains Mono",
+     "size": 40,
+     "weight": 800,
+     "color": "#ECEAE2",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 498,
+     "w": 752,
+     "h": 1,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 522,
+     "w": 752,
+     "h": 40,
+     "text": "Residency work stays in the backlog",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 598,
+     "w": 752,
+     "h": 1,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 622,
+     "w": 752,
+     "h": 40,
+     "text": "Mobile alerts moves to sprint 44",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 698,
+     "w": 752,
+     "h": 1,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 722,
+     "w": 752,
+     "h": 40,
+     "text": "No new services until the cutover is done",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 876,
+     "w": 760,
+     "h": 80,
+     "text": "APAC unblocks the day the contract signs",
+     "family": "VT323",
+     "size": 32,
+     "weight": 400,
+     "color": "#3DF37C",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#0D0E0B",
+      0
+     ],
+     [
+      "#050604",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": ">_",
+     "family": "JetBrains Mono",
+     "size": 620,
+     "weight": 500,
+     "color": "#1f201c",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#292B23"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#3DF37C",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#3DF37C",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#3DF37C",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Nova Systems",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 600,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 52,
+     "text": "// next sprint",
+     "family": "VT323",
+     "size": 40,
+     "weight": 400,
+     "color": "#3DF37C",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 109,
+     "text": "Questions",
+     "family": "JetBrains Mono",
+     "size": 90,
+     "weight": 800,
+     "color": "#ECEAE2",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 443,
+     "w": 940,
+     "h": 120,
+     "text": "Demo recordings and the sprint report are in the channel. Retro on Monday at ten.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 28,
+     "weight": 400,
+     "color": "#9C9A90",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#3DF37C"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "#platform on Slack",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 500,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#3DF37C"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "tomas@novasystems.example",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 500,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "calendar",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#3DF37C"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "Retro: 20 October, 10:00",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 500,
+     "color": "#ECEAE2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Open the sprint board",
+     "fill": "#3DF37C",
+     "color": "#050604",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 700,
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "09 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#9C9A90",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 881,
+     "w": 720,
+     "h": 43,
+     "text": "bring the recording to the retro",
+     "family": "VT323",
+     "size": 34,
+     "weight": 400,
+     "color": "#3DF37C",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day18-floppy",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p4-n9",
+   "kind": "text",
+   "label": "Window title",
+   "hint": "The path in the title bar"
+  },
+  {
+   "node": "p4-n12",
+   "kind": "text",
+   "label": "Demo 1",
+   "hint": "The feature, two short lines"
+  },
+  {
+   "node": "p4-n27",
+   "kind": "text",
+   "label": "Demo 1 after",
+   "hint": "The figure after the change"
+  },
+  {
+   "node": "p4-n31",
+   "kind": "text",
+   "label": "Demo 2",
+   "hint": "The feature, two short lines"
+  },
+  {
+   "node": "p4-n46",
+   "kind": "text",
+   "label": "Demo 2 after",
+   "hint": "The figure after the change"
+  },
+  {
+   "node": "p4-n52",
+   "kind": "text",
+   "label": "Sprint tallies",
+   "hint": "Stories done, carried, bugs, the date"
+  },
+  {
+   "node": "p8-n10",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n12",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n14",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Sprint Demo",
-  "theme": "show, then tell",
-  "pages": [
-   {
-    "title": "This sprint",
-    "points": [
-     "The goal we committed to"
-    ],
-    "visualRole": "cover"
-   },
-   {
-    "title": "Demo one",
-    "points": [
-     "The feature, the flow, the edge cases handled"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Demo two",
-    "points": [
-     "What changed under the hood and why it matters"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "The numbers",
-    "points": [
-     "Velocity, bugs, and the trend"
-    ],
-    "visualRole": "data"
-   },
-   {
-    "title": "Next sprint",
-    "points": [
-     "What we pull and what we park"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 62
 }

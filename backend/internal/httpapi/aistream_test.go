@@ -89,6 +89,7 @@ func TestAIFailureClassificationIsShared(t *testing.T) {
 		{"auth", errors.Join(ai.ErrBadGateway, &ai.UpstreamError{Provider: "p", Status: http.StatusUnauthorized}), "ai_provider_auth_failed"},
 		{"quota", errors.Join(ai.ErrBadGateway, &ai.UpstreamError{Provider: "p", Status: http.StatusPaymentRequired}), "ai_provider_quota_exhausted"},
 		{"model", errors.Join(ai.ErrBadGateway, &ai.UpstreamError{Provider: "p", Status: http.StatusNotFound}), "ai_provider_model_not_found"},
+		{"model-forbidden", errors.Join(ai.ErrBadGateway, ai.ErrModelForbidden, &ai.UpstreamError{Provider: "p", Status: http.StatusForbidden}), "ai_provider_model_forbidden"},
 		{"wrong-path", errors.Join(ai.ErrBadGateway, &ai.UpstreamError{Provider: "p", Status: http.StatusMethodNotAllowed}), "ai_provider_model_not_found"},
 		{"rate", errors.Join(ai.ErrBadGateway, &ai.UpstreamError{Provider: "p", Status: http.StatusTooManyRequests}), "ai_provider_rate_limited"},
 		{"generic", ai.ErrBadGateway, "ai_provider_failed"},

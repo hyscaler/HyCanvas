@@ -72,6 +72,7 @@ export function CommandMenu({ onExport, onShortcuts, workspaceId }: { onExport: 
       { id: "arrange.alignTop", label: tr("editor.align_top"), category: tr("editor.arrange"), run: () => s().alignSelection("top") },
       { id: "arrange.alignMiddle", label: tr("editor.align_middle"), category: tr("editor.arrange"), keywords: ["vertical", "center"], run: () => s().alignSelection("vmiddle") },
       { id: "arrange.alignBottom", label: tr("editor.align_bottom"), category: tr("editor.arrange"), run: () => s().alignSelection("bottom") },
+      { id: "arrange.centerOnPage", label: tr("editor.center_on_page"), category: tr("editor.arrange"), keywords: ["align", "middle", "both"], run: () => s().alignSelection("center") },
       { id: "arrange.distributeH", label: tr("editor.distribute_horizontally"), category: tr("editor.arrange"), keywords: ["space", "even", "gap"], run: () => s().distributeSelection("h", "gap") },
       { id: "arrange.distributeV", label: tr("editor.distribute_vertically"), category: tr("editor.arrange"), keywords: ["space", "even", "gap"], run: () => s().distributeSelection("v", "gap") },
       { id: "path.union", label: tr("editor.combine_union"), category: tr("editor.combine"), keywords: ["boolean", "merge"], run: () => s().booleanSelection("union") },

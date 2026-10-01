@@ -537,3 +537,31 @@ func TestDeleteConfigDisconnects(t *testing.T) {
 		t.Fatalf("second delete should be a no-op: %v", err)
 	}
 }
+
+// A 403 with the provider's "not allowed this model" wording is marked as a
+// refused model, so the form can point at the model field; a 403 that reads
+// like a bad signature or key stays a rejected credential.
+func TestBadGatewayTellsARefusedModelFromARefusedKey(t *testing.T) {
+	cfg := CallConfig{Provider: ProviderBedrock}
+	iam := badGateway(cfg, &httpStatusError{status: 403, reason: "User: arn:aws:iam::1:user/x is not authorized to perform: bedrock:InvokeModel on resource: arn:aws:bedrock:us-east-1:1:inference-profile/us.anthropic.claude-opus-4-7 because no identity-based policy allows the bedrock:InvokeModel action"})
+	if !errors.Is(iam, ErrBadGateway) || !errors.Is(iam, ErrModelForbidden) {
+		t.Fatalf("IAM refusal should be a refused model, got %v", iam)
+	}
+	var up *UpstreamError
+	if !errors.As(iam, &up) || up.Status != 403 {
+		t.Fatalf("upstream status must ride along, got %v", iam)
+	}
+	sig := badGateway(cfg, &httpStatusError{status: 403, reason: "The request signature we calculated does not match the signature you provided. Check your AWS Secret Access Key and signing method."})
+	if errors.Is(sig, ErrModelForbidden) {
+		t.Fatalf("a bad signature is a rejected credential, got %v", sig)
+	}
+	openai := badGateway(CallConfig{Provider: ProviderOpenAI}, &httpStatusError{status: 403, reason: "Project `proj_1` does not have access to model `gpt-5`"})
+	if !errors.Is(openai, ErrModelForbidden) {
+		t.Fatalf("an OpenAI project without the model should be a refused model, got %v", openai)
+	}
+	for _, r := range []string{"", "Invalid API key", "Forbidden"} {
+		if errors.Is(badGateway(cfg, &httpStatusError{status: 403, reason: r}), ErrModelForbidden) {
+			t.Fatalf("%q must not read as a refused model", r)
+		}
+	}
+}

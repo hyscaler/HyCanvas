@@ -32,6 +32,14 @@ export type ThemeSlots = Record<ThemeSlotName, string>;
  *  font catalog (open-source webfonts), so a generated theme never names a
  *  font the editor cannot load. */
 export const themeFontFamilies = [
+  // The four looks' pairings (look.ts), so a deck's theme record names the
+  // faces its text is set in rather than falling back to Inter.
+  "Fraunces",
+  "Source Serif 4",
+  "Archivo Black",
+  "Space Grotesk",
+  "IBM Plex Sans",
+  "IBM Plex Mono",
   "Inter",
   "Poppins",
   "Playfair Display",

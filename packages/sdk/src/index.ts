@@ -288,6 +288,8 @@ export interface TemplateSummary {
   categories: string[];
   previewUrls: string[];
   format: { width: number; height: number; unit: string };
+  /** Pages in the template; a presentation kit has one per layout. */
+  pageCount?: number;
 }
 
 export type TemplateVisibility = "private" | "workspace" | "public";
@@ -451,6 +453,22 @@ export interface AiImageConfigView {
   /** Whether the second credential is stored (signing providers only). */
   hasSecret?: boolean;
   capabilities: AiCapabilities;
+}
+
+/** One model a provider lists, for the settings form's model field. */
+export interface AiModelInfo {
+  id: string;
+  /** The provider's display name for it, when it gives one. */
+  label?: string;
+}
+
+/** A provider's model catalog. `supported` is false when the provider has no
+ *  catalog the server can read (an endpoint without a models route, an Azure
+ *  resource that does not answer the deployments call); the model field then
+ *  stays free text. */
+export interface AiModelList {
+  models: AiModelInfo[];
+  supported: boolean;
 }
 
 /** One entry of the server's provider preset catalog (GET /ai/providers). */
@@ -1913,6 +1931,30 @@ export class HyCanvasClient {
   ): Promise<void> {
     return this.request("POST", `/v1/workspaces/${workspaceId}/ai-config/test`, candidate);
   }
+  /** List the models a provider serves, for the model field. With
+   *  `candidate`, the list comes from those unsaved settings (an omitted key
+   *  or secret means the stored one, as on a save) and nothing is stored;
+   *  without it, from the stored config. `purpose` narrows the catalog to
+   *  chat models ("text") or image models ("image"); omitted lists all.
+   *  Listing is free: no tokens are spent and nothing is metered. A rejected
+   *  key rejects with the same classified problem a call would. */
+  listAiModels(
+    workspaceId: string,
+    candidate?: { provider: string; baseUrl?: string; apiKey?: string; apiSecret?: string },
+    purpose?: "text" | "image",
+  ): Promise<AiModelList> {
+    // The purpose travels even without a candidate: a body with no provider
+    // means "the stored config", and the server reads the purpose from it.
+    return this.request("POST", `/v1/workspaces/${workspaceId}/ai-config/models`, candidate ? { ...candidate, purpose } : purpose ? { purpose } : undefined);
+  }
+  /** List the image models a CANDIDATE dedicated image provider serves,
+   *  without saving it; an omitted key or secret means the stored one. */
+  listAiImageModels(
+    workspaceId: string,
+    candidate: { provider: string; baseUrl?: string; apiKey?: string; apiSecret?: string },
+  ): Promise<AiModelList> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/ai-image-config/models`, candidate);
+  }
   getAiUsage(workspaceId: string): Promise<{ tokensThisMonth: number }> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/ai-usage`);
   }
@@ -2109,6 +2151,12 @@ export class HyCanvasClient {
   /** AI design-critique suggestions for a posted design summary (FR-15). */
   aiCritique(input: { workspaceId: string; designSummary: string }): Promise<{ suggestions: string }> {
     return this.request("POST", "/v1/ai/critique", input);
+  }
+  /** Ask a provider that can read images to look at one rendered page and
+   *  name the visible layout defects, in a fixed vocabulary. A text-only
+   *  provider answers 400 with `ai_describe_image_unsupported`. */
+  aiReviewPage(input: { workspaceId: string; imageBase64: string; title?: string }): Promise<{ findings: { kind: "overlap" | "clipped" | "overflow" | "unreadable" | "empty" | "other"; detail: string }[] }> {
+    return this.request("POST", "/v1/ai/review-page", input);
   }
   /** Generate a complete design as a single editable SVG document at the target
    *  size. Works with text-only providers (e.g. DeepSeek): the model draws the

@@ -1,5 +1,4 @@
 {
- "kind": "deck-outline",
  "id": "deck-project-kickoff",
  "title": "Project Kickoff",
  "categories": [
@@ -13,65 +12,3320 @@
   "team"
  ],
  "styleTags": [
-  "professional",
+  "minimal",
+  "modern",
   "clean"
  ],
- "themeId": "theme-teal",
  "size": [
   1920,
   1080
  ],
- "rank": 34,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Chivo",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Atkinson Hyperlegible Next",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Covered By Your Grace",
+   "weight": 400
+  },
+  {
+   "role": "label",
+   "family": "Overpass Mono",
+   "weight": 500
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#2B3B4A",
+      0
+     ],
+     [
+      "#16202A",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 40,
+     "y": 40,
+     "w": 1840,
+     "h": 1000,
+     "stroke": "#FF7A2E",
+     "strokeWidth": 1.5,
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1805,
+     "y": 388,
+     "w": 5,
+     "h": 5,
+     "fill": "#FF7A2E",
+     "opacity": 0.6499999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1827,
+     "y": 428,
+     "w": 5,
+     "h": 5,
+     "fill": "#FF7A2E",
+     "opacity": 0.52
+    },
+    {
+     "kind": "ellipse",
+     "x": 1816,
+     "y": 674,
+     "w": 6,
+     "h": 6,
+     "fill": "#FF7A2E",
+     "opacity": 0.51
+    },
+    {
+     "kind": "ellipse",
+     "x": 1626,
+     "y": 74,
+     "w": 7,
+     "h": 7,
+     "fill": "#FF7A2E",
+     "opacity": 0.75
+    },
+    {
+     "kind": "ellipse",
+     "x": 1750,
+     "y": 198,
+     "w": 8,
+     "h": 8,
+     "fill": "#FF7A2E",
+     "opacity": 0.45999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1733,
+     "y": 593,
+     "w": 6,
+     "h": 6,
+     "fill": "#FF7A2E",
+     "opacity": 0.71
+    },
+    {
+     "kind": "ellipse",
+     "x": 1339,
+     "y": 678,
+     "w": 6,
+     "h": 6,
+     "fill": "#FF7A2E",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1481,
+     "y": 506,
+     "w": 8,
+     "h": 8,
+     "fill": "#FF7A2E",
+     "opacity": 0.48
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#FF7A2E",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Form & Function",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 600,
+     "color": "#F1F3F5",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 47,
+     "text": "kickoff, billing rebuild",
+     "family": "Covered By Your Grace",
+     "size": 36,
+     "weight": 400,
+     "color": "#FFA062",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 258,
+     "text": "What we are\nhired to build",
+     "family": "Chivo",
+     "size": 118,
+     "weight": 800,
+     "color": "#F1F3F5",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 734,
+     "w": 900,
+     "h": 120,
+     "text": "Why this project, what done looks like and what we are not doing, the phases, who does what, and the risks we already see.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 28,
+     "weight": 400,
+     "color": "#A7B3BE",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Marcus Obi, Project Lead  ·  3 November 2026",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A7B3BE",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 9",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A7B3BE",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#344656",
+     "radius": 4,
+     "stroke": "#40505F",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "16",
+     "family": "Overpass Mono",
+     "size": 26,
+     "weight": 800,
+     "color": "#FFA062",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 246,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "weeks",
+     "family": "Overpass Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#A7B3BE",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 396,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#344656",
+     "radius": 4,
+     "stroke": "#40505F",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 416,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "3",
+     "family": "Overpass Mono",
+     "size": 26,
+     "weight": 800,
+     "color": "#FFA062",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 546,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "phases",
+     "family": "Overpass Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#A7B3BE",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 696,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#344656",
+     "radius": 4,
+     "stroke": "#40505F",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "0.5%",
+     "family": "Overpass Mono",
+     "size": 26,
+     "weight": 800,
+     "color": "#FFA062",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 846,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "max errors",
+     "family": "Overpass Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#A7B3BE",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 170,
+     "w": 700,
+     "h": 700,
+     "fill": "#FF7A2E",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1220,
+     "y": 240,
+     "w": 560,
+     "h": 560,
+     "fill": "#FF7A2E",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 885,
+     "w": 720,
+     "h": 39,
+     "text": "read the non-goals twice",
+     "family": "Covered By Your Grace",
+     "size": 31,
+     "weight": 400,
+     "color": "#FFA062",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day14-forklift",
+     "x": 1210,
+     "y": 230,
+     "w": 580,
+     "h": 580,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Text and picture",
+   "bg": "#EDEFF1",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 76,
+     "w": 56,
+     "h": 3,
+     "fill": "#F26A1B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Why this project",
+     "family": "Overpass Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 960,
+     "h": 73,
+     "text": "Three reasons we cannot wait",
+     "family": "Chivo",
+     "size": 59,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Kickoff: the billing rebuild",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 9",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 269,
+     "w": 34,
+     "h": 34,
+     "fill": "#e5d0c5"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 269,
+     "w": 34,
+     "h": 34,
+     "text": "1",
+     "family": "Chivo",
+     "size": 17,
+     "weight": 800,
+     "color": "#A33C05",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 265,
+     "w": 840,
+     "h": 44,
+     "text": "Invoices are wrong 3% of the time",
+     "family": "Chivo",
+     "size": 32,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 317,
+     "w": 840,
+     "h": 70,
+     "text": "Every error is a credit note, a support ticket and a finance correction. Customers notice before we do.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 447,
+     "w": 34,
+     "h": 34,
+     "fill": "#e5d0c5"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 447,
+     "w": 34,
+     "h": 34,
+     "text": "2",
+     "family": "Chivo",
+     "size": 17,
+     "weight": 800,
+     "color": "#A33C05",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 443,
+     "w": 840,
+     "h": 44,
+     "text": "Finance closes the month in nine days",
+     "family": "Chivo",
+     "size": 32,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 495,
+     "w": 840,
+     "h": 70,
+     "text": "Most of it is reconciling usage by hand. Two days is the target, and the old engine cannot get there.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 625,
+     "w": 34,
+     "h": 34,
+     "fill": "#e5d0c5"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 625,
+     "w": 34,
+     "h": 34,
+     "text": "3",
+     "family": "Chivo",
+     "size": 17,
+     "weight": 800,
+     "color": "#A33C05",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 621,
+     "w": 840,
+     "h": 44,
+     "text": "Usage pricing needs a new engine",
+     "family": "Chivo",
+     "size": 32,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 673,
+     "w": 840,
+     "h": 70,
+     "text": "Sales has three deals waiting on it. The engine bills seats, not usage, and patching it has failed twice.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1080,
+     "y": 196,
+     "w": 744,
+     "h": 690,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#bdcad5",
+        0
+       ],
+       [
+        "#E2E6EA",
+        1
+       ]
+      ]
+     },
+     "radius": 6
+    },
+    {
+     "kind": "ellipse",
+     "x": 1202,
+     "y": 291,
+     "w": 500,
+     "h": 500,
+     "fill": "#F26A1B",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1252,
+     "y": 341,
+     "w": 400,
+     "h": 400,
+     "fill": "#F26A1B",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "three deals are waiting on this",
+     "family": "Covered By Your Grace",
+     "size": 29,
+     "weight": 400,
+     "color": "#A33C05",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day36-abacus",
+     "x": 1160,
+     "y": 270,
+     "w": 584,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Two columns",
+   "bg": "#EDEFF1",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 76,
+     "w": 56,
+     "h": 3,
+     "fill": "#F26A1B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Goals and non-goals",
+     "family": "Overpass Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "What done looks like",
+     "family": "Chivo",
+     "size": 62,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Kickoff: the billing rebuild",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 9",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 848,
+     "h": 600,
+     "fill": "#E2E6EA",
+     "radius": 4,
+     "stroke": "#CBD2D9",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 856,
+     "y": 288,
+     "w": 40,
+     "h": 40,
+     "color": "#A33C05"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 292,
+     "w": 688,
+     "h": 28,
+     "text": "Goals",
+     "family": "Overpass Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 336,
+     "w": 752,
+     "h": 112,
+     "text": "Invoices that are right the first time",
+     "family": "Chivo",
+     "size": 40,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 504,
+     "w": 752,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 528,
+     "w": 752,
+     "h": 40,
+     "text": "Usage-based billing for every plan",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#1A2430",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 604,
+     "w": 752,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 628,
+     "w": 752,
+     "h": 40,
+     "text": "Invoice errors under 0.5%",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#1A2430",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 704,
+     "w": 752,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 728,
+     "w": 752,
+     "h": 40,
+     "text": "Finance closes the month in two days",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#1A2430",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 976,
+     "y": 244,
+     "w": 848,
+     "h": 600,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#2B3B4A",
+        0
+       ],
+       [
+        "#16202A",
+        1
+       ]
+      ]
+     },
+     "radius": 4
+    },
+    {
+     "kind": "icon",
+     "icon": "circle",
+     "x": 1736,
+     "y": 288,
+     "w": 40,
+     "h": 40,
+     "color": "#FFA062"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 292,
+     "w": 688,
+     "h": 28,
+     "text": "Non-goals",
+     "family": "Overpass Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#FFA062",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 336,
+     "w": 752,
+     "h": 112,
+     "text": "What we are explicitly not doing",
+     "family": "Chivo",
+     "size": 40,
+     "weight": 800,
+     "color": "#F1F3F5",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 504,
+     "w": 752,
+     "h": 1,
+     "fill": "#40505F"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 528,
+     "w": 752,
+     "h": 40,
+     "text": "No new pricing tiers this project",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#F1F3F5",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 604,
+     "w": 752,
+     "h": 1,
+     "fill": "#40505F"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 628,
+     "w": 752,
+     "h": 40,
+     "text": "No migration of historical invoices",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#F1F3F5",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 704,
+     "w": 752,
+     "h": 1,
+     "fill": "#40505F"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 728,
+     "w": 752,
+     "h": 40,
+     "text": "No changes to the customer portal",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 600,
+     "color": "#F1F3F5",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "the non-goals are the contract",
+     "family": "Covered By Your Grace",
+     "size": 29,
+     "weight": 400,
+     "color": "#A33C05",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Section",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#2B3B4A",
+      0
+     ],
+     [
+      "#16202A",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 40,
+     "y": 40,
+     "w": 1840,
+     "h": 1000,
+     "stroke": "#FF7A2E",
+     "strokeWidth": 1.5,
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1805,
+     "y": 388,
+     "w": 5,
+     "h": 5,
+     "fill": "#FF7A2E",
+     "opacity": 0.6499999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1827,
+     "y": 428,
+     "w": 5,
+     "h": 5,
+     "fill": "#FF7A2E",
+     "opacity": 0.52
+    },
+    {
+     "kind": "ellipse",
+     "x": 1816,
+     "y": 674,
+     "w": 6,
+     "h": 6,
+     "fill": "#FF7A2E",
+     "opacity": 0.51
+    },
+    {
+     "kind": "ellipse",
+     "x": 1626,
+     "y": 74,
+     "w": 7,
+     "h": 7,
+     "fill": "#FF7A2E",
+     "opacity": 0.75
+    },
+    {
+     "kind": "ellipse",
+     "x": 1750,
+     "y": 198,
+     "w": 8,
+     "h": 8,
+     "fill": "#FF7A2E",
+     "opacity": 0.45999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1733,
+     "y": 593,
+     "w": 6,
+     "h": 6,
+     "fill": "#FF7A2E",
+     "opacity": 0.71
+    },
+    {
+     "kind": "ellipse",
+     "x": 1339,
+     "y": 678,
+     "w": 6,
+     "h": 6,
+     "fill": "#FF7A2E",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1481,
+     "y": 506,
+     "w": 8,
+     "h": 8,
+     "fill": "#FF7A2E",
+     "opacity": 0.48
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 330,
+     "w": 120,
+     "h": 4,
+     "fill": "#FF7A2E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 358,
+     "w": 1100,
+     "h": 112,
+     "text": "The plan",
+     "family": "Chivo",
+     "size": 96,
+     "weight": 800,
+     "color": "#F1F3F5",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 490,
+     "w": 900,
+     "h": 90,
+     "text": "Three phases over sixteen weeks, one owner per workstream, and the three risks we are already working on.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 28,
+     "weight": 400,
+     "color": "#A7B3BE",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1240,
+     "y": 280,
+     "w": 560,
+     "h": 560,
+     "fill": "#FF7A2E",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1296,
+     "y": 336,
+     "w": 448,
+     "h": 448,
+     "fill": "#FF7A2E",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 1000,
+     "h": 50,
+     "text": "how we get there",
+     "family": "Covered By Your Grace",
+     "size": 36,
+     "weight": 400,
+     "color": "#FFA062",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#40505F"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Kickoff: the billing rebuild",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A7B3BE",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 9",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A7B3BE",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 846,
+     "w": 720,
+     "h": 78,
+     "text": "every phase ends in staging, not on a slide",
+     "family": "Covered By Your Grace",
+     "size": 31,
+     "weight": 400,
+     "color": "#FFA062",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day54-building",
+     "x": 1300,
+     "y": 340,
+     "w": 440,
+     "h": 440,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Timeline",
+   "bg": "#EDEFF1",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 76,
+     "w": 56,
+     "h": 3,
+     "fill": "#F26A1B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Scope and milestones",
+     "family": "Overpass Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "Three phases to launch",
+     "family": "Chivo",
+     "size": 62,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Kickoff: the billing rebuild",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 9",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 427,
+     "w": 1728,
+     "h": 3,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 414,
+     "w": 30,
+     "h": 30,
+     "fill": "#EDEFF1",
+     "stroke": "#F26A1B",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 354,
+     "w": 300,
+     "h": 28,
+     "text": "Phase one",
+     "family": "Overpass Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 478,
+     "w": 384,
+     "h": 44,
+     "text": "Foundations",
+     "family": "Chivo",
+     "size": 32,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 530,
+     "w": 384,
+     "h": 120,
+     "text": "Usage metering, the ledger, and the first end-to-end invoice in staging. Six weeks.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 21,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 528,
+     "y": 414,
+     "w": 30,
+     "h": 30,
+     "fill": "#EDEFF1",
+     "stroke": "#F26A1B",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 354,
+     "w": 300,
+     "h": 28,
+     "text": "Phase two",
+     "family": "Overpass Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 478,
+     "w": 384,
+     "h": 44,
+     "text": "The visible wins",
+     "family": "Chivo",
+     "size": 32,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 530,
+     "w": 384,
+     "h": 120,
+     "text": "Finance dashboard, the new invoice, and ten pilot customers on the new engine. Six weeks.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 21,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 960,
+     "y": 414,
+     "w": 30,
+     "h": 30,
+     "fill": "#EDEFF1",
+     "stroke": "#F26A1B",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 354,
+     "w": 300,
+     "h": 28,
+     "text": "Phase three",
+     "family": "Overpass Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 478,
+     "w": 384,
+     "h": 44,
+     "text": "Polish and launch",
+     "family": "Chivo",
+     "size": 32,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 530,
+     "w": 384,
+     "h": 120,
+     "text": "Every customer migrated, the old engine retired, the runbook signed off. Four weeks.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 21,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1392,
+     "y": 414,
+     "w": 30,
+     "h": 30,
+     "fill": "#EDEFF1",
+     "stroke": "#F26A1B",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 354,
+     "w": 300,
+     "h": 28,
+     "text": "Review",
+     "family": "Overpass Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 478,
+     "w": 384,
+     "h": 44,
+     "text": "The retro",
+     "family": "Chivo",
+     "size": 32,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 530,
+     "w": 384,
+     "h": 120,
+     "text": "What we would do differently, written down before the next project starts.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 21,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "phase two is where finance first sees it",
+     "family": "Covered By Your Grace",
+     "size": 29,
+     "weight": 400,
+     "color": "#A33C05",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Responsibility grid",
+   "bg": "#EDEFF1",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 76,
+     "w": 56,
+     "h": 3,
+     "fill": "#F26A1B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Who does what",
+     "family": "Overpass Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "Five workstreams, four roles",
+     "family": "Chivo",
+     "size": 62,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Kickoff: the billing rebuild",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 9",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 276,
+     "w": 480,
+     "h": 24,
+     "text": "Workstream",
+     "family": "Overpass Mono",
+     "size": 15,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 636,
+     "y": 256,
+     "w": 60,
+     "h": 60,
+     "fill": "#e6cbbc"
+    },
+    {
+     "kind": "text",
+     "x": 712,
+     "y": 258,
+     "w": 194,
+     "h": 28,
+     "text": "Marcus Obi",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 21,
+     "weight": 600,
+     "color": "#1A2430",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 712,
+     "y": 290,
+     "w": 194,
+     "h": 22,
+     "text": "Project lead",
+     "family": "Overpass Mono",
+     "size": 14,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 938,
+     "y": 256,
+     "w": 60,
+     "h": 60,
+     "fill": "#bdcad5"
+    },
+    {
+     "kind": "text",
+     "x": 1014,
+     "y": 258,
+     "w": 194,
+     "h": 28,
+     "text": "Tomas Lind",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 21,
+     "weight": 600,
+     "color": "#1A2430",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1014,
+     "y": 290,
+     "w": 194,
+     "h": 22,
+     "text": "Engineering",
+     "family": "Overpass Mono",
+     "size": 14,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 1240,
+     "y": 256,
+     "w": 60,
+     "h": 60,
+     "fill": "#e6cbbc"
+    },
+    {
+     "kind": "text",
+     "x": 1316,
+     "y": 258,
+     "w": 194,
+     "h": 28,
+     "text": "Aisha Rahman",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 21,
+     "weight": 600,
+     "color": "#1A2430",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1316,
+     "y": 290,
+     "w": 194,
+     "h": 22,
+     "text": "Design",
+     "family": "Overpass Mono",
+     "size": 14,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 1542,
+     "y": 256,
+     "w": 60,
+     "h": 60,
+     "fill": "#bdcad5"
+    },
+    {
+     "kind": "text",
+     "x": 1618,
+     "y": 258,
+     "w": 194,
+     "h": 28,
+     "text": "Elena Sato",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 21,
+     "weight": 600,
+     "color": "#1A2430",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1618,
+     "y": 290,
+     "w": 194,
+     "h": 22,
+     "text": "Customers",
+     "family": "Overpass Mono",
+     "size": 14,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 328,
+     "w": 1728,
+     "h": 3,
+     "fill": "#38658C"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 360,
+     "w": 40,
+     "h": 24,
+     "text": "01",
+     "family": "Overpass Mono",
+     "size": 16,
+     "weight": 600,
+     "color": "#A33C05",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 148,
+     "y": 356,
+     "w": 436,
+     "h": 30,
+     "text": "Scope and priorities",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 600,
+     "color": "#1A2430",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 148,
+     "y": 388,
+     "w": 436,
+     "h": 24,
+     "text": "Finance and Sales weigh in",
+     "family": "Overpass Mono",
+     "size": 15,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 751,
+     "y": 371,
+     "w": 32,
+     "h": 32,
+     "fill": "#F26A1B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1053,
+     "y": 371,
+     "w": 32,
+     "h": 32,
+     "fill": "#EDEFF1",
+     "stroke": "#38658C",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 371,
+     "w": 32,
+     "h": 32,
+     "fill": "#EDEFF1",
+     "stroke": "#38658C",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 433,
+     "w": 1728,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 434,
+     "w": 1728,
+     "h": 94,
+     "fill": "#E2E6EA"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 454,
+     "w": 40,
+     "h": 24,
+     "text": "02",
+     "family": "Overpass Mono",
+     "size": 16,
+     "weight": 600,
+     "color": "#A33C05",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 148,
+     "y": 450,
+     "w": 436,
+     "h": 30,
+     "text": "Metering and the ledger",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 600,
+     "color": "#1A2430",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 148,
+     "y": 482,
+     "w": 436,
+     "h": 24,
+     "text": "Platform reviews the design",
+     "family": "Overpass Mono",
+     "size": 15,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 751,
+     "y": 465,
+     "w": 32,
+     "h": 32,
+     "fill": "#E2E6EA",
+     "stroke": "#38658C",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1053,
+     "y": 465,
+     "w": 32,
+     "h": 32,
+     "fill": "#F26A1B"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 527,
+     "w": 1728,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 548,
+     "w": 40,
+     "h": 24,
+     "text": "03",
+     "family": "Overpass Mono",
+     "size": 16,
+     "weight": 600,
+     "color": "#A33C05",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 148,
+     "y": 544,
+     "w": 436,
+     "h": 30,
+     "text": "Invoice design",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 600,
+     "color": "#1A2430",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 148,
+     "y": 576,
+     "w": 436,
+     "h": 24,
+     "text": "Finance and Support see every draft",
+     "family": "Overpass Mono",
+     "size": 15,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1053,
+     "y": 559,
+     "w": 32,
+     "h": 32,
+     "fill": "#EDEFF1",
+     "stroke": "#38658C",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1355,
+     "y": 559,
+     "w": 32,
+     "h": 32,
+     "fill": "#F26A1B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 559,
+     "w": 32,
+     "h": 32,
+     "fill": "#EDEFF1",
+     "stroke": "#38658C",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 621,
+     "w": 1728,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 622,
+     "w": 1728,
+     "h": 94,
+     "fill": "#E2E6EA"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 642,
+     "w": 40,
+     "h": 24,
+     "text": "04",
+     "family": "Overpass Mono",
+     "size": 16,
+     "weight": 600,
+     "color": "#A33C05",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 148,
+     "y": 638,
+     "w": 436,
+     "h": 30,
+     "text": "Customer migration",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 600,
+     "color": "#1A2430",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 148,
+     "y": 670,
+     "w": 436,
+     "h": 24,
+     "text": "Sales calls each pilot customer",
+     "family": "Overpass Mono",
+     "size": 15,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 751,
+     "y": 653,
+     "w": 32,
+     "h": 32,
+     "fill": "#E2E6EA",
+     "stroke": "#38658C",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1053,
+     "y": 653,
+     "w": 32,
+     "h": 32,
+     "fill": "#E2E6EA",
+     "stroke": "#38658C",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 653,
+     "w": 32,
+     "h": 32,
+     "fill": "#F26A1B"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 715,
+     "w": 1728,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 736,
+     "w": 40,
+     "h": 24,
+     "text": "05",
+     "family": "Overpass Mono",
+     "size": 16,
+     "weight": 600,
+     "color": "#A33C05",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 148,
+     "y": 732,
+     "w": 436,
+     "h": 30,
+     "text": "Launch go or no-go",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 600,
+     "color": "#1A2430",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 148,
+     "y": 764,
+     "w": 436,
+     "h": 24,
+     "text": "Finance signs the runbook first",
+     "family": "Overpass Mono",
+     "size": 15,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 751,
+     "y": 747,
+     "w": 32,
+     "h": 32,
+     "fill": "#F26A1B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1053,
+     "y": 747,
+     "w": 32,
+     "h": 32,
+     "fill": "#EDEFF1",
+     "stroke": "#38658C",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1355,
+     "y": 747,
+     "w": 32,
+     "h": 32,
+     "fill": "#EDEFF1",
+     "stroke": "#38658C",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 747,
+     "w": 32,
+     "h": 32,
+     "fill": "#EDEFF1",
+     "stroke": "#38658C",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 809,
+     "w": 1728,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "rect",
+     "x": 616,
+     "y": 244,
+     "w": 2,
+     "h": 566,
+     "fill": "#38658C"
+    },
+    {
+     "kind": "rect",
+     "x": 918,
+     "y": 244,
+     "w": 1,
+     "h": 566,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "rect",
+     "x": 1220,
+     "y": 244,
+     "w": 1,
+     "h": 566,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "rect",
+     "x": 1522,
+     "y": 244,
+     "w": 1,
+     "h": 566,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 843,
+     "w": 22,
+     "h": 22,
+     "fill": "#F26A1B"
+    },
+    {
+     "kind": "text",
+     "x": 130,
+     "y": 840,
+     "w": 220,
+     "h": 28,
+     "text": "owns and decides",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 18,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 358,
+     "y": 843,
+     "w": 22,
+     "h": 22,
+     "fill": "#EDEFF1",
+     "stroke": "#38658C",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 392,
+     "y": 840,
+     "w": 220,
+     "h": 28,
+     "text": "consulted first",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 18,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 616,
+     "y": 840,
+     "w": 480,
+     "h": 28,
+     "text": "blank: not involved, and not copied in",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 18,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "one filled disc per row, never two",
+     "family": "Covered By Your Grace",
+     "size": 29,
+     "weight": 400,
+     "color": "#A33C05",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "op-peep-2",
+     "x": 644,
+     "y": 262,
+     "w": 44,
+     "h": 48
+    },
+    {
+     "asset": "op-peep-16",
+     "x": 946,
+     "y": 262,
+     "w": 44,
+     "h": 48
+    },
+    {
+     "asset": "op-peep-19",
+     "x": 1248,
+     "y": 262,
+     "w": 44,
+     "h": 48
+    },
+    {
+     "asset": "op-peep-54",
+     "x": 1550,
+     "y": 262,
+     "w": 44,
+     "h": 48
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#EDEFF1",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 76,
+     "w": 56,
+     "h": 3,
+     "fill": "#F26A1B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Risks we already see",
+     "family": "Overpass Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "Three risks, with mitigations",
+     "family": "Chivo",
+     "size": 62,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Kickoff: the billing rebuild",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 9",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#E2E6EA",
+     "radius": 4,
+     "stroke": "#CBD2D9",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#F26A1B",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#e5cdc1"
+    },
+    {
+     "kind": "icon",
+     "icon": "alert-triangle",
+     "x": 156,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#A33C05"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "Usage data is wrong at the source",
+     "family": "Chivo",
+     "size": 34,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "Metering bugs become invoice errors. Mitigation: shadow-bill every customer for a month before cutover.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#E2E6EA",
+     "radius": 4,
+     "stroke": "#CBD2D9",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#38658C",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#c0ccd7"
+    },
+    {
+     "kind": "icon",
+     "icon": "clock",
+     "x": 740,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#38658C"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "Finance is busiest at month end",
+     "family": "Chivo",
+     "size": 34,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "Our launch week collides with their close. Mitigation: launch in the second week of the month, never the first.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#E2E6EA",
+     "radius": 4,
+     "stroke": "#CBD2D9",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#F26A1B",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#e5cdc1"
+    },
+    {
+     "kind": "icon",
+     "icon": "user",
+     "x": 1324,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#A33C05"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "One person knows the old engine",
+     "family": "Chivo",
+     "size": 34,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "If Priya is out, nobody can read it. Mitigation: two weeks of pairing in phase one, documented.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "shadow billing starts in week three",
+     "family": "Covered By Your Grace",
+     "size": 29,
+     "weight": 400,
+     "color": "#A33C05",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Four cards",
+   "bg": "#EDEFF1",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 76,
+     "w": 56,
+     "h": 3,
+     "fill": "#F26A1B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "How we work",
+     "family": "Overpass Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#A33C05",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "Four working agreements",
+     "family": "Chivo",
+     "size": 62,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#CBD2D9"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Kickoff: the billing rebuild",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "08 / 9",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#55626F",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 852,
+     "h": 264,
+     "fill": "#E2E6EA",
+     "radius": 4,
+     "stroke": "#CBD2D9",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 284,
+     "w": 72,
+     "h": 72,
+     "fill": "#e5cdc1"
+    },
+    {
+     "kind": "icon",
+     "icon": "clock",
+     "x": 154,
+     "y": 302,
+     "w": 36,
+     "h": 36,
+     "color": "#A33C05"
+    },
+    {
+     "kind": "text",
+     "x": 236,
+     "y": 288,
+     "w": 672,
+     "h": 40,
+     "text": "Standup at 09:15, fifteen minutes",
+     "family": "Chivo",
+     "size": 30,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 236,
+     "y": 340,
+     "w": 672,
+     "h": 120,
+     "text": "Blockers first. Anything that takes longer than a minute moves to the channel.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 244,
+     "w": 852,
+     "h": 264,
+     "fill": "#E2E6EA",
+     "radius": 4,
+     "stroke": "#CBD2D9",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1012,
+     "y": 284,
+     "w": 72,
+     "h": 72,
+     "fill": "#c0ccd7"
+    },
+    {
+     "kind": "icon",
+     "icon": "presentation",
+     "x": 1030,
+     "y": 302,
+     "w": 36,
+     "h": 36,
+     "color": "#38658C"
+    },
+    {
+     "kind": "text",
+     "x": 1112,
+     "y": 288,
+     "w": 672,
+     "h": 40,
+     "text": "Demo every other Friday",
+     "family": "Chivo",
+     "size": 30,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1112,
+     "y": 340,
+     "w": 672,
+     "h": 120,
+     "text": "Working software in staging, shown by whoever built it. Finance is invited to every one.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 544,
+     "w": 852,
+     "h": 264,
+     "fill": "#E2E6EA",
+     "radius": 4,
+     "stroke": "#CBD2D9",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 584,
+     "w": 72,
+     "h": 72,
+     "fill": "#e5cdc1"
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 154,
+     "y": 602,
+     "w": 36,
+     "h": 36,
+     "color": "#A33C05"
+    },
+    {
+     "kind": "text",
+     "x": 236,
+     "y": 588,
+     "w": 672,
+     "h": 40,
+     "text": "Decisions in the channel, within a day",
+     "family": "Chivo",
+     "size": 30,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 236,
+     "y": 640,
+     "w": 672,
+     "h": 120,
+     "text": "If it is not in #billing-rebuild, it was not decided. A day of silence means yes.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 544,
+     "w": 852,
+     "h": 264,
+     "fill": "#E2E6EA",
+     "radius": 4,
+     "stroke": "#CBD2D9",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1012,
+     "y": 584,
+     "w": 72,
+     "h": 72,
+     "fill": "#c0ccd7"
+    },
+    {
+     "kind": "icon",
+     "icon": "clipboard",
+     "x": 1030,
+     "y": 602,
+     "w": 36,
+     "h": 36,
+     "color": "#38658C"
+    },
+    {
+     "kind": "text",
+     "x": 1112,
+     "y": 588,
+     "w": 672,
+     "h": 40,
+     "text": "The plan lives in one place",
+     "family": "Chivo",
+     "size": 30,
+     "weight": 800,
+     "color": "#1A2430",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1112,
+     "y": 640,
+     "w": 672,
+     "h": 120,
+     "text": "One document, one owner, updated every Friday. Slides are copies of it, never the source.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 400,
+     "color": "#55626F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 883,
+     "w": 760,
+     "h": 73,
+     "text": "if it is not in the channel, it did not happen",
+     "family": "Covered By Your Grace",
+     "size": 29,
+     "weight": 400,
+     "color": "#A33C05",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#2B3B4A",
+      0
+     ],
+     [
+      "#16202A",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 40,
+     "y": 40,
+     "w": 1840,
+     "h": 1000,
+     "stroke": "#FF7A2E",
+     "strokeWidth": 1.5,
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1805,
+     "y": 388,
+     "w": 5,
+     "h": 5,
+     "fill": "#FF7A2E",
+     "opacity": 0.6499999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1827,
+     "y": 428,
+     "w": 5,
+     "h": 5,
+     "fill": "#FF7A2E",
+     "opacity": 0.52
+    },
+    {
+     "kind": "ellipse",
+     "x": 1816,
+     "y": 674,
+     "w": 6,
+     "h": 6,
+     "fill": "#FF7A2E",
+     "opacity": 0.51
+    },
+    {
+     "kind": "ellipse",
+     "x": 1626,
+     "y": 74,
+     "w": 7,
+     "h": 7,
+     "fill": "#FF7A2E",
+     "opacity": 0.75
+    },
+    {
+     "kind": "ellipse",
+     "x": 1750,
+     "y": 198,
+     "w": 8,
+     "h": 8,
+     "fill": "#FF7A2E",
+     "opacity": 0.45999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1733,
+     "y": 593,
+     "w": 6,
+     "h": 6,
+     "fill": "#FF7A2E",
+     "opacity": 0.71
+    },
+    {
+     "kind": "ellipse",
+     "x": 1339,
+     "y": 678,
+     "w": 6,
+     "h": 6,
+     "fill": "#FF7A2E",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1481,
+     "y": 506,
+     "w": 8,
+     "h": 8,
+     "fill": "#FF7A2E",
+     "opacity": 0.48
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#FF7A2E",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#FF7A2E",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#FF7A2E",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Form & Function",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 600,
+     "color": "#F1F3F5",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 47,
+     "text": "hard hats on",
+     "family": "Covered By Your Grace",
+     "size": 36,
+     "weight": 400,
+     "color": "#FFA062",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 140,
+     "text": "We start Monday",
+     "family": "Chivo",
+     "size": 118,
+     "weight": 800,
+     "color": "#F1F3F5",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 474,
+     "w": 940,
+     "h": 120,
+     "text": "Phase one begins on 9 November. The plan, the grid and the risk log live in the project space; if it is not there, ask in the channel.",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 28,
+     "weight": 400,
+     "color": "#A7B3BE",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#FF7A2E"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "#billing-rebuild on Slack",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 500,
+     "color": "#F1F3F5",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#FF7A2E"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "marcus@formfunction.example",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 500,
+     "color": "#F1F3F5",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "calendar",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#FF7A2E"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "First demo: Friday 20 November",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 24,
+     "weight": 500,
+     "color": "#F1F3F5",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Open the project plan",
+     "fill": "#FF7A2E",
+     "color": "#1A2430",
+     "family": "Atkinson Hyperlegible Next",
+     "size": 22,
+     "weight": 700,
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "09 / 9",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A7B3BE",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 885,
+     "w": 720,
+     "h": 39,
+     "text": "first demo is 20 November, bring finance",
+     "family": "Covered By Your Grace",
+     "size": 31,
+     "weight": 400,
+     "color": "#FFA062",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day17-walkie-talkie",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n10",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n12",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n13",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n14",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p5-n2",
+   "kind": "text",
+   "label": "Title",
+   "hint": "The grid in one line"
+  },
+  {
+   "node": "p5-n8",
+   "kind": "text",
+   "label": "Role 1",
+   "hint": "Who holds the role"
+  },
+  {
+   "node": "p5-n11",
+   "kind": "text",
+   "label": "Role 2",
+   "hint": "Who holds the role"
+  },
+  {
+   "node": "p5-n14",
+   "kind": "text",
+   "label": "Role 3",
+   "hint": "Who holds the role"
+  },
+  {
+   "node": "p5-n17",
+   "kind": "text",
+   "label": "Role 4",
+   "hint": "Who holds the role"
+  },
+  {
+   "node": "p8-n17",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n19",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n21",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Project Kickoff",
-  "theme": "clear, aligned, energizing",
-  "pages": [
-   {
-    "title": "Why this project",
-    "points": [
-     "The outcome we are hired to deliver"
-    ],
-    "visualRole": "cover"
-   },
-   {
-    "title": "Goals and non-goals",
-    "points": [
-     "What done looks like",
-     "What we are explicitly not doing"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Scope and milestones",
-    "points": [
-     "Phase one: foundations",
-     "Phase two: the visible wins",
-     "Phase three: polish and launch"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Who does what",
-    "points": [
-     "Roles, owners, and decision rights"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Risks we already see",
-    "points": [
-     "Top three risks and their mitigations"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Working agreements",
-    "points": [
-     "Rituals, channels, and response times"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 34
 }

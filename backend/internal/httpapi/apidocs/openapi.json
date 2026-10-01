@@ -103,9 +103,21 @@
             "type": "string",
             "description": "A built-in theme id (see GET /themes), e.g. 'theme-slate'; omit for an auto-picked look."
           },
+          "brandKitId": {
+            "type": "string",
+            "description": "A brand kit id from this workspace: the deck takes that kit's palette, fonts, logo and voice instead of the workspace's default kit. An id from another workspace is ignored."
+          },
           "templateId": {
             "type": "string",
             "description": "A template id: the deck is composed on that template's layout system and theme (workspace templates and public built-ins; see the MCP list_templates tool)."
+          },
+          "motion": {
+            "type": "string",
+            "enum": [
+              "subtle",
+              "none"
+            ],
+            "description": "Entrance motion on the composed slides: one quiet reveal per page in reading order (default), or none."
           }
         }
       },
@@ -114,6 +126,16 @@
         "properties": {
           "jobId": {
             "type": "string"
+          },
+          "look": {
+            "type": "string",
+            "enum": [
+              "classic",
+              "editorial",
+              "bold",
+              "technical"
+            ],
+            "description": "The deck's house style: what the forms are made of (pairing, rules, corners, panels, the impact-page construction). Omit to let the model name one from the brief; a chosen theme's fonts and a brand kit's fonts keep their pairing either way."
           },
           "poll": {
             "type": "string",
@@ -139,7 +161,7 @@
             ]
           },
           "result": {
-            "description": "On completion of a generation job: { designId, title, pageCount, editorUrl, images }.",
+            "description": "On completion of a generation job: { designId, title, pageCount, editorUrl, quality, images }. quality is the composer's verdict on the saved deck: { ok, stillLong (pages whose copy is still long after one shortening pass), bulletShare (share of pages set as plain bullets) }. images reports the picture regions: { requested, placed, reused, stock, generated, unsupported }; a region that could not be filled keeps its stand-in and can be filled in the editor, and unsupported is true when the workspace's provider cannot generate images at all.",
             "type": "object"
           },
           "error": {

@@ -1,5 +1,4 @@
 {
- "kind": "deck-outline",
  "id": "deck-marketing-plan",
  "title": "Marketing Plan",
  "categories": [
@@ -13,61 +12,3091 @@
   "strategy"
  ],
  "styleTags": [
-  "bold"
+  "editorial",
+  "elegant",
+  "warm"
  ],
- "themeId": "theme-plum",
  "size": [
   1920,
   1080
  ],
- "rank": 80,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "DM Serif Display",
+   "weight": 400
+  },
+  {
+   "role": "body",
+   "family": "Work Sans",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Gochi Hand",
+   "weight": 400
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#241A2B",
+      0
+     ],
+     [
+      "#110A16",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2104,
+     "y": -1012,
+     "w": 1171,
+     "h": 1171,
+     "fill": "#DA3283",
+     "rotation": 45,
+     "opacity": 0.92,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1733,
+     "y": 760,
+     "w": 9,
+     "h": 9,
+     "fill": "#FBF7F0",
+     "opacity": 0.61
+    },
+    {
+     "kind": "ellipse",
+     "x": 1527,
+     "y": 757,
+     "w": 7,
+     "h": 7,
+     "fill": "#FBF7F0",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1582,
+     "y": 549,
+     "w": 5,
+     "h": 5,
+     "fill": "#FBF7F0",
+     "opacity": 0.73
+    },
+    {
+     "kind": "ellipse",
+     "x": 1632,
+     "y": 575,
+     "w": 8,
+     "h": 8,
+     "fill": "#FBF7F0",
+     "opacity": 0.69
+    },
+    {
+     "kind": "ellipse",
+     "x": 1390,
+     "y": 794,
+     "w": 8,
+     "h": 8,
+     "fill": "#FBF7F0",
+     "opacity": 0.77
+    },
+    {
+     "kind": "ellipse",
+     "x": 1384,
+     "y": 653,
+     "w": 9,
+     "h": 9,
+     "fill": "#FBF7F0",
+     "opacity": 0.53
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#DA3283",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Meridian Studio",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#FBF7F0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 49,
+     "text": "Creative, with a spine",
+     "family": "Gochi Hand",
+     "size": 38,
+     "weight": 400,
+     "color": "#FF8AC2",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 231,
+     "text": "What marketing\nowes the business",
+     "family": "DM Serif Display",
+     "size": 105,
+     "weight": 400,
+     "color": "#FBF7F0",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 707,
+     "w": 900,
+     "h": 80,
+     "text": "The objective, the audience, the big idea, the calendar, the budget, and the dashboard we will check every week.",
+     "family": "Work Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#B7ABBE",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Mei Lin, Head of Marketing  ·  12 December 2026",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#B7ABBE",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#B7ABBE",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 170,
+     "w": 700,
+     "h": 700,
+     "fill": "#DA3283",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1220,
+     "y": 240,
+     "w": 560,
+     "h": 560,
+     "fill": "#DA3283",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 884,
+     "w": 720,
+     "h": 40,
+     "text": "a year, four campaigns, one Friday",
+     "family": "Gochi Hand",
+     "size": 32,
+     "weight": 400,
+     "color": "#FF8AC2",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day17-walkie-talkie",
+     "x": 1210,
+     "y": 230,
+     "w": 580,
+     "h": 580,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Figures",
+   "bg": "#FBF7F0",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2040,
+     "y": -660,
+     "w": 764,
+     "h": 764,
+     "fill": "#C2185B",
+     "rotation": 45,
+     "opacity": 0.9,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The objective",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#C2185B",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "What we owe the business in 2027",
+     "family": "DM Serif Display",
+     "size": 62,
+     "weight": 400,
+     "color": "#1E1822",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Meridian Studio  ·  Marketing plan 2027",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#665C6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 414,
+     "h": 560,
+     "fill": "#F3ECE0",
+     "radius": 6,
+     "stroke": "#E3D9CC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 414,
+     "h": 6,
+     "fill": "#C2185B",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 300,
+     "w": 342,
+     "h": 116,
+     "text": "$9M",
+     "family": "DM Serif Display",
+     "size": 100,
+     "weight": 400,
+     "color": "#C2185B",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 440,
+     "w": 342,
+     "h": 34,
+     "text": "Sourced pipeline",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E1822",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 132,
+     "y": 494,
+     "w": 190,
+     "h": 40,
+     "label": "+50% on 2026",
+     "fill": "#eac6c8",
+     "color": "#C2185B",
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 564,
+     "w": 342,
+     "h": 140,
+     "text": "Marketing-sourced, first touch, measured in the CRM.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 244,
+     "w": 414,
+     "h": 560,
+     "fill": "#F3ECE0",
+     "radius": 6,
+     "stroke": "#E3D9CC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 244,
+     "w": 414,
+     "h": 6,
+     "fill": "#E3A91B",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 300,
+     "w": 342,
+     "h": 116,
+     "text": "2,400",
+     "family": "DM Serif Display",
+     "size": 100,
+     "weight": 400,
+     "color": "#7F5B0E",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 440,
+     "w": 342,
+     "h": 34,
+     "text": "Qualified leads",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E1822",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 570,
+     "y": 494,
+     "w": 190,
+     "h": 40,
+     "label": "200 a month",
+     "fill": "#f0e0bd",
+     "color": "#7F5B0E",
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 564,
+     "w": 342,
+     "h": 140,
+     "text": "Up from 140; the free tier is the largest new source.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 244,
+     "w": 414,
+     "h": 560,
+     "fill": "#F3ECE0",
+     "radius": 6,
+     "stroke": "#E3D9CC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 244,
+     "w": 414,
+     "h": 6,
+     "fill": "#C2185B",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 300,
+     "w": 342,
+     "h": 116,
+     "text": "38%",
+     "family": "DM Serif Display",
+     "size": 100,
+     "weight": 400,
+     "color": "#C2185B",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 440,
+     "w": 342,
+     "h": 34,
+     "text": "Share of voice",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E1822",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1008,
+     "y": 494,
+     "w": 190,
+     "h": 40,
+     "label": "+10 pts",
+     "fill": "#eac6c8",
+     "color": "#C2185B",
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 564,
+     "w": 342,
+     "h": 140,
+     "text": "In our category, measured quarterly by the analyst survey.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 244,
+     "w": 414,
+     "h": 560,
+     "fill": "#F3ECE0",
+     "radius": 6,
+     "stroke": "#E3D9CC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 244,
+     "w": 414,
+     "h": 6,
+     "fill": "#E3A91B",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 300,
+     "w": 342,
+     "h": 116,
+     "text": "$1.9M",
+     "family": "DM Serif Display",
+     "size": 100,
+     "weight": 400,
+     "color": "#7F5B0E",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 440,
+     "w": 342,
+     "h": 34,
+     "text": "Budget",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E1822",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1446,
+     "y": 494,
+     "w": 190,
+     "h": 40,
+     "label": "Flat",
+     "fill": "#f0e0bd",
+     "color": "#7F5B0E",
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 564,
+     "w": 342,
+     "h": 140,
+     "text": "Same money, reweighted toward the channels that worked.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 918,
+     "w": 760,
+     "h": 38,
+     "text": "same money, aimed better",
+     "family": "Gochi Hand",
+     "size": 30,
+     "weight": 400,
+     "color": "#C2185B",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Comparison table",
+   "bg": "#FBF7F0",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2040,
+     "y": -660,
+     "w": 764,
+     "h": 764,
+     "fill": "#C2185B",
+     "rotation": 45,
+     "opacity": 0.9,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The audience",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#C2185B",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "Segments, moments and messages",
+     "family": "DM Serif Display",
+     "size": 62,
+     "weight": 400,
+     "color": "#1E1822",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Meridian Studio  ·  Marketing plan 2027",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#665C6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 1728,
+     "h": 76,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#241A2B",
+        0
+       ],
+       [
+        "#110A16",
+        1
+       ]
+      ]
+     },
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 266,
+     "w": 376,
+     "h": 32,
+     "text": "Moment",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#FBF7F0",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1072,
+     "y": 266,
+     "w": 376,
+     "h": 32,
+     "text": "Message",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#FBF7F0",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 266,
+     "w": 376,
+     "h": 32,
+     "text": "Channel",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#FBF7F0",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 350,
+     "w": 536,
+     "h": 36,
+     "text": "Founders, 10 to 50 people",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E1822",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 350,
+     "w": 376,
+     "h": 36,
+     "text": "First hire in ops",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1072,
+     "y": 350,
+     "w": 376,
+     "h": 36,
+     "text": "Set up in an afternoon",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 350,
+     "w": 376,
+     "h": 36,
+     "text": "Product and community",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 415,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 416,
+     "w": 1728,
+     "h": 96,
+     "fill": "#F3ECE0"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 446,
+     "w": 536,
+     "h": 36,
+     "text": "Ops leads, 50 to 500",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E1822",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 446,
+     "w": 376,
+     "h": 36,
+     "text": "The spreadsheet broke",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1084,
+     "y": 434,
+     "w": 352,
+     "h": 60,
+     "text": "One place for the whole team",
+     "family": "Work Sans",
+     "size": 19,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.25,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 446,
+     "w": 376,
+     "h": 36,
+     "text": "Search and content",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 511,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 542,
+     "w": 536,
+     "h": 36,
+     "text": "Directors, 500 plus",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E1822",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 542,
+     "w": 376,
+     "h": 36,
+     "text": "Board asks for the number",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1072,
+     "y": 542,
+     "w": 376,
+     "h": 36,
+     "text": "Answers, not reports",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 542,
+     "w": 376,
+     "h": 36,
+     "text": "Events and partners",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 607,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 608,
+     "w": 1728,
+     "h": 96,
+     "fill": "#F3ECE0"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 638,
+     "w": 536,
+     "h": 36,
+     "text": "Partners",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E1822",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 638,
+     "w": 376,
+     "h": 36,
+     "text": "Their client asks",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1072,
+     "y": 638,
+     "w": 376,
+     "h": 36,
+     "text": "Refer and earn",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 638,
+     "w": 376,
+     "h": 36,
+     "text": "Partner programme",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 703,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 734,
+     "w": 536,
+     "h": 36,
+     "text": "Free-tier teams",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E1822",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 734,
+     "w": 376,
+     "h": 36,
+     "text": "Hit the seat limit",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1072,
+     "y": 734,
+     "w": 376,
+     "h": 36,
+     "text": "Bring the whole team",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 734,
+     "w": 376,
+     "h": 36,
+     "text": "In-app and email",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 799,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 918,
+     "w": 760,
+     "h": 38,
+     "text": "one line per person, or it is not a message",
+     "family": "Gochi Hand",
+     "size": 30,
+     "weight": 400,
+     "color": "#C2185B",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Section",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#241A2B",
+      0
+     ],
+     [
+      "#110A16",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2104,
+     "y": -1012,
+     "w": 1171,
+     "h": 1171,
+     "fill": "#DA3283",
+     "rotation": 45,
+     "opacity": 0.92,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1733,
+     "y": 760,
+     "w": 9,
+     "h": 9,
+     "fill": "#FBF7F0",
+     "opacity": 0.61
+    },
+    {
+     "kind": "ellipse",
+     "x": 1527,
+     "y": 757,
+     "w": 7,
+     "h": 7,
+     "fill": "#FBF7F0",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1582,
+     "y": 549,
+     "w": 5,
+     "h": 5,
+     "fill": "#FBF7F0",
+     "opacity": 0.73
+    },
+    {
+     "kind": "ellipse",
+     "x": 1632,
+     "y": 575,
+     "w": 8,
+     "h": 8,
+     "fill": "#FBF7F0",
+     "opacity": 0.69
+    },
+    {
+     "kind": "ellipse",
+     "x": 1390,
+     "y": 794,
+     "w": 8,
+     "h": 8,
+     "fill": "#FBF7F0",
+     "opacity": 0.77
+    },
+    {
+     "kind": "ellipse",
+     "x": 1384,
+     "y": 653,
+     "w": 9,
+     "h": 9,
+     "fill": "#FBF7F0",
+     "opacity": 0.53
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 800,
+     "h": 250,
+     "text": "2027",
+     "family": "DM Serif Display",
+     "size": 230,
+     "weight": 400,
+     "color": "#FF8AC2",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 486,
+     "w": 120,
+     "h": 4,
+     "fill": "#DA3283"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 514,
+     "w": 1100,
+     "h": 212,
+     "text": "One idea, then the year",
+     "family": "DM Serif Display",
+     "size": 96,
+     "weight": 400,
+     "color": "#FBF7F0",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 746,
+     "w": 900,
+     "h": 90,
+     "text": "One idea, four campaigns, twelve months and one budget. Everything after this page is how the money gets spent.",
+     "family": "Work Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#B7ABBE",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1240,
+     "y": 280,
+     "w": 560,
+     "h": 560,
+     "fill": "#DA3283",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1296,
+     "y": 336,
+     "w": 448,
+     "h": 448,
+     "fill": "#DA3283",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 1000,
+     "h": 50,
+     "text": "The creative half",
+     "family": "Gochi Hand",
+     "size": 38,
+     "weight": 400,
+     "color": "#FF8AC2",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#3D2F45"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Meridian Studio  ·  Marketing plan 2027",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#B7ABBE",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#B7ABBE",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 884,
+     "w": 720,
+     "h": 40,
+     "text": "argue with the calendar, not the idea",
+     "family": "Gochi Hand",
+     "size": 32,
+     "weight": 400,
+     "color": "#FF8AC2",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day70-designer-fav-tool-wacom",
+     "x": 1300,
+     "y": 340,
+     "w": 440,
+     "h": 440,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Statement",
+   "bg": "#FBF7F0",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2040,
+     "y": -660,
+     "w": 764,
+     "h": 764,
+     "fill": "#C2185B",
+     "rotation": 45,
+     "opacity": 0.9,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Meridian Studio  ·  Marketing plan 2027",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#665C6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 49,
+     "text": "Creative, with a spine",
+     "family": "Gochi Hand",
+     "size": 38,
+     "weight": 400,
+     "color": "#C2185B",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 299,
+     "w": 120,
+     "h": 6,
+     "fill": "#C2185B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 345,
+     "w": 1560,
+     "h": 272,
+     "text": "The big idea: show the afternoon a team gets back. Not the features, the Friday.",
+     "family": "DM Serif Display",
+     "size": 78,
+     "weight": 400,
+     "color": "#1E1822",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 657,
+     "w": 1000,
+     "h": 32,
+     "text": "Campaign concept, 2027",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#665C6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 918,
+     "w": 760,
+     "h": 38,
+     "text": "the whole campaign in one breath",
+     "family": "Gochi Hand",
+     "size": 30,
+     "weight": 400,
+     "color": "#C2185B",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Calendar",
+   "bg": "#FBF7F0",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2040,
+     "y": -660,
+     "w": 764,
+     "h": 764,
+     "fill": "#C2185B",
+     "rotation": 45,
+     "opacity": 0.9,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The calendar",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#C2185B",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "Four campaigns across the year",
+     "family": "DM Serif Display",
+     "size": 62,
+     "weight": 400,
+     "color": "#1E1822",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Meridian Studio  ·  Marketing plan 2027",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#665C6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 528,
+     "y": 280,
+     "w": 432,
+     "h": 552,
+     "fill": "#F3ECE0"
+    },
+    {
+     "kind": "rect",
+     "x": 1392,
+     "y": 280,
+     "w": 432,
+     "h": 552,
+     "fill": "#F3ECE0"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 280,
+     "w": 1,
+     "h": 552,
+     "fill": "#a89f99"
+    },
+    {
+     "kind": "rect",
+     "x": 240,
+     "y": 280,
+     "w": 1,
+     "h": 552,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "rect",
+     "x": 384,
+     "y": 280,
+     "w": 1,
+     "h": 552,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "rect",
+     "x": 528,
+     "y": 280,
+     "w": 1,
+     "h": 552,
+     "fill": "#a89f99"
+    },
+    {
+     "kind": "rect",
+     "x": 672,
+     "y": 280,
+     "w": 1,
+     "h": 552,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "rect",
+     "x": 816,
+     "y": 280,
+     "w": 1,
+     "h": 552,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "rect",
+     "x": 960,
+     "y": 280,
+     "w": 1,
+     "h": 552,
+     "fill": "#a89f99"
+    },
+    {
+     "kind": "rect",
+     "x": 1104,
+     "y": 280,
+     "w": 1,
+     "h": 552,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "rect",
+     "x": 1248,
+     "y": 280,
+     "w": 1,
+     "h": 552,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "rect",
+     "x": 1392,
+     "y": 280,
+     "w": 1,
+     "h": 552,
+     "fill": "#a89f99"
+    },
+    {
+     "kind": "rect",
+     "x": 1536,
+     "y": 280,
+     "w": 1,
+     "h": 552,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "rect",
+     "x": 1680,
+     "y": 280,
+     "w": 1,
+     "h": 552,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "rect",
+     "x": 1823,
+     "y": 280,
+     "w": 1,
+     "h": 552,
+     "fill": "#a89f99"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 292,
+     "w": 144,
+     "h": 24,
+     "text": "Jan",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#1E1822",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 240,
+     "y": 292,
+     "w": 144,
+     "h": 24,
+     "text": "Feb",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#1E1822",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 384,
+     "y": 292,
+     "w": 144,
+     "h": 24,
+     "text": "Mar",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#1E1822",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 292,
+     "w": 144,
+     "h": 24,
+     "text": "Apr",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#1E1822",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 672,
+     "y": 292,
+     "w": 144,
+     "h": 24,
+     "text": "May",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#1E1822",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 816,
+     "y": 292,
+     "w": 144,
+     "h": 24,
+     "text": "Jun",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#1E1822",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 292,
+     "w": 144,
+     "h": 24,
+     "text": "Jul",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#1E1822",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1104,
+     "y": 292,
+     "w": 144,
+     "h": 24,
+     "text": "Aug",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#1E1822",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1248,
+     "y": 292,
+     "w": 144,
+     "h": 24,
+     "text": "Sep",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#1E1822",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 292,
+     "w": 144,
+     "h": 24,
+     "text": "Oct",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#1E1822",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1536,
+     "y": 292,
+     "w": 144,
+     "h": 24,
+     "text": "Nov",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#1E1822",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1680,
+     "y": 292,
+     "w": 144,
+     "h": 24,
+     "text": "Dec",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#1E1822",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 280,
+     "w": 1728,
+     "h": 2,
+     "fill": "#1E1822"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 832,
+     "w": 1728,
+     "h": 2,
+     "fill": "#1E1822"
+    },
+    {
+     "kind": "rect",
+     "x": 102,
+     "y": 334,
+     "w": 564,
+     "h": 50,
+     "fill": "#C2185B",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 122,
+     "y": 345,
+     "w": 524,
+     "h": 28,
+     "text": "The Friday campaign",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#FBF7F0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 102,
+     "y": 392,
+     "w": 564,
+     "h": 24,
+     "text": "$640K  ·  34% of the budget",
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 600,
+     "color": "#C2185B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 686,
+     "y": 346,
+     "w": 1138,
+     "h": 28,
+     "text": "Launch film on 14 January, a customer story a week after",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 446,
+     "w": 420,
+     "h": 50,
+     "fill": "#E3A91B",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 554,
+     "y": 457,
+     "w": 380,
+     "h": 28,
+     "text": "The report",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#1E1822",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 534,
+     "y": 504,
+     "w": 420,
+     "h": 24,
+     "text": "$300K  ·  16% of the budget",
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 600,
+     "color": "#7F5B0E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 974,
+     "y": 458,
+     "w": 850,
+     "h": 28,
+     "text": "Published 5 May; the briefings run through June",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 966,
+     "y": 558,
+     "w": 564,
+     "h": 50,
+     "fill": "#C2185B",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 986,
+     "y": 569,
+     "w": 524,
+     "h": 28,
+     "text": "Partner season",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#FBF7F0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 966,
+     "y": 616,
+     "w": 564,
+     "h": 24,
+     "text": "$360K  ·  19% of the budget",
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 600,
+     "color": "#C2185B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 570,
+     "w": 850,
+     "h": 28,
+     "text": "Twenty partners, one co-written story a week",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 1254,
+     "y": 670,
+     "w": 564,
+     "h": 50,
+     "fill": "#E3A91B",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 1274,
+     "y": 681,
+     "w": 524,
+     "h": 28,
+     "text": "The conference",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#1E1822",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1254,
+     "y": 728,
+     "w": 564,
+     "h": 24,
+     "text": "$460K  ·  24% of the budget",
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 600,
+     "color": "#7F5B0E",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 682,
+     "w": 1138,
+     "h": 28,
+     "text": "Four hundred people on 12 November; the 2028 plan from the stage",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 102,
+     "y": 782,
+     "w": 1716,
+     "h": 30,
+     "fill": "#1E1822",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 122,
+     "y": 787,
+     "w": 900,
+     "h": 22,
+     "text": "Always on: search, content, community",
+     "family": "Work Sans",
+     "size": 16,
+     "weight": 600,
+     "color": "#FBF7F0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1478,
+     "y": 787,
+     "w": 320,
+     "h": 22,
+     "text": "$140K  ·  7% of the budget",
+     "family": "Work Sans",
+     "size": 16,
+     "weight": 600,
+     "color": "#FBF7F0",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 844,
+     "w": 432,
+     "h": 22,
+     "text": "Q1",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#665C6B",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 844,
+     "w": 432,
+     "h": 22,
+     "text": "Q2",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#665C6B",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 844,
+     "w": 432,
+     "h": 22,
+     "text": "Q3",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#665C6B",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 844,
+     "w": 432,
+     "h": 22,
+     "text": "Q4",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#665C6B",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 880,
+     "w": 1000,
+     "h": 26,
+     "text": "A bar spans the months a campaign is live; the figure under it is its share of the $1.9M.",
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 500,
+     "color": "#665C6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 918,
+     "w": 760,
+     "h": 38,
+     "text": "the overlaps are on purpose",
+     "family": "Gochi Hand",
+     "size": 30,
+     "weight": 400,
+     "color": "#C2185B",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Chart",
+   "bg": "#FBF7F0",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2040,
+     "y": -660,
+     "w": 764,
+     "h": 764,
+     "fill": "#C2185B",
+     "rotation": 45,
+     "opacity": 0.9,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The budget",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#C2185B",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1100,
+     "h": 120,
+     "text": "Spend by channel, with expected return",
+     "family": "DM Serif Display",
+     "size": 51,
+     "weight": 400,
+     "color": "#1E1822",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Meridian Studio  ·  Marketing plan 2027",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#665C6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 264,
+     "w": 1100,
+     "h": 36,
+     "text": "Content and partners carry the plan; events are the bet; paid stays capped.",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "chart",
+     "x": 96,
+     "y": 328,
+     "w": 1140,
+     "h": 580,
+     "chartType": "barGrouped",
+     "fontSize": 18,
+     "categories": [
+      "Content",
+      "Partners",
+      "Events",
+      "Paid",
+      "Brand"
+     ],
+     "series": [
+      {
+       "name": "Spend ($K)",
+       "values": [
+        520,
+        380,
+        460,
+        300,
+        240
+       ],
+       "color": "#E3A91B"
+      },
+      {
+       "name": "Expected pipeline ($K)",
+       "values": [
+        3100,
+        2600,
+        1800,
+        900,
+        600
+       ],
+       "color": "#C2185B"
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 308,
+     "w": 504,
+     "h": 80,
+     "text": "6x",
+     "family": "DM Serif Display",
+     "size": 64,
+     "weight": 400,
+     "color": "#C2185B",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 396,
+     "w": 504,
+     "h": 60,
+     "text": "Content pipeline against spend",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1320,
+     "y": 460,
+     "w": 504,
+     "h": 1,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 488,
+     "w": 504,
+     "h": 80,
+     "text": "4x",
+     "family": "DM Serif Display",
+     "size": 64,
+     "weight": 400,
+     "color": "#C2185B",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 576,
+     "w": 504,
+     "h": 60,
+     "text": "Events, the bet of the year",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1320,
+     "y": 640,
+     "w": 504,
+     "h": 1,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 668,
+     "w": 504,
+     "h": 80,
+     "text": "3x",
+     "family": "DM Serif Display",
+     "size": 64,
+     "weight": 400,
+     "color": "#C2185B",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 756,
+     "w": 504,
+     "h": 60,
+     "text": "Paid, capped at $300K",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 918,
+     "w": 760,
+     "h": 38,
+     "text": "content earns it, events bet it",
+     "family": "Gochi Hand",
+     "size": 30,
+     "weight": 400,
+     "color": "#C2185B",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Four cards",
+   "bg": "#FBF7F0",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2040,
+     "y": -660,
+     "w": 764,
+     "h": 764,
+     "fill": "#C2185B",
+     "rotation": 45,
+     "opacity": 0.9,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The dashboard",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#C2185B",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "Four numbers, every Monday",
+     "family": "DM Serif Display",
+     "size": 62,
+     "weight": 400,
+     "color": "#1E1822",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E3D9CC"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Meridian Studio  ·  Marketing plan 2027",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#665C6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "08 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#665C6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 852,
+     "h": 264,
+     "fill": "#F3ECE0",
+     "radius": 6,
+     "stroke": "#E3D9CC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 284,
+     "w": 72,
+     "h": 72,
+     "fill": "#e9c2c5"
+    },
+    {
+     "kind": "icon",
+     "icon": "chart-pie",
+     "x": 154,
+     "y": 302,
+     "w": 36,
+     "h": 36,
+     "color": "#C2185B"
+    },
+    {
+     "kind": "text",
+     "x": 236,
+     "y": 288,
+     "w": 672,
+     "h": 40,
+     "text": "Sourced pipeline",
+     "family": "DM Serif Display",
+     "size": 30,
+     "weight": 400,
+     "color": "#1E1822",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 236,
+     "y": 340,
+     "w": 672,
+     "h": 120,
+     "text": "$9M for the year, so $750K a month. First touch, in the CRM, nothing counted by hand.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 244,
+     "w": 852,
+     "h": 264,
+     "fill": "#F3ECE0",
+     "radius": 6,
+     "stroke": "#E3D9CC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1012,
+     "y": 284,
+     "w": 72,
+     "h": 72,
+     "fill": "#f0dfb9"
+    },
+    {
+     "kind": "icon",
+     "icon": "user",
+     "x": 1030,
+     "y": 302,
+     "w": 36,
+     "h": 36,
+     "color": "#7F5B0E"
+    },
+    {
+     "kind": "text",
+     "x": 1112,
+     "y": 288,
+     "w": 672,
+     "h": 40,
+     "text": "Qualified leads",
+     "family": "DM Serif Display",
+     "size": 30,
+     "weight": 400,
+     "color": "#1E1822",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1112,
+     "y": 340,
+     "w": 672,
+     "h": 120,
+     "text": "200 a month. The free tier is the largest new source and gets its own line.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 544,
+     "w": 852,
+     "h": 264,
+     "fill": "#F3ECE0",
+     "radius": 6,
+     "stroke": "#E3D9CC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 584,
+     "w": 72,
+     "h": 72,
+     "fill": "#e9c2c5"
+    },
+    {
+     "kind": "icon",
+     "icon": "microphone",
+     "x": 154,
+     "y": 602,
+     "w": 36,
+     "h": 36,
+     "color": "#C2185B"
+    },
+    {
+     "kind": "text",
+     "x": 236,
+     "y": 588,
+     "w": 672,
+     "h": 40,
+     "text": "Share of voice",
+     "family": "DM Serif Display",
+     "size": 30,
+     "weight": 400,
+     "color": "#1E1822",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 236,
+     "y": 640,
+     "w": 672,
+     "h": 120,
+     "text": "38% by Q4. The analyst survey each quarter, mentions each month in between.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 544,
+     "w": 852,
+     "h": 264,
+     "fill": "#F3ECE0",
+     "radius": 6,
+     "stroke": "#E3D9CC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1012,
+     "y": 584,
+     "w": 72,
+     "h": 72,
+     "fill": "#f0dfb9"
+    },
+    {
+     "kind": "icon",
+     "icon": "coin",
+     "x": 1030,
+     "y": 602,
+     "w": 36,
+     "h": 36,
+     "color": "#7F5B0E"
+    },
+    {
+     "kind": "text",
+     "x": 1112,
+     "y": 588,
+     "w": 672,
+     "h": 40,
+     "text": "Cost per lead",
+     "family": "DM Serif Display",
+     "size": 30,
+     "weight": 400,
+     "color": "#1E1822",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1112,
+     "y": 640,
+     "w": 672,
+     "h": 120,
+     "text": "$790 or under. A channel above $1,200 for two months in a row loses its money.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#665C6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 918,
+     "w": 760,
+     "h": 38,
+     "text": "miss twice and the money moves",
+     "family": "Gochi Hand",
+     "size": 30,
+     "weight": 400,
+     "color": "#C2185B",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#241A2B",
+      0
+     ],
+     [
+      "#110A16",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2104,
+     "y": -1012,
+     "w": 1171,
+     "h": 1171,
+     "fill": "#DA3283",
+     "rotation": 45,
+     "opacity": 0.92,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1733,
+     "y": 760,
+     "w": 9,
+     "h": 9,
+     "fill": "#FBF7F0",
+     "opacity": 0.61
+    },
+    {
+     "kind": "ellipse",
+     "x": 1527,
+     "y": 757,
+     "w": 7,
+     "h": 7,
+     "fill": "#FBF7F0",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1582,
+     "y": 549,
+     "w": 5,
+     "h": 5,
+     "fill": "#FBF7F0",
+     "opacity": 0.73
+    },
+    {
+     "kind": "ellipse",
+     "x": 1632,
+     "y": 575,
+     "w": 8,
+     "h": 8,
+     "fill": "#FBF7F0",
+     "opacity": 0.69
+    },
+    {
+     "kind": "ellipse",
+     "x": 1390,
+     "y": 794,
+     "w": 8,
+     "h": 8,
+     "fill": "#FBF7F0",
+     "opacity": 0.77
+    },
+    {
+     "kind": "ellipse",
+     "x": 1384,
+     "y": 653,
+     "w": 9,
+     "h": 9,
+     "fill": "#FBF7F0",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#DA3283",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#DA3283",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#DA3283",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Meridian Studio",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#FBF7F0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 49,
+     "text": "And then we measure it",
+     "family": "Gochi Hand",
+     "size": 38,
+     "weight": 400,
+     "color": "#FF8AC2",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 133,
+     "text": "How we will know",
+     "family": "DM Serif Display",
+     "size": 112,
+     "weight": 400,
+     "color": "#FBF7F0",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 467,
+     "w": 940,
+     "h": 120,
+     "text": "One dashboard, four numbers, checked every Monday at nine. If a channel misses two months, we move its money.",
+     "family": "Work Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#B7ABBE",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#DA3283"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "mei@meridian.example",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#FBF7F0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "world",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#DA3283"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "meridian.example/marketing",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#FBF7F0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "calendar",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#DA3283"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "Weekly review: Mondays, 09:00",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#FBF7F0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Open the dashboard",
+     "fill": "#DA3283",
+     "color": "#FBF7F0",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 700,
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "09 / 9",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#B7ABBE",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 884,
+     "w": 720,
+     "h": 40,
+     "text": "Mondays at nine, coffee provided",
+     "family": "Gochi Hand",
+     "size": 32,
+     "weight": 400,
+     "color": "#FF8AC2",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day42-imac",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n8",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n10",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n11",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n12",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p5-n2",
+   "kind": "text",
+   "label": "Title",
+   "hint": "One short line"
+  },
+  {
+   "node": "p5-n36",
+   "kind": "text",
+   "label": "Campaign 1",
+   "hint": "The campaign's name"
+  },
+  {
+   "node": "p5-n40",
+   "kind": "text",
+   "label": "Campaign 2",
+   "hint": "The campaign's name"
+  },
+  {
+   "node": "p5-n44",
+   "kind": "text",
+   "label": "Campaign 3",
+   "hint": "The campaign's name"
+  },
+  {
+   "node": "p5-n48",
+   "kind": "text",
+   "label": "Campaign 4",
+   "hint": "The campaign's name"
+  },
+  {
+   "node": "p8-n15",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n17",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n19",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Marketing Plan",
-  "theme": "creative with a spine",
-  "pages": [
-   {
-    "title": "The objective",
-    "points": [
-     "What marketing owes the business this year"
-    ],
-    "visualRole": "cover"
-   },
-   {
-    "title": "The audience",
-    "points": [
-     "Segments, moments, and messages"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "The big idea",
-    "points": [
-     "The campaign concept in one line"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "The calendar",
-    "points": [
-     "Campaigns across the year"
-    ],
-    "visualRole": "data"
-   },
-   {
-    "title": "The budget",
-    "points": [
-     "Spend by channel with expected return"
-    ],
-    "visualRole": "data"
-   },
-   {
-    "title": "How we will know",
-    "points": [
-     "The dashboard we check weekly"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 80
 }

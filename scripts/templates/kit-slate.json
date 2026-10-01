@@ -1,0 +1,8043 @@
+{
+ "id": "kit-slate",
+ "title": "Slate Minimal Kit",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "kit",
+  "agency",
+  "portfolio",
+  "proposal",
+  "minimal",
+  "swiss",
+  "monochrome"
+ ],
+ "styleTags": [
+  "minimal",
+  "modern",
+  "clean"
+ ],
+ "size": [
+  1920,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Archivo",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Archivo",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Space Mono",
+   "weight": 400
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#181818",
+      0
+     ],
+     [
+      "#070707",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1180,
+     "y": -300,
+     "w": 1200,
+     "h": 1200,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#4D82FF",
+        0
+       ],
+       [
+        "#070707",
+        1
+       ]
+      ],
+      "radial": true
+     },
+     "opacity": 0.35,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#4D82FF",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Form & Function",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 34,
+     "text": "Studio proposal, 2026",
+     "family": "Space Mono",
+     "size": 26,
+     "weight": 400,
+     "color": "#4D82FF",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 258,
+     "text": "Built for the\nlong run",
+     "family": "Archivo",
+     "size": 118,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 734,
+     "w": 900,
+     "h": 80,
+     "text": "A year of steady growth, and the plan that carries it into the next decade.",
+     "family": "Archivo",
+     "size": 28,
+     "weight": 400,
+     "color": "#A0A0A0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Dana Whitfield, Managing Partner  ·  14 October 2026",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#A0A0A0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#A0A0A0",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 1176,
+     "y": 0,
+     "w": 744,
+     "h": 1080,
+     "fill": "#1F1F1F",
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 1176,
+     "y": 0,
+     "w": 4,
+     "h": 1080,
+     "fill": "#4D82FF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1238,
+     "y": 230,
+     "w": 620,
+     "h": 620,
+     "fill": "#4D82FF",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1300,
+     "y": 292,
+     "w": 496,
+     "h": 496,
+     "fill": "#4D82FF",
+     "opacity": 0.16,
+     "bleed": true
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-working-1",
+     "x": 1260,
+     "y": 260,
+     "w": 580,
+     "h": 560
+    }
+   ]
+  },
+  {
+   "name": "Agenda",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Agenda",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "What we will cover today",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 248,
+     "w": 96,
+     "h": 60,
+     "text": "01",
+     "family": "Archivo",
+     "size": 44,
+     "weight": 700,
+     "color": "#2F6BFF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 246,
+     "w": 900,
+     "h": 44,
+     "text": "Where we stand",
+     "family": "Archivo",
+     "size": 34,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 292,
+     "w": 900,
+     "h": 30,
+     "text": "Results, retention and the numbers behind them",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 250,
+     "w": 160,
+     "h": 34,
+     "label": "10 min",
+     "fill": "#d4ddf5",
+     "color": "#2F6BFF",
+     "family": "Archivo",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 348,
+     "w": 1204,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 366,
+     "w": 96,
+     "h": 60,
+     "text": "02",
+     "family": "Archivo",
+     "size": 44,
+     "weight": 700,
+     "color": "#2F6BFF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 364,
+     "w": 900,
+     "h": 44,
+     "text": "What we learned",
+     "family": "Archivo",
+     "size": 34,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 410,
+     "w": 900,
+     "h": 30,
+     "text": "Three findings that change the plan",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 368,
+     "w": 160,
+     "h": 34,
+     "label": "15 min",
+     "fill": "#d4ddf5",
+     "color": "#2F6BFF",
+     "family": "Archivo",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 466,
+     "w": 1204,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 484,
+     "w": 96,
+     "h": 60,
+     "text": "03",
+     "family": "Archivo",
+     "size": 44,
+     "weight": 700,
+     "color": "#2F6BFF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 482,
+     "w": 900,
+     "h": 44,
+     "text": "The plan for next year",
+     "family": "Archivo",
+     "size": 34,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 528,
+     "w": 900,
+     "h": 30,
+     "text": "Priorities, sequencing and owners",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 486,
+     "w": 160,
+     "h": 34,
+     "label": "20 min",
+     "fill": "#d4ddf5",
+     "color": "#2F6BFF",
+     "family": "Archivo",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 584,
+     "w": 1204,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 602,
+     "w": 96,
+     "h": 60,
+     "text": "04",
+     "family": "Archivo",
+     "size": 44,
+     "weight": 700,
+     "color": "#2F6BFF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 600,
+     "w": 900,
+     "h": 44,
+     "text": "What it takes",
+     "family": "Archivo",
+     "size": 34,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 646,
+     "w": 900,
+     "h": 30,
+     "text": "Budget, hiring and the risks we carry",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 604,
+     "w": 160,
+     "h": 34,
+     "label": "10 min",
+     "fill": "#d4ddf5",
+     "color": "#2F6BFF",
+     "family": "Archivo",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 702,
+     "w": 1204,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 720,
+     "w": 96,
+     "h": 60,
+     "text": "05",
+     "family": "Archivo",
+     "size": 44,
+     "weight": 700,
+     "color": "#2F6BFF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 718,
+     "w": 900,
+     "h": 44,
+     "text": "Decisions we need",
+     "family": "Archivo",
+     "size": 34,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 764,
+     "w": 900,
+     "h": 30,
+     "text": "Three questions for this room",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 722,
+     "w": 160,
+     "h": 34,
+     "label": "5 min",
+     "fill": "#d4ddf5",
+     "color": "#2F6BFF",
+     "family": "Archivo",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 820,
+     "w": 1204,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "rect",
+     "x": 1396,
+     "y": 242,
+     "w": 428,
+     "h": 560,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#181818",
+        0
+       ],
+       [
+        "#070707",
+        1
+       ]
+      ]
+     },
+     "radius": 0
+    },
+    {
+     "kind": "rect",
+     "x": 1396,
+     "y": 242,
+     "w": 428,
+     "h": 6,
+     "fill": "#4D82FF",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 282,
+     "w": 348,
+     "h": 28,
+     "text": "Today",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#4D82FF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 322,
+     "w": 348,
+     "h": 120,
+     "text": "14 Oct",
+     "family": "Archivo",
+     "size": 76,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 478,
+     "w": 120,
+     "h": 26,
+     "text": "Time",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#A0A0A0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 506,
+     "w": 348,
+     "h": 30,
+     "text": "09:30 to 10:30",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1436,
+     "y": 542,
+     "w": 348,
+     "h": 1,
+     "fill": "#2E2E2E"
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 552,
+     "w": 120,
+     "h": 26,
+     "text": "Room",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#A0A0A0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 580,
+     "w": 348,
+     "h": 30,
+     "text": "Boardroom, level 4",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1436,
+     "y": 616,
+     "w": 348,
+     "h": 1,
+     "fill": "#2E2E2E"
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 626,
+     "w": 120,
+     "h": 26,
+     "text": "Host",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#A0A0A0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 654,
+     "w": 348,
+     "h": 30,
+     "text": "Dana Whitfield",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1436,
+     "y": 690,
+     "w": 348,
+     "h": 1,
+     "fill": "#2E2E2E"
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 700,
+     "w": 120,
+     "h": 26,
+     "text": "Notes",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#A0A0A0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 728,
+     "w": 348,
+     "h": 30,
+     "text": "Shared after the session",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    }
+   ]
+  },
+  {
+   "name": "Section",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#181818",
+      0
+     ],
+     [
+      "#070707",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1180,
+     "y": -300,
+     "w": 1200,
+     "h": 1200,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#4D82FF",
+        0
+       ],
+       [
+        "#070707",
+        1
+       ]
+      ],
+      "radial": true
+     },
+     "opacity": 0.35,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 800,
+     "h": 256,
+     "text": "01",
+     "family": "Archivo",
+     "size": 236,
+     "weight": 700,
+     "color": "#4D82FF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 492,
+     "w": 120,
+     "h": 4,
+     "fill": "#4D82FF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 520,
+     "w": 1100,
+     "h": 112,
+     "text": "Where we stand",
+     "family": "Archivo",
+     "size": 96,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 652,
+     "w": 900,
+     "h": 90,
+     "text": "The year in numbers, and what sits behind each of them.",
+     "family": "Archivo",
+     "size": 28,
+     "weight": 400,
+     "color": "#A0A0A0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1240,
+     "y": 280,
+     "w": 560,
+     "h": 560,
+     "fill": "#4D82FF",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1296,
+     "y": 336,
+     "w": 448,
+     "h": 448,
+     "fill": "#4D82FF",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 1000,
+     "h": 50,
+     "text": "Studio proposal, 2026",
+     "family": "Space Mono",
+     "size": 26,
+     "weight": 400,
+     "color": "#4D82FF",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#2E2E2E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#A0A0A0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#A0A0A0",
+     "lineHeight": 1.3,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day10-canvas-stand",
+     "x": 1300,
+     "y": 340,
+     "w": 440,
+     "h": 440,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Statement",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 34,
+     "text": "Studio proposal, 2026",
+     "family": "Space Mono",
+     "size": 26,
+     "weight": 400,
+     "color": "#2F6BFF",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 284,
+     "w": 120,
+     "h": 6,
+     "fill": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 330,
+     "w": 1560,
+     "h": 272,
+     "text": "Growth that we can explain is the only kind we want to keep.",
+     "family": "Archivo",
+     "size": 78,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 642,
+     "w": 1000,
+     "h": 32,
+     "text": "Dana Whitfield, in the FY2026 letter to partners",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    }
+   ]
+  },
+  {
+   "name": "Text and picture",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Where we stand",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 960,
+     "h": 74,
+     "text": "Three things the year proved",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 270,
+     "w": 34,
+     "h": 34,
+     "fill": "#d0dbf5"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 270,
+     "w": 34,
+     "h": 34,
+     "text": "1",
+     "family": "Archivo",
+     "size": 17,
+     "weight": 700,
+     "color": "#2F6BFF",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 266,
+     "w": 840,
+     "h": 44,
+     "text": "Retention leads growth",
+     "family": "Archivo",
+     "size": 32,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 318,
+     "w": 840,
+     "h": 70,
+     "text": "Net revenue retention held above 118% in every quarter, before any new logo.",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 448,
+     "w": 34,
+     "h": 34,
+     "fill": "#d0dbf5"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 448,
+     "w": 34,
+     "h": 34,
+     "text": "2",
+     "family": "Archivo",
+     "size": 17,
+     "weight": 700,
+     "color": "#2F6BFF",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 444,
+     "w": 840,
+     "h": 44,
+     "text": "The mid-market is ours",
+     "family": "Archivo",
+     "size": 32,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 496,
+     "w": 840,
+     "h": 70,
+     "text": "Deals between 200 and 2,000 seats closed twice as fast as a year ago.",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 626,
+     "w": 34,
+     "h": 34,
+     "fill": "#d0dbf5"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 626,
+     "w": 34,
+     "h": 34,
+     "text": "3",
+     "family": "Archivo",
+     "size": 17,
+     "weight": 700,
+     "color": "#2F6BFF",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 622,
+     "w": 840,
+     "h": 44,
+     "text": "Partners now bring a third of pipeline",
+     "family": "Archivo",
+     "size": 32,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 674,
+     "w": 840,
+     "h": 70,
+     "text": "Referred deals close at higher values and churn less.",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1080,
+     "y": 196,
+     "w": 744,
+     "h": 690,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#c1c1c1",
+        0
+       ],
+       [
+        "#F3F3F3",
+        1
+       ]
+      ]
+     }
+    },
+    {
+     "kind": "ellipse",
+     "x": 1202,
+     "y": 291,
+     "w": 500,
+     "h": 500,
+     "fill": "#2F6BFF",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1252,
+     "y": 341,
+     "w": 400,
+     "h": 400,
+     "fill": "#2F6BFF",
+     "opacity": 0.16,
+     "bleed": true
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-desk-illustration-2",
+     "x": 1160,
+     "y": 270,
+     "w": 584,
+     "h": 540
+    }
+   ]
+  },
+  {
+   "name": "Two columns",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "What we learned",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "Before and after the change",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 848,
+     "h": 600,
+     "fill": "#F3F3F3",
+     "radius": 0,
+     "stroke": "#E2E2E2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "icon",
+     "icon": "alert-triangle",
+     "x": 856,
+     "y": 286,
+     "w": 40,
+     "h": 40,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 290,
+     "w": 688,
+     "h": 28,
+     "text": "Before",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 334,
+     "w": 752,
+     "h": 112,
+     "text": "Every team ran its own playbook",
+     "family": "Archivo",
+     "size": 40,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 502,
+     "w": 752,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 526,
+     "w": 752,
+     "h": 40,
+     "text": "Four onboarding flows, none shared",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 602,
+     "w": 752,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 626,
+     "w": 752,
+     "h": 40,
+     "text": "Handoffs lost a day at every step",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 702,
+     "w": 752,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 726,
+     "w": 752,
+     "h": 40,
+     "text": "Nobody owned the number",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 976,
+     "y": 242,
+     "w": 848,
+     "h": 600,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#181818",
+        0
+       ],
+       [
+        "#070707",
+        1
+       ]
+      ]
+     },
+     "radius": 0
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 1736,
+     "y": 286,
+     "w": 40,
+     "h": 40,
+     "color": "#4D82FF"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 290,
+     "w": 688,
+     "h": 28,
+     "text": "After",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#4D82FF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 334,
+     "w": 752,
+     "h": 112,
+     "text": "One playbook, one owner",
+     "family": "Archivo",
+     "size": 40,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 502,
+     "w": 752,
+     "h": 1,
+     "fill": "#2E2E2E"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 526,
+     "w": 752,
+     "h": 40,
+     "text": "A single flow every team adopts",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 602,
+     "w": 752,
+     "h": 1,
+     "fill": "#2E2E2E"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 626,
+     "w": 752,
+     "h": 40,
+     "text": "Handoffs measured and cut to hours",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 702,
+     "w": 752,
+     "h": 1,
+     "fill": "#2E2E2E"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 726,
+     "w": 752,
+     "h": 40,
+     "text": "One dashboard, one accountable lead",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The plan",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "Three priorities for the year",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#F3F3F3",
+     "radius": 0,
+     "stroke": "#E2E2E2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#2F6BFF",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#ccd8f5"
+    },
+    {
+     "kind": "icon",
+     "icon": "flag",
+     "x": 156,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "Win the mid-market",
+     "family": "Archivo",
+     "size": 34,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "Double the segment team and ship the two integrations every deal asks for.",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#F3F3F3",
+     "radius": 0,
+     "stroke": "#E2E2E2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#111111",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#c6c6c6"
+    },
+    {
+     "kind": "icon",
+     "icon": "shield",
+     "x": 740,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#111111"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "Earn the enterprise",
+     "family": "Archivo",
+     "size": 34,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "Certifications, regional residency and a support tier that answers in an hour.",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#F3F3F3",
+     "radius": 0,
+     "stroke": "#E2E2E2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#2F6BFF",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#ccd8f5"
+    },
+    {
+     "kind": "icon",
+     "icon": "sparkles",
+     "x": 1324,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "Make the product sell itself",
+     "family": "Archivo",
+     "size": 34,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "A free tier that grows into paid on its own, measured weekly.",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    }
+   ]
+  },
+  {
+   "name": "Four cards",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "How we do this",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "Four agreements for the week",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "08 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 852,
+     "h": 264,
+     "fill": "#F3F3F3",
+     "radius": 0,
+     "stroke": "#E2E2E2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 282,
+     "w": 72,
+     "h": 72,
+     "fill": "#ccd8f5"
+    },
+    {
+     "kind": "icon",
+     "icon": "clock",
+     "x": 154,
+     "y": 300,
+     "w": 36,
+     "h": 36,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 236,
+     "y": 286,
+     "w": 672,
+     "h": 40,
+     "text": "Be on time",
+     "family": "Archivo",
+     "size": 30,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 236,
+     "y": 338,
+     "w": 672,
+     "h": 120,
+     "text": "Sessions start when they say; nobody waits well.",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 242,
+     "w": 852,
+     "h": 264,
+     "fill": "#F3F3F3",
+     "radius": 0,
+     "stroke": "#E2E2E2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1012,
+     "y": 282,
+     "w": 72,
+     "h": 72,
+     "fill": "#c6c6c6"
+    },
+    {
+     "kind": "icon",
+     "icon": "microphone",
+     "x": 1030,
+     "y": 300,
+     "w": 36,
+     "h": 36,
+     "color": "#111111"
+    },
+    {
+     "kind": "text",
+     "x": 1112,
+     "y": 286,
+     "w": 672,
+     "h": 40,
+     "text": "Everyone speaks",
+     "family": "Archivo",
+     "size": 30,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1112,
+     "y": 338,
+     "w": 672,
+     "h": 120,
+     "text": "Each session ends with a round.",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 542,
+     "w": 852,
+     "h": 264,
+     "fill": "#F3F3F3",
+     "radius": 0,
+     "stroke": "#E2E2E2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 582,
+     "w": 72,
+     "h": 72,
+     "fill": "#ccd8f5"
+    },
+    {
+     "kind": "icon",
+     "icon": "device-mobile",
+     "x": 154,
+     "y": 600,
+     "w": 36,
+     "h": 36,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 236,
+     "y": 586,
+     "w": 672,
+     "h": 40,
+     "text": "Phones down in sessions",
+     "family": "Archivo",
+     "size": 30,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 236,
+     "y": 638,
+     "w": 672,
+     "h": 120,
+     "text": "Notes on paper; photos of the board at the end.",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 542,
+     "w": 852,
+     "h": 264,
+     "fill": "#F3F3F3",
+     "radius": 0,
+     "stroke": "#E2E2E2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1012,
+     "y": 582,
+     "w": 72,
+     "h": 72,
+     "fill": "#c6c6c6"
+    },
+    {
+     "kind": "icon",
+     "icon": "heart",
+     "x": 1030,
+     "y": 600,
+     "w": 36,
+     "h": 36,
+     "color": "#111111"
+    },
+    {
+     "kind": "text",
+     "x": 1112,
+     "y": 586,
+     "w": 672,
+     "h": 40,
+     "text": "Kind by default",
+     "family": "Archivo",
+     "size": 30,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1112,
+     "y": 638,
+     "w": 672,
+     "h": 120,
+     "text": "Demos are brave. Questions are curious.",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    }
+   ]
+  },
+  {
+   "name": "Figures",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Results",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "The year in four numbers",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "09 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 414,
+     "h": 560,
+     "fill": "#F3F3F3",
+     "radius": 0,
+     "stroke": "#E2E2E2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 414,
+     "h": 6,
+     "fill": "#2F6BFF",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 298,
+     "w": 342,
+     "h": 120,
+     "text": "$48.2M",
+     "family": "Archivo",
+     "size": 83.2,
+     "weight": 700,
+     "color": "#2F6BFF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 438,
+     "w": 342,
+     "h": 34,
+     "text": "Annual recurring revenue",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 132,
+     "y": 492,
+     "w": 190,
+     "h": 40,
+     "label": "+31% year over year",
+     "fill": "#d0dbf5",
+     "color": "#2F6BFF",
+     "family": "Archivo",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 562,
+     "w": 342,
+     "h": 140,
+     "text": "Up from $36.8M, with expansion ahead of new business for the first time.",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 242,
+     "w": 414,
+     "h": 560,
+     "fill": "#F3F3F3",
+     "radius": 0,
+     "stroke": "#E2E2E2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 242,
+     "w": 414,
+     "h": 6,
+     "fill": "#111111",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 298,
+     "w": 342,
+     "h": 120,
+     "text": "118%",
+     "family": "Archivo",
+     "size": 104,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 438,
+     "w": 342,
+     "h": 34,
+     "text": "Net revenue retention",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 570,
+     "y": 492,
+     "w": 190,
+     "h": 40,
+     "label": "+6 pts",
+     "fill": "#cacaca",
+     "color": "#111111",
+     "family": "Archivo",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 562,
+     "w": 342,
+     "h": 140,
+     "text": "Held above target in every quarter; enterprise accounts led.",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 242,
+     "w": 414,
+     "h": 560,
+     "fill": "#F3F3F3",
+     "radius": 0,
+     "stroke": "#E2E2E2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 242,
+     "w": 414,
+     "h": 6,
+     "fill": "#2F6BFF",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 298,
+     "w": 342,
+     "h": 120,
+     "text": "1,240",
+     "family": "Archivo",
+     "size": 104,
+     "weight": 700,
+     "color": "#2F6BFF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 438,
+     "w": 342,
+     "h": 34,
+     "text": "Customers",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1008,
+     "y": 492,
+     "w": 190,
+     "h": 40,
+     "label": "+280 net new",
+     "fill": "#d0dbf5",
+     "color": "#2F6BFF",
+     "family": "Archivo",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 562,
+     "w": 342,
+     "h": 140,
+     "text": "Mid-market grew fastest; churn fell to 4.1% on the year.",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 242,
+     "w": 414,
+     "h": 560,
+     "fill": "#F3F3F3",
+     "radius": 0,
+     "stroke": "#E2E2E2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 242,
+     "w": 414,
+     "h": 6,
+     "fill": "#111111",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 298,
+     "w": 342,
+     "h": 120,
+     "text": "19",
+     "family": "Archivo",
+     "size": 104,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 438,
+     "w": 342,
+     "h": 34,
+     "text": "Months of runway",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1446,
+     "y": 492,
+     "w": 190,
+     "h": 40,
+     "label": "Plan holds",
+     "fill": "#cacaca",
+     "color": "#111111",
+     "family": "Archivo",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 562,
+     "w": 342,
+     "h": 140,
+     "text": "Before the round, at the current burn and the current plan.",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    }
+   ]
+  },
+  {
+   "name": "Chart",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Results",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1100,
+     "h": 74,
+     "text": "Revenue by quarter",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "10 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 218,
+     "w": 1100,
+     "h": 36,
+     "text": "Expansion overtook new business in Q2 and has led every quarter since.",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "chart",
+     "x": 96,
+     "y": 282,
+     "w": 1140,
+     "h": 580,
+     "chartType": "barGrouped",
+     "fontSize": 18,
+     "categories": [
+      "Q1",
+      "Q2",
+      "Q3",
+      "Q4"
+     ],
+     "series": [
+      {
+       "name": "New business",
+       "values": [
+        2.1,
+        2.4,
+        2.6,
+        3
+       ],
+       "color": "#111111"
+      },
+      {
+       "name": "Expansion",
+       "values": [
+        1.8,
+        2.7,
+        3.4,
+        4.2
+       ],
+       "color": "#2F6BFF"
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 262,
+     "w": 504,
+     "h": 80,
+     "text": "$4.2M",
+     "family": "Archivo",
+     "size": 64,
+     "weight": 700,
+     "color": "#2F6BFF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 350,
+     "w": 504,
+     "h": 60,
+     "text": "Expansion revenue in Q4, a record",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1320,
+     "y": 414,
+     "w": 504,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 442,
+     "w": 504,
+     "h": 80,
+     "text": "58%",
+     "family": "Archivo",
+     "size": 64,
+     "weight": 700,
+     "color": "#2F6BFF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 530,
+     "w": 504,
+     "h": 60,
+     "text": "Share of Q4 growth from existing customers",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1320,
+     "y": 594,
+     "w": 504,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 622,
+     "w": 504,
+     "h": 80,
+     "text": "3 of 4",
+     "family": "Archivo",
+     "size": 64,
+     "weight": 700,
+     "color": "#2F6BFF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 710,
+     "w": 504,
+     "h": 60,
+     "text": "Quarters where expansion led",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    }
+   ]
+  },
+  {
+   "name": "Timeline",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The plan",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "The road to next October",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "11 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 425,
+     "w": 1728,
+     "h": 3,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 425,
+     "w": 648,
+     "h": 3,
+     "fill": "#2F6BFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 412,
+     "w": 30,
+     "h": 30,
+     "fill": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 352,
+     "w": 300,
+     "h": 28,
+     "text": "Q1",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 476,
+     "w": 384,
+     "h": 44,
+     "text": "Foundations",
+     "family": "Archivo",
+     "size": 32,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 528,
+     "w": 384,
+     "h": 120,
+     "text": "Segment team hired, the two integrations shipped, pricing page rebuilt.",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 528,
+     "y": 412,
+     "w": 30,
+     "h": 30,
+     "fill": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 352,
+     "w": 300,
+     "h": 28,
+     "text": "Q2",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 476,
+     "w": 384,
+     "h": 44,
+     "text": "Enterprise ready",
+     "family": "Archivo",
+     "size": 32,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 528,
+     "w": 384,
+     "h": 120,
+     "text": "Certifications complete, EU residency live, one-hour support tier launched.",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 960,
+     "y": 412,
+     "w": 30,
+     "h": 30,
+     "fill": "#FFFFFF",
+     "stroke": "#2F6BFF",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 352,
+     "w": 300,
+     "h": 28,
+     "text": "Q3",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 476,
+     "w": 384,
+     "h": 44,
+     "text": "Self-serve growth",
+     "family": "Archivo",
+     "size": 32,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 528,
+     "w": 384,
+     "h": 120,
+     "text": "Free tier public, conversion measured weekly, first paid upgrades on their own.",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1392,
+     "y": 412,
+     "w": 30,
+     "h": 30,
+     "fill": "#FFFFFF",
+     "stroke": "#2F6BFF",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 352,
+     "w": 300,
+     "h": 28,
+     "text": "Q4",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 476,
+     "w": 384,
+     "h": 44,
+     "text": "Scale what works",
+     "family": "Archivo",
+     "size": 32,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 528,
+     "w": 384,
+     "h": 120,
+     "text": "Double down on the channel that grew, cut the ones that did not.",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    }
+   ]
+  },
+  {
+   "name": "Process",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "How it works",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "From first call to live",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "12 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "fill": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "text": "1",
+     "family": "Archivo",
+     "size": 34,
+     "weight": 700,
+     "color": "#111111",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 200,
+     "y": 315,
+     "w": 322,
+     "h": 2,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 404,
+     "w": 402,
+     "h": 44,
+     "text": "Discover",
+     "family": "Archivo",
+     "size": 32,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 458,
+     "w": 378,
+     "h": 150,
+     "text": "A 45-minute call maps your workflow and the numbers you care about.",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 538,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "fill": "#181818"
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "text": "2",
+     "family": "Archivo",
+     "size": 34,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 642,
+     "y": 315,
+     "w": 322,
+     "h": 2,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 404,
+     "w": 402,
+     "h": 44,
+     "text": "Pilot",
+     "family": "Archivo",
+     "size": 32,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 458,
+     "w": 378,
+     "h": 150,
+     "text": "One team, two weeks, your real data. We measure against the baseline.",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 980,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "fill": "#181818"
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "text": "3",
+     "family": "Archivo",
+     "size": 34,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1084,
+     "y": 315,
+     "w": 322,
+     "h": 2,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 404,
+     "w": 402,
+     "h": 44,
+     "text": "Roll out",
+     "family": "Archivo",
+     "size": 32,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 458,
+     "w": 378,
+     "h": 150,
+     "text": "Every team onboarded in waves, with a named lead on each side.",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1422,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "fill": "#181818"
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "text": "4",
+     "family": "Archivo",
+     "size": 34,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 404,
+     "w": 402,
+     "h": 44,
+     "text": "Review",
+     "family": "Archivo",
+     "size": 32,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 458,
+     "w": 378,
+     "h": 150,
+     "text": "A quarterly session on the numbers, and the plan for the next one.",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    }
+   ]
+  },
+  {
+   "name": "Schedule",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Day one  ·  Wednesday",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 940,
+     "h": 74,
+     "text": "Maps out, laptops shut.",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "13 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 106,
+     "y": 332,
+     "w": 4,
+     "h": 520,
+     "fill": "#E2E2E2",
+     "radius": 2
+    },
+    {
+     "kind": "ellipse",
+     "x": 98,
+     "y": 322,
+     "w": 20,
+     "h": 20,
+     "fill": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 320,
+     "w": 150,
+     "h": 28,
+     "text": "08:30",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 316,
+     "y": 316,
+     "w": 620,
+     "h": 32,
+     "text": "Check-in",
+     "family": "Archivo",
+     "size": 27,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 316,
+     "y": 354,
+     "w": 620,
+     "h": 56,
+     "text": "Badges, maps and the good espresso.",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 98,
+     "y": 426,
+     "w": 20,
+     "h": 20,
+     "fill": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 424,
+     "w": 150,
+     "h": 28,
+     "text": "10:00",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 316,
+     "y": 420,
+     "w": 620,
+     "h": 32,
+     "text": "The plan",
+     "family": "Archivo",
+     "size": 27,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 316,
+     "y": 458,
+     "w": 620,
+     "h": 56,
+     "text": "Ten slides, zero spreadsheets.",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 98,
+     "y": 530,
+     "w": 20,
+     "h": 20,
+     "fill": "#111111"
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 528,
+     "w": 150,
+     "h": 28,
+     "text": "12:30",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 316,
+     "y": 524,
+     "w": 620,
+     "h": 32,
+     "text": "Lunch",
+     "family": "Archivo",
+     "size": 27,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 316,
+     "y": 562,
+     "w": 620,
+     "h": 56,
+     "text": "One table, everyone.",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 98,
+     "y": 634,
+     "w": 20,
+     "h": 20,
+     "fill": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 632,
+     "w": 150,
+     "h": 28,
+     "text": "14:00",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 316,
+     "y": 628,
+     "w": 620,
+     "h": 32,
+     "text": "Workshops",
+     "family": "Archivo",
+     "size": 27,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 316,
+     "y": 666,
+     "w": 620,
+     "h": 56,
+     "text": "Pick one of three tracks.",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 98,
+     "y": 738,
+     "w": 20,
+     "h": 20,
+     "fill": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 736,
+     "w": 150,
+     "h": 28,
+     "text": "16:30",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 316,
+     "y": 732,
+     "w": 620,
+     "h": 32,
+     "text": "The walk",
+     "family": "Archivo",
+     "size": 27,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 316,
+     "y": 770,
+     "w": 620,
+     "h": 56,
+     "text": "Gentle loop or the summit.",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 98,
+     "y": 842,
+     "w": 20,
+     "h": 20,
+     "fill": "#111111"
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 840,
+     "w": 150,
+     "h": 28,
+     "text": "19:00",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 316,
+     "y": 836,
+     "w": 620,
+     "h": 32,
+     "text": "Dinner",
+     "family": "Archivo",
+     "size": 27,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 316,
+     "y": 874,
+     "w": 620,
+     "h": 56,
+     "text": "Off the grill, by the fire.",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1120,
+     "y": 268,
+     "w": 660,
+     "h": 650,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#181818",
+        0
+       ],
+       [
+        "#070707",
+        1
+       ]
+      ]
+     },
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1142,
+     "y": 470,
+     "w": 6,
+     "h": 6,
+     "fill": "#4D82FF",
+     "opacity": 0.38999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1328,
+     "y": 416,
+     "w": 4,
+     "h": 4,
+     "fill": "#4D82FF",
+     "opacity": 0.6499999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1674,
+     "y": 337,
+     "w": 9,
+     "h": 9,
+     "fill": "#4D82FF",
+     "opacity": 0.35
+    },
+    {
+     "kind": "ellipse",
+     "x": 1749,
+     "y": 536,
+     "w": 8,
+     "h": 8,
+     "fill": "#4D82FF",
+     "opacity": 0.69
+    },
+    {
+     "kind": "ellipse",
+     "x": 1700,
+     "y": 294,
+     "w": 7,
+     "h": 7,
+     "fill": "#4D82FF",
+     "opacity": 0.49
+    },
+    {
+     "kind": "ellipse",
+     "x": 1179,
+     "y": 473,
+     "w": 7,
+     "h": 7,
+     "fill": "#4D82FF",
+     "opacity": 0.52
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 324,
+     "w": 540,
+     "h": 24,
+     "text": "After hours",
+     "family": "Archivo",
+     "size": 19,
+     "weight": 600,
+     "color": "#4D82FF",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 360,
+     "w": 540,
+     "h": 84,
+     "text": "Night one ends\naround the fire.",
+     "family": "Archivo",
+     "size": 34,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "ellipse",
+     "x": 1270,
+     "y": 528,
+     "w": 360,
+     "h": 360,
+     "fill": "#4D82FF",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1306,
+     "y": 564,
+     "w": 288,
+     "h": 288,
+     "fill": "#4D82FF",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 828,
+     "w": 540,
+     "h": 44,
+     "text": "bring a hoodie, trust us",
+     "family": "Space Mono",
+     "size": 21,
+     "weight": 400,
+     "color": "#4D82FF",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day10-canvas-stand",
+     "x": 1270,
+     "y": 548,
+     "w": 360,
+     "h": 300,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Checklist",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Before you leave",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 900,
+     "h": 74,
+     "text": "The pack list",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "14 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 96,
+     "y": 264,
+     "w": 34,
+     "h": 34,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 150,
+     "y": 262,
+     "w": 480,
+     "h": 40,
+     "text": "Layers for the weather",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 656,
+     "y": 264,
+     "w": 34,
+     "h": 34,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 710,
+     "y": 262,
+     "w": 480,
+     "h": 40,
+     "text": "Shoes that can get muddy",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 96,
+     "y": 356,
+     "w": 34,
+     "h": 34,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 150,
+     "y": 354,
+     "w": 480,
+     "h": 40,
+     "text": "A water bottle",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle",
+     "x": 656,
+     "y": 356,
+     "w": 34,
+     "h": 34,
+     "color": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 710,
+     "y": 354,
+     "w": 480,
+     "h": 40,
+     "text": "Swimsuit, for the brave",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 96,
+     "y": 448,
+     "w": 34,
+     "h": 34,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 150,
+     "y": 446,
+     "w": 480,
+     "h": 40,
+     "text": "A hoodie for the evening",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle",
+     "x": 656,
+     "y": 448,
+     "w": 34,
+     "h": 34,
+     "color": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 710,
+     "y": 446,
+     "w": 480,
+     "h": 40,
+     "text": "A torch",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 96,
+     "y": 540,
+     "w": 34,
+     "h": 34,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 150,
+     "y": 538,
+     "w": 480,
+     "h": 40,
+     "text": "Chargers",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle",
+     "x": 656,
+     "y": 540,
+     "w": 34,
+     "h": 34,
+     "color": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 710,
+     "y": 538,
+     "w": 480,
+     "h": 40,
+     "text": "A book or a deck of cards",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 650,
+     "w": 1080,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 96,
+     "y": 676,
+     "w": 22,
+     "h": 22,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 130,
+     "y": 672,
+     "w": 300,
+     "h": 28,
+     "text": "must bring",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "circle",
+     "x": 356,
+     "y": 676,
+     "w": 22,
+     "h": 22,
+     "color": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 390,
+     "y": 672,
+     "w": 300,
+     "h": 28,
+     "text": "nice to have",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1300,
+     "y": 268,
+     "w": 480,
+     "h": 600,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#c1c1c1",
+        0
+       ],
+       [
+        "#F3F3F3",
+        1
+       ]
+      ]
+     }
+    },
+    {
+     "kind": "ellipse",
+     "x": 1340,
+     "y": 340,
+     "w": 400,
+     "h": 400,
+     "fill": "#2F6BFF",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1380,
+     "y": 380,
+     "w": 320,
+     "h": 320,
+     "fill": "#2F6BFF",
+     "opacity": 0.16,
+     "bleed": true
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-desk-illustration-2",
+     "x": 1360,
+     "y": 320,
+     "w": 360,
+     "h": 420
+    }
+   ]
+  },
+  {
+   "name": "Facts",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Where we're staying",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 900,
+     "h": 74,
+     "text": "The lodge",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "15 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 222,
+     "w": 820,
+     "h": 90,
+     "text": "A timber lodge at altitude with a lake, a library, a long porch and no reason to check messages.",
+     "family": "Archivo",
+     "size": 26,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 342,
+     "w": 56,
+     "h": 56,
+     "fill": "#d0dbf5"
+    },
+    {
+     "kind": "icon",
+     "icon": "map-pin",
+     "x": 110,
+     "y": 356,
+     "w": 28,
+     "h": 28,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 340,
+     "w": 740,
+     "h": 34,
+     "text": "Two hours from the office",
+     "family": "Archivo",
+     "size": 26,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 376,
+     "w": 740,
+     "h": 30,
+     "text": "By shuttle, door to door",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 460,
+     "w": 56,
+     "h": 56,
+     "fill": "#d0dbf5"
+    },
+    {
+     "kind": "icon",
+     "icon": "bed",
+     "x": 110,
+     "y": 474,
+     "w": 28,
+     "h": 28,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 458,
+     "w": 740,
+     "h": 34,
+     "text": "Sixteen cabins",
+     "family": "Archivo",
+     "size": 26,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 494,
+     "w": 740,
+     "h": 30,
+     "text": "Assignments land the Friday before",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 578,
+     "w": 56,
+     "h": 56,
+     "fill": "#d0dbf5"
+    },
+    {
+     "kind": "icon",
+     "icon": "home",
+     "x": 110,
+     "y": 592,
+     "w": 28,
+     "h": 28,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 576,
+     "w": 740,
+     "h": 34,
+     "text": "A hall that seats sixty",
+     "family": "Archivo",
+     "size": 26,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 612,
+     "w": 740,
+     "h": 30,
+     "text": "Sessions, meals and demos",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 696,
+     "w": 56,
+     "h": 56,
+     "fill": "#d0dbf5"
+    },
+    {
+     "kind": "icon",
+     "icon": "sun",
+     "x": 110,
+     "y": 710,
+     "w": 28,
+     "h": 28,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 694,
+     "w": 740,
+     "h": 34,
+     "text": "Highs of 18, lows of 4",
+     "family": "Archivo",
+     "size": 26,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 730,
+     "w": 740,
+     "h": 30,
+     "text": "Layers. Really.",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1080,
+     "y": 268,
+     "w": 700,
+     "h": 610,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#c1c1c1",
+        0
+       ],
+       [
+        "#F3F3F3",
+        1
+       ]
+      ]
+     }
+    },
+    {
+     "kind": "ellipse",
+     "x": 1180,
+     "y": 295,
+     "w": 500,
+     "h": 500,
+     "fill": "#2F6BFF",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1230,
+     "y": 345,
+     "w": 400,
+     "h": 400,
+     "fill": "#2F6BFF",
+     "opacity": 0.16,
+     "bleed": true
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-desk-illustration-2",
+     "x": 1190,
+     "y": 320,
+     "w": 480,
+     "h": 420
+    }
+   ]
+  },
+  {
+   "name": "Split",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 0,
+     "w": 900,
+     "h": 1080,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#181818",
+        0
+       ],
+       [
+        "#070707",
+        1
+       ]
+      ]
+     },
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 191,
+     "y": 228,
+     "w": 8,
+     "h": 8,
+     "fill": "#4D82FF",
+     "opacity": 0.75
+    },
+    {
+     "kind": "ellipse",
+     "x": 383,
+     "y": 387,
+     "w": 6,
+     "h": 6,
+     "fill": "#4D82FF",
+     "opacity": 0.75
+    },
+    {
+     "kind": "ellipse",
+     "x": 209,
+     "y": 130,
+     "w": 8,
+     "h": 8,
+     "fill": "#4D82FF",
+     "opacity": 0.48
+    },
+    {
+     "kind": "ellipse",
+     "x": 687,
+     "y": 66,
+     "w": 5,
+     "h": 5,
+     "fill": "#4D82FF",
+     "opacity": 0.59
+    },
+    {
+     "kind": "ellipse",
+     "x": 535,
+     "y": 175,
+     "w": 9,
+     "h": 9,
+     "fill": "#4D82FF",
+     "opacity": 0.45999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 172,
+     "y": 425,
+     "w": 6,
+     "h": 6,
+     "fill": "#4D82FF",
+     "opacity": 0.6599999999999999
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 130,
+     "w": 700,
+     "h": 28,
+     "text": "The problem",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#4D82FF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 184,
+     "w": 720,
+     "h": 240,
+     "text": "Selling online is\nstill built for\nbig brands.",
+     "family": "Archivo",
+     "size": 58,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "lineHeight": 1.08
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 470,
+     "w": 12,
+     "h": 12,
+     "fill": "#4D82FF",
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 460,
+     "w": 660,
+     "h": 70,
+     "text": "Most small shops still cannot take an order online.",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 400,
+     "color": "#A0A0A0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 570,
+     "w": 12,
+     "h": 12,
+     "fill": "#4D82FF",
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 560,
+     "w": 660,
+     "h": 70,
+     "text": "Store builders demand weeks of setup and fees.",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 400,
+     "color": "#A0A0A0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 670,
+     "w": 12,
+     "h": 12,
+     "fill": "#4D82FF",
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 660,
+     "w": 660,
+     "h": 70,
+     "text": "Marketplaces skim a third and keep the customer.",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 400,
+     "color": "#A0A0A0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 900,
+     "y": 0,
+     "w": 6,
+     "h": 1080,
+     "fill": "#2F6BFF",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 130,
+     "w": 800,
+     "h": 28,
+     "text": "Our solution",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 184,
+     "w": 820,
+     "h": 160,
+     "text": "Storefronts that\nbuild themselves.",
+     "family": "Archivo",
+     "size": 58,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.08
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 370,
+     "w": 800,
+     "h": 110,
+     "text": "We read a shop's socials and point of sale, then assemble a ready-to-sell storefront with payments and delivery included.",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 980,
+     "y": 520,
+     "w": 44,
+     "h": 44,
+     "fill": "#ccd8f5"
+    },
+    {
+     "kind": "icon",
+     "icon": "bolt",
+     "x": 990,
+     "y": 530,
+     "w": 24,
+     "h": 24,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 1044,
+     "y": 526,
+     "w": 700,
+     "h": 34,
+     "text": "Live in one afternoon",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 980,
+     "y": 596,
+     "w": 44,
+     "h": 44,
+     "fill": "#ccd8f5"
+    },
+    {
+     "kind": "icon",
+     "icon": "coin",
+     "x": 990,
+     "y": 606,
+     "w": 24,
+     "h": 24,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 1044,
+     "y": 602,
+     "w": 700,
+     "h": 34,
+     "text": "No commission, one flat fee",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 980,
+     "y": 672,
+     "w": 44,
+     "h": 44,
+     "fill": "#ccd8f5"
+    },
+    {
+     "kind": "icon",
+     "icon": "user",
+     "x": 990,
+     "y": 682,
+     "w": 24,
+     "h": 24,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 1044,
+     "y": 678,
+     "w": 700,
+     "h": 34,
+     "text": "You own every customer",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1410,
+     "y": 650,
+     "w": 300,
+     "h": 300,
+     "fill": "#2F6BFF",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 680,
+     "w": 240,
+     "h": 240,
+     "fill": "#2F6BFF",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "16 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-desk-illustration-2",
+     "x": 1440,
+     "y": 690,
+     "w": 240,
+     "h": 220
+    }
+   ]
+  },
+  {
+   "name": "Comparison table",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Options",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "How the plans compare",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "17 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 1728,
+     "h": 76,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#181818",
+        0
+       ],
+       [
+        "#070707",
+        1
+       ]
+      ]
+     },
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 264,
+     "w": 376,
+     "h": 32,
+     "text": "Starter",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1072,
+     "y": 264,
+     "w": 376,
+     "h": 32,
+     "text": "Team",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 264,
+     "w": 376,
+     "h": 32,
+     "text": "Enterprise",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 348,
+     "w": 536,
+     "h": 36,
+     "text": "Seats included",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 348,
+     "w": 376,
+     "h": 36,
+     "text": "5",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1072,
+     "y": 348,
+     "w": 376,
+     "h": 36,
+     "text": "25",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 348,
+     "w": 376,
+     "h": 36,
+     "text": "Unlimited",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 413,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 414,
+     "w": 1728,
+     "h": 96,
+     "fill": "#F3F3F3"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 444,
+     "w": 536,
+     "h": 36,
+     "text": "Shared workspaces",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 868,
+     "y": 446,
+     "w": 32,
+     "h": 32,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 1244,
+     "y": 446,
+     "w": 32,
+     "h": 32,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 1620,
+     "y": 446,
+     "w": 32,
+     "h": 32,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 509,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 540,
+     "w": 536,
+     "h": 36,
+     "text": "Brand kits",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle",
+     "x": 868,
+     "y": 542,
+     "w": 32,
+     "h": 32,
+     "color": "#E2E2E2"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 1244,
+     "y": 542,
+     "w": 32,
+     "h": 32,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 1620,
+     "y": 542,
+     "w": 32,
+     "h": 32,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 605,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 606,
+     "w": 1728,
+     "h": 96,
+     "fill": "#F3F3F3"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 636,
+     "w": 536,
+     "h": 36,
+     "text": "Single sign-on",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle",
+     "x": 868,
+     "y": 638,
+     "w": 32,
+     "h": 32,
+     "color": "#E2E2E2"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle",
+     "x": 1244,
+     "y": 638,
+     "w": 32,
+     "h": 32,
+     "color": "#E2E2E2"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 1620,
+     "y": 638,
+     "w": 32,
+     "h": 32,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 701,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 732,
+     "w": 536,
+     "h": 36,
+     "text": "Support response",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 732,
+     "w": 376,
+     "h": 36,
+     "text": "2 days",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1072,
+     "y": 732,
+     "w": 376,
+     "h": 36,
+     "text": "1 day",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 732,
+     "w": 376,
+     "h": 36,
+     "text": "1 hour",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 797,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    }
+   ]
+  },
+  {
+   "name": "Team",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Who we are",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "The people behind the plan",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "18 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 193,
+     "y": 371,
+     "w": 220,
+     "h": 220,
+     "fill": "#c8d5f6"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 623,
+     "w": 414,
+     "h": 40,
+     "text": "Dana Whitfield",
+     "family": "Archivo",
+     "size": 30,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 669,
+     "w": 414,
+     "h": 28,
+     "text": "Managing Partner",
+     "family": "Archivo",
+     "size": 17,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 715,
+     "w": 366,
+     "h": 96,
+     "text": "Twenty years across three funds; leads the portfolio.",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4,
+     "align": "center"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 631,
+     "y": 371,
+     "w": 220,
+     "h": 220,
+     "fill": "#c1c1c1"
+    },
+    {
+     "kind": "text",
+     "x": 534,
+     "y": 623,
+     "w": 414,
+     "h": 40,
+     "text": "Marcus Obi",
+     "family": "Archivo",
+     "size": 30,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 534,
+     "y": 669,
+     "w": 414,
+     "h": 28,
+     "text": "Chief Operating Officer",
+     "family": "Archivo",
+     "size": 17,
+     "weight": 600,
+     "color": "#111111",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 558,
+     "y": 715,
+     "w": 366,
+     "h": 96,
+     "text": "Built the operating model every team now runs on.",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4,
+     "align": "center"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 1069,
+     "y": 371,
+     "w": 220,
+     "h": 220,
+     "fill": "#c8d5f6"
+    },
+    {
+     "kind": "text",
+     "x": 972,
+     "y": 623,
+     "w": 414,
+     "h": 40,
+     "text": "Priya Raman",
+     "family": "Archivo",
+     "size": 30,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 972,
+     "y": 669,
+     "w": 414,
+     "h": 28,
+     "text": "Head of Product",
+     "family": "Archivo",
+     "size": 17,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 996,
+     "y": 715,
+     "w": 366,
+     "h": 96,
+     "text": "Owns the roadmap and the free tier that feeds it.",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4,
+     "align": "center"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 1507,
+     "y": 371,
+     "w": 220,
+     "h": 220,
+     "fill": "#c1c1c1"
+    },
+    {
+     "kind": "text",
+     "x": 1410,
+     "y": 623,
+     "w": 414,
+     "h": 40,
+     "text": "Elena Sato",
+     "family": "Archivo",
+     "size": 30,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1410,
+     "y": 669,
+     "w": 414,
+     "h": 28,
+     "text": "Head of Customers",
+     "family": "Archivo",
+     "size": 17,
+     "weight": 600,
+     "color": "#111111",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1434,
+     "y": 715,
+     "w": 366,
+     "h": 96,
+     "text": "Retention, expansion and the partners who bring both.",
+     "family": "Archivo",
+     "size": 21,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "op-peep-73",
+     "x": 223,
+     "y": 393,
+     "w": 160,
+     "h": 176
+    },
+    {
+     "asset": "op-peep-84",
+     "x": 661,
+     "y": 393,
+     "w": 160,
+     "h": 176
+    },
+    {
+     "asset": "op-peep-86",
+     "x": 1099,
+     "y": 393,
+     "w": 160,
+     "h": 176
+    },
+    {
+     "asset": "op-peep-105",
+     "x": 1537,
+     "y": 393,
+     "w": 160,
+     "h": 176
+    }
+   ]
+  },
+  {
+   "name": "Quote",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#181818",
+      0
+     ],
+     [
+      "#070707",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1180,
+     "y": -300,
+     "w": 1200,
+     "h": 1200,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#4D82FF",
+        0
+       ],
+       [
+        "#070707",
+        1
+       ]
+      ],
+      "radial": true
+     },
+     "opacity": 0.35,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#2E2E2E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#A0A0A0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "19 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#A0A0A0",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 260,
+     "h": 260,
+     "text": "“",
+     "family": "Archivo",
+     "size": 280,
+     "weight": 700,
+     "color": "#4D82FF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 400,
+     "w": 1400,
+     "h": 213,
+     "text": "They did not sell us software. They showed us the number we were losing every week, and then made it stop.",
+     "family": "Archivo",
+     "size": 52,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "lineHeight": 1.26
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 116,
+     "y": 673,
+     "w": 84,
+     "h": 84,
+     "fill": "#2A2A2A"
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 681,
+     "w": 800,
+     "h": 32,
+     "text": "Rowan Achebe",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 717,
+     "w": 800,
+     "h": 28,
+     "text": "Chief Financial Officer, Brightline Logistics",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#A0A0A0",
+     "lineHeight": 1.4
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "op-peep-53",
+     "x": 128,
+     "y": 681,
+     "w": 60,
+     "h": 68
+    }
+   ]
+  },
+  {
+   "name": "Pricing",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#E2E2E2",
+     "opacity": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Options",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "Pick the plan that fits",
+     "family": "Archivo",
+     "size": 60,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Studio proposal",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "20 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#6B6B6B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 554.6666666666666,
+     "h": 620,
+     "fill": "#FFFFFF",
+     "radius": 0,
+     "stroke": "#E2E2E2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 282,
+     "w": 474.66666666666663,
+     "h": 28,
+     "text": "Starter",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 326,
+     "w": 474.66666666666663,
+     "h": 90,
+     "text": "$29",
+     "family": "Archivo",
+     "size": 72,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 422,
+     "w": 474.66666666666663,
+     "h": 28,
+     "text": "per seat, per month",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 474,
+     "w": 474.66666666666663,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 136,
+     "y": 506,
+     "w": 26,
+     "h": 26,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 504,
+     "w": 430.66666666666663,
+     "h": 32,
+     "text": "5 seats",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 500,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 136,
+     "y": 562,
+     "w": 26,
+     "h": 26,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 560,
+     "w": 430.66666666666663,
+     "h": 32,
+     "text": "Shared workspaces",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 500,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 136,
+     "y": 618,
+     "w": 26,
+     "h": 26,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 616,
+     "w": 430.66666666666663,
+     "h": 32,
+     "text": "Community support",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 500,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 136,
+     "y": 674,
+     "w": 26,
+     "h": 26,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 672,
+     "w": 430.66666666666663,
+     "h": 32,
+     "text": "Export to PDF",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 500,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 136,
+     "y": 762,
+     "w": 474.66666666666663,
+     "h": 60,
+     "label": "Choose Starter",
+     "fill": "#181818",
+     "color": "#FFFFFF",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 700,
+     "radius": 0
+    },
+    {
+     "kind": "rect",
+     "x": 682.6666666666666,
+     "y": 226,
+     "w": 554.6666666666666,
+     "h": 652,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#181818",
+        0
+       ],
+       [
+        "#070707",
+        1
+       ]
+      ]
+     },
+     "radius": 0
+    },
+    {
+     "kind": "button",
+     "x": 1037.3333333333333,
+     "y": 254,
+     "w": 160,
+     "h": 36,
+     "label": "Most chosen",
+     "fill": "#4D82FF",
+     "color": "#111111",
+     "family": "Archivo",
+     "size": 15,
+     "weight": 700,
+     "upper": true,
+     "letterSpacing": 1
+    },
+    {
+     "kind": "text",
+     "x": 722.6666666666666,
+     "y": 266,
+     "w": 474.66666666666663,
+     "h": 28,
+     "text": "Team",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#4D82FF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 722.6666666666666,
+     "y": 310,
+     "w": 474.66666666666663,
+     "h": 90,
+     "text": "$59",
+     "family": "Archivo",
+     "size": 72,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 722.6666666666666,
+     "y": 406,
+     "w": 474.66666666666663,
+     "h": 28,
+     "text": "per seat, per month",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#A0A0A0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 722.6666666666666,
+     "y": 458,
+     "w": 474.66666666666663,
+     "h": 1,
+     "fill": "#2E2E2E"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 722.6666666666666,
+     "y": 490,
+     "w": 26,
+     "h": 26,
+     "color": "#4D82FF"
+    },
+    {
+     "kind": "text",
+     "x": 766.6666666666666,
+     "y": 488,
+     "w": 430.66666666666663,
+     "h": 32,
+     "text": "25 seats",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 500,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 722.6666666666666,
+     "y": 546,
+     "w": 26,
+     "h": 26,
+     "color": "#4D82FF"
+    },
+    {
+     "kind": "text",
+     "x": 766.6666666666666,
+     "y": 544,
+     "w": 430.66666666666663,
+     "h": 32,
+     "text": "Brand kits and templates",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 500,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 722.6666666666666,
+     "y": 602,
+     "w": 26,
+     "h": 26,
+     "color": "#4D82FF"
+    },
+    {
+     "kind": "text",
+     "x": 766.6666666666666,
+     "y": 600,
+     "w": 430.66666666666663,
+     "h": 32,
+     "text": "Priority support",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 500,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 722.6666666666666,
+     "y": 658,
+     "w": 26,
+     "h": 26,
+     "color": "#4D82FF"
+    },
+    {
+     "kind": "text",
+     "x": 766.6666666666666,
+     "y": 656,
+     "w": 430.66666666666663,
+     "h": 32,
+     "text": "Version history",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 500,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 722.6666666666666,
+     "y": 762,
+     "w": 474.66666666666663,
+     "h": 60,
+     "label": "Start with Team",
+     "fill": "#4D82FF",
+     "color": "#111111",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 700,
+     "radius": 0
+    },
+    {
+     "kind": "rect",
+     "x": 1269.3333333333333,
+     "y": 242,
+     "w": 554.6666666666666,
+     "h": 620,
+     "fill": "#FFFFFF",
+     "radius": 0,
+     "stroke": "#E2E2E2",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 1309.3333333333333,
+     "y": 282,
+     "w": 474.66666666666663,
+     "h": 28,
+     "text": "Enterprise",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 600,
+     "color": "#2F6BFF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1309.3333333333333,
+     "y": 326,
+     "w": 474.66666666666663,
+     "h": 90,
+     "text": "Custom",
+     "family": "Archivo",
+     "size": 72,
+     "weight": 700,
+     "color": "#111111",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1309.3333333333333,
+     "y": 422,
+     "w": 474.66666666666663,
+     "h": 28,
+     "text": "annual agreement",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 400,
+     "color": "#6B6B6B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1309.3333333333333,
+     "y": 474,
+     "w": 474.66666666666663,
+     "h": 1,
+     "fill": "#E2E2E2"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 1309.3333333333333,
+     "y": 506,
+     "w": 26,
+     "h": 26,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 1353.3333333333333,
+     "y": 504,
+     "w": 430.66666666666663,
+     "h": 32,
+     "text": "Unlimited seats",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 500,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 1309.3333333333333,
+     "y": 562,
+     "w": 26,
+     "h": 26,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 1353.3333333333333,
+     "y": 560,
+     "w": 430.66666666666663,
+     "h": 32,
+     "text": "Single sign-on",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 500,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 1309.3333333333333,
+     "y": 618,
+     "w": 26,
+     "h": 26,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 1353.3333333333333,
+     "y": 616,
+     "w": 430.66666666666663,
+     "h": 32,
+     "text": "One-hour response",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 500,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 1309.3333333333333,
+     "y": 674,
+     "w": 26,
+     "h": 26,
+     "color": "#2F6BFF"
+    },
+    {
+     "kind": "text",
+     "x": 1353.3333333333333,
+     "y": 672,
+     "w": 430.66666666666663,
+     "h": 32,
+     "text": "Dedicated success lead",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 500,
+     "color": "#111111",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1309.3333333333333,
+     "y": 762,
+     "w": 474.66666666666663,
+     "h": 60,
+     "label": "Choose Enterprise",
+     "fill": "#181818",
+     "color": "#FFFFFF",
+     "family": "Archivo",
+     "size": 20,
+     "weight": 700,
+     "radius": 0
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#181818",
+      0
+     ],
+     [
+      "#070707",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1180,
+     "y": -300,
+     "w": 1200,
+     "h": 1200,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#4D82FF",
+        0
+       ],
+       [
+        "#070707",
+        1
+       ]
+      ],
+      "radial": true
+     },
+     "opacity": 0.35,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 47,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 36,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 36,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 47,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1860,
+     "y": 1031,
+     "w": 24,
+     "h": 2,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 1871,
+     "y": 1020,
+     "w": 2,
+     "h": 24,
+     "fill": "#FFFFFF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#4D82FF",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#4D82FF",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#4D82FF",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Form & Function",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 34,
+     "text": "Let's make something",
+     "family": "Space Mono",
+     "size": 26,
+     "weight": 400,
+     "color": "#4D82FF",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 140,
+     "text": "Thank you",
+     "family": "Archivo",
+     "size": 118,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 474,
+     "w": 940,
+     "h": 120,
+     "text": "Questions now, or any time this week. The deck and the model are in the shared folder.",
+     "family": "Archivo",
+     "size": 28,
+     "weight": 400,
+     "color": "#A0A0A0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#4D82FF"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "dana@halcyon.example",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 500,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "world",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#4D82FF"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "halcyon.example",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 500,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "phone",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#4D82FF"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "+1 415 555 0142",
+     "family": "Archivo",
+     "size": 24,
+     "weight": 500,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Book a follow-up",
+     "fill": "#4D82FF",
+     "color": "#111111",
+     "family": "Archivo",
+     "size": 22,
+     "weight": 700,
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "21 / 21",
+     "family": "Archivo",
+     "size": 18,
+     "weight": 500,
+     "color": "#A0A0A0",
+     "lineHeight": 1.3,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-flat-character-illustrations",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n10",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n12",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n13",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n14",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p20-n17",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p20-n19",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p20-n21",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 2,
+ "created": "2026-09-29T00:00:00.000Z",
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 15
+}

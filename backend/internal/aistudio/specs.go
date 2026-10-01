@@ -2,6 +2,7 @@ package aistudio
 
 import (
 	"errors"
+	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -43,7 +44,61 @@ type OutlineItem struct {
 	Columns   []Column     `json:"columns,omitempty"`
 	Image     *ImageIntent `json:"image,omitempty"`
 	Chart     *ChartData   `json:"chart,omitempty"`
+	// Phase 7 forms (additive): several figures that belong together, a
+	// dated sequence reuses Steps with When set, a small data table, and the
+	// people on a team (names and roles only; no portraits are generated).
+	Stats  []Stat     `json:"stats,omitempty"`
+	Table  *TableData `json:"table,omitempty"`
+	People []Person   `json:"people,omitempty"`
+	// Composition is a bespoke page: cells on a 12 by 6 grid with optional
+	// links, for what no catalog form holds.
+	Composition *Composition `json:"composition,omitempty"`
+	// Icon is one English keyword naming a simple icon for the page.
+	Icon string `json:"icon,omitempty"`
+	// Eyebrow is two or three words saying what the page is about, set small
+	// above the title.
+	Eyebrow string `json:"eyebrow,omitempty"`
+	// The kit's voice and vocabulary (kit/ in the composer package): a
+	// hand-written aside, a drawing keyword, a signature form and the pairs
+	// of label and value the signature forms draw from. Mirrors outline.ts.
+	Aside     string `json:"aside,omitempty"`
+	Drawing   string `json:"drawing,omitempty"`
+	Signature string `json:"signature,omitempty"`
+	Pairs     []Pair `json:"pairs,omitempty"`
 }
+
+// Pair is a label and its value, for the kit's signature forms and a
+// kpiGrid's deltas. Mirrors Pair in outline.ts.
+type Pair struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
+
+// CompositionCell is one cell of a bespoke page on the 12-column by 6-row
+// grid. Mirrors CompositionCell in outline.ts.
+type CompositionCell struct {
+	Col    int      `json:"col"`
+	Span   int      `json:"span"`
+	Row    int      `json:"row"`
+	Rows   int      `json:"rows"`
+	Kind   string   `json:"kind"`
+	Text   string   `json:"text,omitempty"`
+	Points []string `json:"points,omitempty"`
+	Value  string   `json:"value,omitempty"`
+	Unit   string   `json:"unit,omitempty"`
+	Icon   string   `json:"icon,omitempty"`
+	Tone   string   `json:"tone,omitempty"`
+}
+
+// Composition is a bespoke page: its cells and the links drawn as arrows
+// between them, as pairs of cell indexes.
+type Composition struct {
+	Cells []CompositionCell `json:"cells"`
+	Links [][]int           `json:"links,omitempty"`
+}
+
+var compositionKinds = map[string]bool{"heading": true, "body": true, "list": true, "figure": true, "label": true, "icon": true, "picture": true}
+var compositionTones = map[string]bool{"tint": true, "accent": true, "deep": true}
 
 // Stat is the content of a big-number slide: one figure at display scale, its
 // unit, and the line that says what it means.
@@ -51,6 +106,7 @@ type Stat struct {
 	Value string `json:"value"`
 	Unit  string `json:"unit,omitempty"`
 	Label string `json:"label"`
+	Icon  string `json:"icon,omitempty"`
 }
 
 // Quote is a pull quote with its source.
@@ -64,12 +120,32 @@ type Quote struct {
 type Step struct {
 	Label  string `json:"label"`
 	Detail string `json:"detail,omitempty"`
+	// When is a short time marker ("2019", "Q3", "Week 2") for a timeline.
+	When string `json:"when,omitempty"`
+	Icon string `json:"icon,omitempty"`
 }
 
 // Column is one side of a comparison or one cell of a three-up.
 type Column struct {
 	Heading string   `json:"heading"`
 	Points  []string `json:"points"`
+	// Icon is one English keyword naming a simple icon for the column
+	// ("shield", "clock"); the composer matches it against its icon set.
+	Icon string `json:"icon,omitempty"`
+}
+
+// Person is one member of a team slide. Names and roles only: the composer
+// sets a monogram, never a generated portrait of a named person.
+type Person struct {
+	Name string `json:"name"`
+	Role string `json:"role,omitempty"`
+}
+
+// TableData is a small table with real values: a header row and up to a
+// handful of rows, every row as long as the header.
+type TableData struct {
+	Columns []string   `json:"columns"`
+	Rows    [][]string `json:"rows"`
 }
 
 // ImageIntent is what the picture on a slide should show and how it should be
@@ -78,6 +154,10 @@ type Column struct {
 type ImageIntent struct {
 	Subject   string `json:"subject"`
 	Treatment string `json:"treatment,omitempty"` // photo | illustration | abstract
+	// Illustration is one English keyword naming a drawing from the deck's
+	// illustration set; when the set knows it, the composer draws it in
+	// place of the picture and no image is generated for that region.
+	Illustration string `json:"illustration,omitempty"`
 }
 
 // ChartData is a small dataset for a chart slide, in the shape the chart node
@@ -95,6 +175,7 @@ var archetypes = map[string]bool{
 	"cover": true, "agenda": true, "section": true, "statement": true, "bigNumber": true,
 	"bullets": true, "twoColumn": true, "threeUp": true, "process": true, "quote": true,
 	"imageCaption": true, "chart": true, "closing": true,
+	"kpiGrid": true, "timeline": true, "table": true, "team": true, "composition": true,
 }
 
 // archetypeForRole is the default form for a page that named only a visual
@@ -110,6 +191,7 @@ var roleForArchetype = map[string]string{
 	"cover": "cover", "agenda": "agenda", "section": "content", "statement": "content",
 	"bigNumber": "data", "bullets": "content", "twoColumn": "comparison", "threeUp": "content",
 	"process": "content", "quote": "quote", "imageCaption": "content", "chart": "data", "closing": "closing",
+	"kpiGrid": "data", "timeline": "content", "table": "data", "team": "content", "composition": "content",
 }
 
 // Content budgets, in characters. The composer sizes type from slot geometry
@@ -134,8 +216,34 @@ const (
 	maxColHeadChars   = 40
 	maxColPoints      = 4
 	maxImageSubject   = 140
-	maxChartCats      = 8
-	maxChartSeries    = 3
+	maxChartCats      = 12
+	maxChartSeries    = 4
+	maxStats          = 4
+	maxTableCols      = 5
+	maxTableRows      = 8
+	maxTableCell      = 60
+	maxPeople         = 4
+	maxPersonName     = 40
+	maxPersonRole     = 40
+	maxStepWhen       = 20
+	maxColIcon        = 30
+	maxEyebrowChars   = 24
+	maxStyleChars     = 24
+	maxOrgChars       = 60
+	maxKickerChars    = 40
+	maxFarewellChars  = 32
+	maxAsideChars     = 60
+	maxDrawingChars   = 30
+	maxPairs          = 8
+	maxPairLabelChars = 40
+	maxPairValueChars = 24
+	maxCompCells      = 8
+	maxCompText       = 140
+	maxCompPoints     = 4
+	maxCompPoint      = 70
+	maxCompLinks      = 8
+	gridCols          = 12
+	gridRows          = 6
 )
 
 // DesignOutline is the editable plan returned by the outline endpoint.
@@ -143,12 +251,32 @@ type DesignOutline struct {
 	Title string        `json:"title"`
 	Theme string        `json:"theme"`
 	Pages []OutlineItem `json:"pages"`
+	// Look is the house style the model named for the whole deck. Mirrors
+	// DesignOutline.look in outline.ts.
+	Look string `json:"look,omitempty"`
+	// Style is the kit style the deck is set in; Organization, Kicker and
+	// Farewell are the deck's voice. Mirrors outline.ts; an unknown style is
+	// kept and falls back in the composer, as the TypeScript normalizer does.
+	Style        string `json:"style,omitempty"`
+	Organization string `json:"organization,omitempty"`
+	Kicker       string `json:"kicker,omitempty"`
+	Farewell     string `json:"farewell,omitempty"`
 }
+
+// deckLooks is the set of house styles. Mirrors deckLooks in look.ts.
+var deckLooks = map[string]bool{"classic": true, "editorial": true, "bold": true, "technical": true}
 
 func validateOutline(o *DesignOutline) error {
 	if strings.TrimSpace(o.Title) == "" {
 		o.Title = "Untitled"
 	}
+	if !deckLooks[o.Look] {
+		o.Look = ""
+	}
+	o.Style = iconKeyword(clipRunes(strings.TrimSpace(o.Style), maxStyleChars))
+	o.Organization = clipRunes(strings.TrimSpace(o.Organization), maxOrgChars)
+	o.Kicker = clipRunes(strings.TrimSpace(o.Kicker), maxKickerChars)
+	o.Farewell = clipRunes(strings.TrimSpace(o.Farewell), maxFarewellChars)
 	clean := o.Pages[:0]
 	for _, p := range o.Pages {
 		// Archetype and role are two views of one decision. A reply that names
@@ -205,7 +333,28 @@ func clipRunes(s string, n int) string {
 	if i := strings.LastIndex(cut, " "); i > n*6/10 {
 		cut = cut[:i]
 	}
-	return strings.TrimRight(cut, " ,;:-")
+	cut = strings.TrimRight(cut, " ,;:-")
+	// Drop a trailing connective, and the punctuation it leaves behind, until
+	// the phrase ends on a word that can end a phrase. Mirrors clipToBudget.
+	for {
+		at := strings.LastIndex(cut, " ")
+		if at < 0 {
+			break
+		}
+		if !danglingWords[strings.ToLower(cut[at+1:])] {
+			break
+		}
+		cut = strings.TrimRight(cut[:at], " ,;:-")
+	}
+	return cut
+}
+
+// danglingWords are the words a clipped phrase must not end on. Mirrors
+// danglingWords in outline.ts.
+var danglingWords = map[string]bool{
+	"and": true, "or": true, "of": true, "to": true, "with": true, "for": true, "the": true, "a": true, "an": true,
+	"in": true, "on": true, "at": true, "by": true, "from": true, "than": true, "vs": true, "vs.": true, "&": true,
+	"but": true, "as": true, "into": true, "over": true, "per": true, "via": true,
 }
 
 // normalizeArchetypeFields clips every typed field to its budget and drops a
@@ -213,16 +362,189 @@ func clipRunes(s string, n int) string {
 // second-guess a half-filled stat or a one-column comparison. A page whose
 // archetype needs a payload it does not have falls back to the plain form its
 // content can support: no stat means no big number.
+// bareFigure strips the direction a model sometimes writes into a stat value
+// ("↓67%", "▲ 3.2M"): the label carries direction, and an arrow set at display
+// scale rises into the rule above the figure. Mirrors bareFigure in outline.ts.
+func bareFigure(v string) string {
+	return strings.TrimSpace(strings.TrimFunc(clipRunes(strings.TrimSpace(v), maxStatValueChars), func(r rune) bool {
+		return unicode.IsSpace(r) || (r >= 0x2190 && r <= 0x21FF) || (r >= 0x25B2 && r <= 0x25BF) || (r >= 0x2B05 && r <= 0x2B0D)
+	}))
+}
+
+// normalizeComposition clamps every cell to the grid, drops what has no
+// content for its kind or overlaps an earlier cell, and keeps only links whose
+// both ends survived. Mirrors normalizeComposition in outline.ts.
+func normalizeComposition(c *Composition) *Composition {
+	clamp := func(v, lo, hi int) int {
+		if v < lo {
+			return lo
+		}
+		if v > hi {
+			return hi
+		}
+		return v
+	}
+	var kept []CompositionCell
+	keptIndex := map[int]int{}
+	for i, raw := range c.Cells {
+		if len(kept) >= maxCompCells {
+			break
+		}
+		if !compositionKinds[raw.Kind] {
+			continue
+		}
+		col := clamp(raw.Col, 0, gridCols-1)
+		span := raw.Span
+		if span < 1 {
+			span = gridCols - col
+		}
+		span = clamp(span, 1, gridCols-col)
+		row := clamp(raw.Row, 0, gridRows-1)
+		rows := clamp(raw.Rows, 1, gridRows-row)
+		text := clipRunes(strings.TrimSpace(raw.Text), maxCompText)
+		var points []string
+		for _, pt := range raw.Points {
+			if len(points) >= maxCompPoints {
+				break
+			}
+			if t := clipRunes(strings.TrimSpace(pt), maxCompPoint); t != "" {
+				points = append(points, t)
+			}
+		}
+		value, unit := splitFigure(raw.Value, raw.Unit)
+		icon := iconKeyword(raw.Icon)
+		tone := strings.ToLower(strings.TrimSpace(raw.Tone))
+		if !compositionTones[tone] {
+			tone = ""
+		}
+		switch raw.Kind {
+		case "heading", "body", "label":
+			if text == "" {
+				continue
+			}
+		case "list":
+			if len(points) == 0 {
+				continue
+			}
+		case "figure":
+			if value == "" {
+				continue
+			}
+		case "icon":
+			if icon == "" {
+				continue
+			}
+		}
+		clash := false
+		for _, k := range kept {
+			if col < k.Col+k.Span && col+span > k.Col && row < k.Row+k.Rows && row+rows > k.Row {
+				clash = true
+				break
+			}
+		}
+		if clash {
+			continue
+		}
+		keptIndex[i] = len(kept)
+		kept = append(kept, CompositionCell{Col: col, Span: span, Row: row, Rows: rows, Kind: raw.Kind, Text: text, Points: points, Value: value, Unit: unit, Icon: icon, Tone: tone})
+	}
+	if len(kept) == 0 {
+		return nil
+	}
+	var links [][]int
+	for _, l := range c.Links {
+		if len(links) >= maxCompLinks {
+			break
+		}
+		if len(l) < 2 {
+			continue
+		}
+		a, okA := keptIndex[l[0]]
+		b, okB := keptIndex[l[1]]
+		if !okA || !okB || a == b {
+			continue
+		}
+		dup := false
+		for _, e := range links {
+			if e[0] == a && e[1] == b {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			links = append(links, []int{a, b})
+		}
+	}
+	return &Composition{Cells: kept, Links: links}
+}
+
+// splitFigure keeps a figure to one token so it never wraps inside the
+// numeral: a word left in the value ("48 hrs", "$1.8 million") moves to the
+// unit, and a unit the model also gave wins over that word. Only a value
+// whose first token carries a digit is split. Mirrors splitFigure in
+// outline.ts.
+func splitFigure(value, unit string) (string, string) {
+	// Every run of whitespace becomes one plain space first, so this mirror
+	// and outline.ts (whose \s also matches a no-break space) split the same
+	// values.
+	v := strings.Join(strings.Fields(bareFigure(value)), " ")
+	u := clipRunes(strings.TrimSpace(unit), maxStatUnitChars)
+	m := figureSplitRe.FindStringSubmatch(v)
+	if m == nil {
+		return v, u
+	}
+	if u == "" {
+		u = clipRunes(strings.TrimSpace(m[2]), maxStatUnitChars)
+	}
+	return m[1], u
+}
+
+var figureSplitRe = regexp.MustCompile(`^(\S*\d\S*)\s+(\S[^\d]*)$`)
+
+// undashTitle replaces a dash used as a separator in a headline with a colon.
+// Mirrors undashTitle in outline.ts.
+func undashTitle(title string) string {
+	return titleDash.ReplaceAllString(title, ": ")
+}
+
+var titleDash = regexp.MustCompile(`\s+[\x{2013}\x{2014}]\s+|\s+-\s+`)
+
+// iconKeyword lower-cases and clips an icon keyword; empty when there is none.
+func iconKeyword(v string) string {
+	return clipRunes(strings.ToLower(strings.TrimSpace(v)), maxColIcon)
+}
+
 func normalizeArchetypeFields(p *OutlineItem) {
-	p.Title = clipRunes(strings.TrimSpace(p.Title), maxTitleChars)
+	p.Icon = iconKeyword(p.Icon)
+	p.Aside = clipRunes(strings.TrimSpace(p.Aside), maxAsideChars)
+	p.Drawing = iconKeyword(clipRunes(strings.TrimSpace(p.Drawing), maxDrawingChars))
+	if !kitSignatures[strings.TrimSpace(p.Signature)] {
+		p.Signature = ""
+	} else {
+		p.Signature = strings.TrimSpace(p.Signature)
+	}
+	pairs := p.Pairs[:0]
+	for _, pr := range p.Pairs {
+		if len(pairs) >= maxPairs {
+			break
+		}
+		pr.Label = clipRunes(strings.TrimSpace(pr.Label), maxPairLabelChars)
+		pr.Value = clipRunes(strings.TrimSpace(pr.Value), maxPairValueChars)
+		if pr.Label != "" && pr.Value != "" {
+			pairs = append(pairs, pr)
+		}
+	}
+	p.Pairs = pairs
+	p.Title = undashTitle(clipRunes(strings.TrimSpace(p.Title), maxTitleChars))
 	p.Subhead = clipRunes(strings.TrimSpace(p.Subhead), maxSubheadChars)
+	p.Eyebrow = clipRunes(strings.TrimSpace(p.Eyebrow), maxEyebrowChars)
 	if p.Archetype == "statement" {
 		p.Title = clipRunes(p.Title, maxStatementChars)
 	}
 	if p.Stat != nil {
-		p.Stat.Value = clipRunes(strings.TrimSpace(p.Stat.Value), maxStatValueChars)
-		p.Stat.Unit = clipRunes(strings.TrimSpace(p.Stat.Unit), maxStatUnitChars)
+		p.Stat.Value, p.Stat.Unit = splitFigure(p.Stat.Value, p.Stat.Unit)
 		p.Stat.Label = clipRunes(strings.TrimSpace(p.Stat.Label), maxStatLabelChars)
+		p.Stat.Icon = iconKeyword(p.Stat.Icon)
 		if p.Stat.Value == "" {
 			p.Stat = nil
 		}
@@ -238,6 +560,8 @@ func normalizeArchetypeFields(p *OutlineItem) {
 	for _, st := range p.Steps {
 		st.Label = clipRunes(strings.TrimSpace(st.Label), maxStepLabelChars)
 		st.Detail = clipRunes(strings.TrimSpace(st.Detail), maxStepDetail)
+		st.When = clipRunes(strings.TrimSpace(st.When), maxStepWhen)
+		st.Icon = iconKeyword(st.Icon)
 		if st.Label != "" {
 			steps = append(steps, st)
 		}
@@ -249,6 +573,7 @@ func normalizeArchetypeFields(p *OutlineItem) {
 	cols := p.Columns[:0]
 	for _, c := range p.Columns {
 		c.Heading = clipRunes(strings.TrimSpace(c.Heading), maxColHeadChars)
+		c.Icon = iconKeyword(c.Icon)
 		cp := c.Points[:0]
 		for _, pt := range c.Points {
 			if t := clipRunes(strings.TrimSpace(pt), maxPointChars); t != "" {
@@ -269,6 +594,7 @@ func normalizeArchetypeFields(p *OutlineItem) {
 	p.Columns = cols
 	if p.Image != nil {
 		p.Image.Subject = clipRunes(strings.TrimSpace(p.Image.Subject), maxImageSubject)
+		p.Image.Illustration = iconKeyword(p.Image.Illustration)
 		switch p.Image.Treatment {
 		case "photo", "illustration", "abstract":
 		default:
@@ -304,10 +630,98 @@ func normalizeArchetypeFields(p *OutlineItem) {
 			p.Chart = nil
 		}
 	}
+	stats := p.Stats[:0]
+	for _, st := range p.Stats {
+		st.Value, st.Unit = splitFigure(st.Value, st.Unit)
+		st.Label = clipRunes(strings.TrimSpace(st.Label), maxStatLabelChars)
+		st.Icon = iconKeyword(st.Icon)
+		if st.Value != "" {
+			stats = append(stats, st)
+		}
+	}
+	if len(stats) > maxStats {
+		stats = stats[:maxStats]
+	}
+	p.Stats = stats
+	if p.Table != nil {
+		cols := p.Table.Columns[:0]
+		for _, c := range p.Table.Columns {
+			cols = append(cols, clipRunes(strings.TrimSpace(c), maxTableCell))
+		}
+		if len(cols) > maxTableCols {
+			cols = cols[:maxTableCols]
+		}
+		rows := p.Table.Rows[:0]
+		for _, r := range p.Table.Rows {
+			// Every row is exactly as long as the header: extra cells are
+			// dropped, missing ones are blank, an empty row is not a row.
+			row := make([]string, len(cols))
+			any := false
+			for i := range cols {
+				if i < len(r) {
+					row[i] = clipRunes(strings.TrimSpace(r[i]), maxTableCell)
+					if row[i] != "" {
+						any = true
+					}
+				}
+			}
+			if any {
+				rows = append(rows, row)
+			}
+		}
+		if len(rows) > maxTableRows {
+			rows = rows[:maxTableRows]
+		}
+		p.Table.Columns, p.Table.Rows = cols, rows
+		if len(cols) == 0 || len(rows) == 0 {
+			p.Table = nil
+		}
+	}
+	people := p.People[:0]
+	for _, per := range p.People {
+		per.Name = clipRunes(strings.TrimSpace(per.Name), maxPersonName)
+		per.Role = clipRunes(strings.TrimSpace(per.Role), maxPersonRole)
+		if per.Name != "" {
+			people = append(people, per)
+		}
+	}
+	if len(people) > maxPeople {
+		people = people[:maxPeople]
+	}
+	p.People = people
+	if p.Composition != nil {
+		p.Composition = normalizeComposition(p.Composition)
+	}
 	// Downgrade an archetype whose payload did not survive.
 	switch p.Archetype {
 	case "bigNumber":
 		if p.Stat == nil {
+			p.Archetype = "bullets"
+		}
+	case "kpiGrid":
+		// One figure is a bigNumber; none is a list.
+		switch len(p.Stats) {
+		case 0:
+			p.Archetype = "bullets"
+		case 1:
+			one := p.Stats[0]
+			p.Stat = &one
+			p.Archetype = "bigNumber"
+		}
+	case "timeline":
+		if len(p.Steps) < 2 {
+			p.Archetype = "bullets"
+		}
+	case "table":
+		if p.Table == nil {
+			p.Archetype = "bullets"
+		}
+	case "composition":
+		if p.Composition == nil {
+			p.Archetype = "bullets"
+		}
+	case "team":
+		if len(p.People) == 0 {
 			p.Archetype = "bullets"
 		}
 	case "quote":

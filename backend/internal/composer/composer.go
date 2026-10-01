@@ -58,6 +58,54 @@ type Input struct {
 	LayoutSet   any    `json:"layoutSet,omitempty"`
 	ThemeRecord any    `json:"themeRecord,omitempty"`
 	Dir         string `json:"dir,omitempty"`
+	// Motion is the entrance motion on the composed pages: "subtle" (the
+	// bundle's default when empty) or "none".
+	Motion string `json:"motion,omitempty"`
+	// DesignType is what the pages are ("deck", "doc", "poster", "social"):
+	// a post or poster composes without deck furniture.
+	DesignType string `json:"designType,omitempty"`
+	// Look is the deck's house style ("classic", "editorial", "bold",
+	// "technical"); empty lets the outline's or the catalog's stand.
+	Look string `json:"look,omitempty"`
+	// Renderer names the composer that draws a deck's pages: "kit" (the
+	// bundle's default: the signature templates' systems and forms) or
+	// "classic" (the archetype composer).
+	Renderer string `json:"renderer,omitempty"`
+	// BrandFonts are the workspace brand kit's faces by role; the generated
+	// theme sets headings and body in them. A catalog theme or a template
+	// keeps its own.
+	BrandFonts *BrandFonts `json:"brandFonts,omitempty"`
+	// Logo is the brand kit's primary logo; the composer places it small on
+	// every archetype page and lists the asset in the file.
+	Logo *Logo `json:"logo,omitempty"`
+}
+
+// BrandFonts mirrors the editor's brandFonts: a face for headings and one for
+// body copy, either optional.
+type BrandFonts struct {
+	Heading string `json:"heading,omitempty"`
+	Body    string `json:"body,omitempty"`
+}
+
+// Logo is an asset the composer may place: its id (the file's asset ref) and
+// the URL that ref carries.
+type Logo struct {
+	AssetID string `json:"assetId"`
+	URL     string `json:"url"`
+	// Aspect is width over height when the asset's dimensions are known, so
+	// the composer's box fits the picture; zero means unknown.
+	Aspect float64 `json:"aspect,omitempty"`
+	// MinSizePx is the brand kit's floor on the logo's width.
+	MinSizePx int `json:"minSizePx,omitempty"`
+	// Dark is the version drawn on a dark ground, when the kit has one.
+	Dark *LogoVariant `json:"dark,omitempty"`
+}
+
+// LogoVariant is one alternative rendering of the kit's logo.
+type LogoVariant struct {
+	AssetID string  `json:"assetId"`
+	URL     string  `json:"url"`
+	Aspect  float64 `json:"aspect,omitempty"`
 }
 
 // PageReport is the reviewer's verdict on one composed page. Mirrors
@@ -71,6 +119,9 @@ type PageReport struct {
 	// fixes it, which is what the generation API hands back to the model once.
 	Overfull   []string `json:"overfull"`
 	Whitespace float64  `json:"whitespace"`
+	// Repairs counts the text runs the composer re-inked to AA before the
+	// page left it.
+	Repairs int `json:"repairs"`
 }
 
 // Report is the reviewer's verdict on a composed deck. Mirrors DeckReport in
@@ -80,6 +131,7 @@ type Report struct {
 	BulletShare float64      `json:"bulletShare"`
 	Repetition  []int        `json:"repetition"`
 	Shorten     []int        `json:"shorten"`
+	Repairs     int          `json:"repairs"`
 	OK          bool         `json:"ok"`
 }
 
@@ -114,13 +166,23 @@ func run(ctx context.Context, in Input, entry string) ([]byte, error) {
 	if in.Width <= 0 || in.Height <= 0 {
 		return nil, errors.New("composer: width and height must be positive")
 	}
-	p, err := program()
-	if err != nil {
-		return nil, fmt.Errorf("composer: bundle compile: %w", err)
-	}
 	inputJSON, err := json.Marshal(in)
 	if err != nil {
 		return nil, fmt.Errorf("composer: marshal input: %w", err)
+	}
+	out, err := callString(ctx, entry, string(inputJSON))
+	if err != nil {
+		return nil, err
+	}
+	return []byte(out), nil
+}
+
+// callString evaluates the bundle and calls one entry point with one string
+// argument, returning its string result.
+func callString(ctx context.Context, entry string, arg string) (string, error) {
+	p, err := program()
+	if err != nil {
+		return "", fmt.Errorf("composer: bundle compile: %w", err)
 	}
 
 	vm := goja.New()
@@ -137,20 +199,20 @@ func run(ctx context.Context, in Input, entry string) ([]byte, error) {
 	}()
 
 	if _, err := vm.RunProgram(p); err != nil {
-		return nil, fmt.Errorf("composer: bundle eval: %w", err)
+		return "", fmt.Errorf("composer: bundle eval: %w", err)
 	}
 	fnVal := vm.Get(entry)
 	fn, ok := goja.AssertFunction(fnVal)
 	if !ok {
-		return nil, fmt.Errorf("composer: bundle exposes no %s", entry)
+		return "", fmt.Errorf("composer: bundle exposes no %s", entry)
 	}
-	res, err := fn(goja.Undefined(), vm.ToValue(string(inputJSON)))
+	res, err := fn(goja.Undefined(), vm.ToValue(arg))
 	if err != nil {
-		return nil, fmt.Errorf("composer: compose failed: %w", err)
+		return "", fmt.Errorf("composer: compose failed: %w", err)
 	}
 	out, ok := res.Export().(string)
 	if !ok || out == "" {
-		return nil, errors.New("composer: compose returned no output")
+		return "", errors.New("composer: compose returned no output")
 	}
-	return []byte(out), nil
+	return out, nil
 }

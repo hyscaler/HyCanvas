@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"image"
 	"image/png"
+	"math"
 	"testing"
 )
 
@@ -201,5 +202,69 @@ func TestRasterCompoundPathHole(t *testing.T) {
 	hr, hg, hb, _ := img.At(50, 50).RGBA()
 	if hr>>8 < 240 || hg>>8 < 240 || hb>>8 < 240 {
 		t.Fatalf("expected white hole at (50,50), got r=%d g=%d b=%d", hr>>8, hg>>8, hb>>8)
+	}
+}
+
+func TestRasterPathStrokeWithoutFill(t *testing.T) {
+	// A stroke-only path (an arrow, a connector, a drawing's line layer) must
+	// draw its outline, as the browser engine does after the fill; it used to
+	// return before stroking when the path had no fill.
+	col := map[string]any{"srgb": map[string]any{"r": 1.0, "g": 0.0, "b": 0.0, "a": 1.0}}
+	design := Design{"pages": []any{map[string]any{
+		"width": 100.0, "height": 100.0,
+		"children": []any{map[string]any{
+			"type":      "path",
+			"transform": map[string]any{"x": 0.0, "y": 0.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
+			"size":      map[string]any{"width": 100.0, "height": 100.0},
+			"segments": []any{
+				map[string]any{"x": 10.0, "y": 50.0},
+				map[string]any{"x": 90.0, "y": 50.0, "cIn": map[string]any{"x": 50.0, "y": 10.0}},
+			},
+			"closed": false,
+			"fills":  []any{},
+			"stroke": map[string]any{"fill": map[string]any{"type": "solid", "color": col}, "width": 6.0, "align": "center", "cap": "round", "join": "round"},
+		}},
+	}}}
+	img, err := ToRaster(design, 0, 1)
+	if err != nil {
+		t.Fatalf("ToRaster: %v", err)
+	}
+	// The curve leaves (10,50) heading up toward the control point: a pixel
+	// just right of the start on the stroke is red; the page centre, which the
+	// arc passes above, stays white.
+	r, g, _, _ := img.At(12, 49).RGBA()
+	if r>>8 < 180 || g>>8 > 100 {
+		t.Fatalf("expected the stroke at the start of the curve, got r=%d g=%d", r>>8, g>>8)
+	}
+	cr, cg, cb, _ := img.At(50, 70).RGBA()
+	if cr>>8 < 240 || cg>>8 < 240 || cb>>8 < 240 {
+		t.Fatalf("expected white below the arc, got r=%d g=%d b=%d", cr>>8, cg>>8, cb>>8)
+	}
+}
+
+// A dash pattern cuts a line into its "on" runs: 10 on, 5 off along a 40px
+// line gives three dashes (the last one cut short), a closed square walks
+// once around, and a pattern with nothing to draw strokes solid.
+func TestDashPolyline(t *testing.T) {
+	line := [][2]float64{{0, 0}, {40, 0}}
+	pieces := dashPolyline(line, false, []float64{10, 5})
+	if len(pieces) != 3 {
+		t.Fatalf("want 3 dashes, got %d: %v", len(pieces), pieces)
+	}
+	if got := pieces[1][0][0]; math.Abs(got-15) > 1e-9 {
+		t.Fatalf("second dash starts at %v, want 15", got)
+	}
+	if got := pieces[2][len(pieces[2])-1][0]; math.Abs(got-40) > 1e-9 {
+		t.Fatalf("last dash ends at %v, want 40 (cut short)", got)
+	}
+	square := [][2]float64{{0, 0}, {10, 0}, {10, 10}, {0, 10}}
+	if n := len(dashPolyline(square, true, []float64{5, 5})); n != 4 {
+		t.Fatalf("a closed square with 5 on 5 off wants 4 dashes, got %d", n)
+	}
+	if dashPattern(map[string]any{"dash": []any{0.0, 0.0}}, 1) != nil {
+		t.Fatal("an all-zero pattern must stroke solid")
+	}
+	if got := dashPattern(map[string]any{"dash": []any{4.0, 2.0}}, 2); len(got) != 2 || got[0] != 8 || got[1] != 4 {
+		t.Fatalf("dash lengths must scale to device space, got %v", got)
 	}
 }

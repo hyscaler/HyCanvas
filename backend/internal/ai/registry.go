@@ -36,7 +36,7 @@ type ProviderPreset struct {
 // uses its own (handled in provider.go).
 var PRESETS = []ProviderPreset{
 	{ID: "openai", Label: "OpenAI", BaseURL: "https://api.openai.com/v1", DefaultModel: "gpt-4o-mini", DefaultImageModel: "dall-e-3", Capabilities: Capabilities{Text: true, Image: true, DescribeImage: true, EditImage: true}},
-	{ID: "anthropic", Label: "Anthropic (Claude)", BaseURL: "https://api.anthropic.com", DefaultModel: "claude-opus-4-8", Capabilities: Capabilities{Text: true, DescribeImage: true}},
+	{ID: "anthropic", Label: "Anthropic (Claude)", BaseURL: "https://api.anthropic.com", DefaultModel: defaultAnthropicModel, Capabilities: Capabilities{Text: true, DescribeImage: true}},
 	{ID: "deepseek", Label: "DeepSeek", BaseURL: "https://api.deepseek.com/v1", DefaultModel: "deepseek-chat", Capabilities: Capabilities{Text: true}},
 	// Moonshot AI (Kimi). OpenAI-compatible chat/completions. kimi-latest is the
 	// default because it auto-selects the context window (8k/32k/128k): a
@@ -86,7 +86,7 @@ var PRESETS = []ProviderPreset{
 	// scoped to, which is why it is not stored as a separate field that could
 	// disagree with the host. Editing is off: Nova Canvas can inpaint, but
 	// through task types this transport does not send.
-	{ID: "bedrock", Label: "Amazon Bedrock", BaseURL: "https://bedrock-runtime.us-east-1.amazonaws.com", DefaultModel: "anthropic.claude-sonnet-4-5-20250929-v1:0", DefaultImageModel: "amazon.nova-canvas-v1:0", Capabilities: Capabilities{Text: true, Image: true, DescribeImage: true}, NeedsBaseURL: true, NeedsSecret: true},
+	{ID: "bedrock", Label: "Amazon Bedrock", BaseURL: "https://bedrock-runtime.us-east-1.amazonaws.com", DefaultModel: defaultBedrockModel, DefaultImageModel: "amazon.nova-canvas-v1:0", Capabilities: Capabilities{Text: true, Image: true, DescribeImage: true}, NeedsBaseURL: true, NeedsSecret: true},
 	{ID: "custom", Label: "Custom (OpenAI-compatible)", BaseURL: "", DefaultModel: "", Capabilities: Capabilities{Text: true, Image: true, DescribeImage: true, EditImage: true}, NeedsBaseURL: true},
 }
 

@@ -8,9 +8,15 @@
 // the DesignFile JSON back; errors throw and surface as goja errors.
 
 import "./composer-polyfill.mjs"; // MUST stay the first import (host shims)
-import { composeDeckFile, composeDeckFileWithReport } from "../packages/aistudio/dist/index.js";
+import { composeDeckFile, composeDeckFileWithReport, capacityClause, kitVocabularyRule } from "../packages/aistudio/dist/index.js";
 
 globalThis.__composeDeckFile = (inputJson) => JSON.stringify(composeDeckFile(JSON.parse(inputJson)));
 // The same composition plus the reviewer's report, so the server can hand
 // overfull copy back to the model once before persisting.
 globalThis.__composeDeckFileWithReport = (inputJson) => JSON.stringify(composeDeckFileWithReport(JSON.parse(inputJson)));
+// The capacity clause the outline prompt carries, so the Go door's native
+// copy can be checked against the composer's own arithmetic.
+globalThis.__capacityClause = (inputJson) => { const a = JSON.parse(inputJson); return capacityClause(a.designType, a.width, a.height); };
+// The kit vocabulary clause of the outline prompt, so the Go door's generated
+// copy (kitvocab_gen.go) can be held identical to the composer's.
+globalThis.__kitVocabularyRule = () => kitVocabularyRule;

@@ -1,44 +1,1003 @@
 {
-  "id": "deck-agenda",
-  "title": "Agenda Slide",
-  "categories": ["presentations", "business"],
-  "tags": ["slide", "agenda", "list"],
-  "styleTags": ["clean", "corporate"],
-  "size": [1920, 1080],
-  "typography": [
-    { "role": "heading", "family": "DM Sans", "weight": 800 },
-    { "role": "body", "family": "Inter", "weight": 500 }
-  ],
-  "pages": [
+ "id": "deck-agenda",
+ "title": "Agenda Slide",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "slide",
+  "agenda",
+  "list"
+ ],
+ "styleTags": [
+  "professional",
+  "classic"
+ ],
+ "size": [
+  1920,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Ibarra Real Nova",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Red Hat Text",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "La Belle Aurore",
+   "weight": 400
+  }
+ ],
+ "pages": [
+  {
+   "name": "Agenda",
+   "bg": "#F6F0E4",
+   "nodes": [
     {
-      "name": "Agenda",
-      "bg": "#F8FAFC",
-      "nodes": [
-        { "kind": "rect", "x": 1280, "y": 0, "w": 640, "h": 1080, "fill": "#1D4ED8" },
-        { "kind": "text", "x": 1400, "y": 90, "w": 480, "h": 312, "text": "Q3", "family": "DM Sans", "size": 280, "weight": 800, "color": "#FFFFFF", "opacity": 0.14, "lineHeight": 1.05 },
-        { "kind": "text", "x": 160, "y": 200, "w": 800, "h": 92, "text": "Agenda", "family": "DM Sans", "size": 80, "weight": 800, "color": "#0F172A", "lineHeight": 1.06 },
-        { "kind": "rect", "x": 160, "y": 340, "w": 90, "h": 8, "fill": "#2563EB", "radius": 4 },
-        { "kind": "text", "x": 160, "y": 460, "w": 70, "h": 54, "text": "01", "family": "DM Sans", "size": 40, "weight": 800, "color": "#2563EB", "lineHeight": 1.2 },
-        { "kind": "text", "x": 280, "y": 462, "w": 840, "h": 52, "text": "Where we are today", "family": "Inter", "size": 38, "weight": 500, "color": "#1E293B", "lineHeight": 1.2 },
-        { "kind": "text", "x": 160, "y": 580, "w": 70, "h": 54, "text": "02", "family": "DM Sans", "size": 40, "weight": 800, "color": "#2563EB", "lineHeight": 1.2 },
-        { "kind": "text", "x": 280, "y": 582, "w": 840, "h": 52, "text": "What changed this quarter", "family": "Inter", "size": 38, "weight": 500, "color": "#1E293B", "lineHeight": 1.2 },
-        { "kind": "text", "x": 160, "y": 700, "w": 70, "h": 54, "text": "03", "family": "DM Sans", "size": 40, "weight": 800, "color": "#2563EB", "lineHeight": 1.2 },
-        { "kind": "text", "x": 280, "y": 702, "w": 840, "h": 52, "text": "Priorities for the next 90 days", "family": "Inter", "size": 38, "weight": 500, "color": "#1E293B", "lineHeight": 1.2 },
-        { "kind": "text", "x": 160, "y": 820, "w": 70, "h": 54, "text": "04", "family": "DM Sans", "size": 40, "weight": 800, "color": "#2563EB", "lineHeight": 1.2 },
-        { "kind": "text", "x": 280, "y": 822, "w": 840, "h": 52, "text": "Questions & discussion", "family": "Inter", "size": 38, "weight": 500, "color": "#1E293B", "lineHeight": 1.2 },
-        { "kind": "text", "x": 1400, "y": 600, "w": 400, "h": 32, "text": "Quarterly review", "family": "Inter", "size": 22, "weight": 600, "color": "#DBEAFE", "letterSpacing": 4, "upper": true, "lineHeight": 1.2 },
-        { "kind": "text", "x": 1400, "y": 652, "w": 440, "h": 56, "text": "October 8, 2026", "family": "DM Sans", "size": 44, "weight": 700, "color": "#FFFFFF", "lineHeight": 1.1 },
-        { "kind": "text", "x": 1400, "y": 736, "w": 440, "h": 40, "text": "9:30 - 11:00 AM · Room 4B", "family": "Inter", "size": 26, "weight": 500, "color": "#DBEAFE", "lineHeight": 1.3 },
-        { "kind": "text", "x": 1400, "y": 804, "w": 440, "h": 40, "text": "Hosted by Dana Whitfield", "family": "Inter", "size": 26, "weight": 500, "color": "#DBEAFE", "lineHeight": 1.3 }
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#1E2540"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1770,
+     "y": -110,
+     "w": 220,
+     "h": 220,
+     "fill": "#D9A26F",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 96,
+     "w": 1200,
+     "h": 28,
+     "text": "Order of business",
+     "family": "Red Hat Text",
+     "size": 20,
+     "weight": 600,
+     "color": "#8C4418",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 132,
+     "w": 1240,
+     "h": 74,
+     "text": "Ninety minutes, five items",
+     "family": "Ibarra Real Nova",
+     "size": 60,
+     "weight": 700,
+     "color": "#1E2540",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 1030,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Labs  ·  Quarterly review",
+     "family": "Red Hat Text",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5F72",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 219,
+     "y": 274,
+     "w": 2,
+     "h": 649,
+     "fill": "#D9CFBC"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 270,
+     "w": 100,
+     "h": 26,
+     "text": "09:30",
+     "family": "Red Hat Text",
+     "size": 20,
+     "weight": 600,
+     "color": "#8C4418",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 213,
+     "y": 274,
+     "w": 14,
+     "h": 14,
+     "fill": "#B5642F"
+    },
+    {
+     "kind": "rect",
+     "x": 252,
+     "y": 266,
+     "w": 964,
+     "h": 103,
+     "fill": "#EEE6D6",
+     "radius": 4,
+     "stroke": "#D9CFBC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 252,
+     "y": 266,
+     "w": 6,
+     "h": 103,
+     "fill": "#B5642F",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 282,
+     "y": 278,
+     "w": 60,
+     "h": 36,
+     "text": "I",
+     "family": "Ibarra Real Nova",
+     "size": 28,
+     "weight": 700,
+     "color": "#8C4418",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 356,
+     "y": 278,
+     "w": 560,
+     "h": 34,
+     "text": "Where we are today",
+     "family": "Ibarra Real Nova",
+     "size": 26,
+     "weight": 700,
+     "color": "#1E2540",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 356,
+     "y": 314,
+     "w": 560,
+     "h": 26,
+     "text": "The quarter's numbers against plan",
+     "family": "Red Hat Text",
+     "size": 18,
+     "weight": 400,
+     "color": "#5C5F72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1088,
+     "y": 280,
+     "w": 104,
+     "h": 30,
+     "label": "15 min",
+     "fill": "#e5d1bb",
+     "color": "#8C4418",
+     "family": "Red Hat Text",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 772,
+     "y": 283,
+     "w": 300,
+     "h": 24,
+     "text": "Rhea Castellanos",
+     "family": "Red Hat Text",
+     "size": 17,
+     "weight": 500,
+     "color": "#5C5F72",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 383,
+     "w": 100,
+     "h": 26,
+     "text": "09:45",
+     "family": "Red Hat Text",
+     "size": 20,
+     "weight": 600,
+     "color": "#8C4418",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 213,
+     "y": 387,
+     "w": 14,
+     "h": 14,
+     "fill": "#F6F0E4",
+     "stroke": "#B5642F",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "rect",
+     "x": 252,
+     "y": 379,
+     "w": 964,
+     "h": 124,
+     "fill": "#EEE6D6",
+     "radius": 4,
+     "stroke": "#D9CFBC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 252,
+     "y": 379,
+     "w": 6,
+     "h": 124,
+     "fill": "#B5642F",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 282,
+     "y": 391,
+     "w": 60,
+     "h": 36,
+     "text": "II",
+     "family": "Ibarra Real Nova",
+     "size": 28,
+     "weight": 700,
+     "color": "#8C4418",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 356,
+     "y": 391,
+     "w": 560,
+     "h": 34,
+     "text": "What changed this quarter",
+     "family": "Ibarra Real Nova",
+     "size": 26,
+     "weight": 700,
+     "color": "#1E2540",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 356,
+     "y": 427,
+     "w": 560,
+     "h": 26,
+     "text": "Wins, misses and what we learned",
+     "family": "Red Hat Text",
+     "size": 18,
+     "weight": 400,
+     "color": "#5C5F72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1088,
+     "y": 393,
+     "w": 104,
+     "h": 30,
+     "label": "20 min",
+     "fill": "#e5d1bb",
+     "color": "#8C4418",
+     "family": "Red Hat Text",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 772,
+     "y": 396,
+     "w": 300,
+     "h": 24,
+     "text": "Tomas Lindqvist",
+     "family": "Red Hat Text",
+     "size": 17,
+     "weight": 500,
+     "color": "#5C5F72",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 517,
+     "w": 100,
+     "h": 26,
+     "text": "10:05",
+     "family": "Red Hat Text",
+     "size": 20,
+     "weight": 600,
+     "color": "#8C4418",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 213,
+     "y": 521,
+     "w": 14,
+     "h": 14,
+     "fill": "#F6F0E4",
+     "stroke": "#B5642F",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "rect",
+     "x": 252,
+     "y": 513,
+     "w": 964,
+     "h": 166,
+     "fill": "#EEE6D6",
+     "radius": 4,
+     "stroke": "#D9CFBC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 252,
+     "y": 513,
+     "w": 6,
+     "h": 166,
+     "fill": "#B5642F",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 282,
+     "y": 525,
+     "w": 60,
+     "h": 36,
+     "text": "III",
+     "family": "Ibarra Real Nova",
+     "size": 28,
+     "weight": 700,
+     "color": "#8C4418",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 356,
+     "y": 525,
+     "w": 560,
+     "h": 34,
+     "text": "Priorities for the next 90 days",
+     "family": "Ibarra Real Nova",
+     "size": 26,
+     "weight": 700,
+     "color": "#1E2540",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 356,
+     "y": 561,
+     "w": 560,
+     "h": 26,
+     "text": "Three bets, owners and dates",
+     "family": "Red Hat Text",
+     "size": 18,
+     "weight": 400,
+     "color": "#5C5F72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1088,
+     "y": 527,
+     "w": 104,
+     "h": 30,
+     "label": "30 min",
+     "fill": "#e5d1bb",
+     "color": "#8C4418",
+     "family": "Red Hat Text",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 772,
+     "y": 530,
+     "w": 300,
+     "h": 24,
+     "text": "Dana Whitfield",
+     "family": "Red Hat Text",
+     "size": 17,
+     "weight": 500,
+     "color": "#5C5F72",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 693,
+     "w": 100,
+     "h": 26,
+     "text": "10:35",
+     "family": "Red Hat Text",
+     "size": 20,
+     "weight": 600,
+     "color": "#8C4418",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 213,
+     "y": 697,
+     "w": 14,
+     "h": 14,
+     "fill": "#F6F0E4",
+     "stroke": "#B5642F",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "rect",
+     "x": 252,
+     "y": 689,
+     "w": 964,
+     "h": 124,
+     "fill": "#EEE6D6",
+     "radius": 4,
+     "stroke": "#D9CFBC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 252,
+     "y": 689,
+     "w": 6,
+     "h": 124,
+     "fill": "#B5642F",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 282,
+     "y": 701,
+     "w": 60,
+     "h": 36,
+     "text": "IV",
+     "family": "Ibarra Real Nova",
+     "size": 28,
+     "weight": 700,
+     "color": "#8C4418",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 356,
+     "y": 701,
+     "w": 560,
+     "h": 34,
+     "text": "Questions and discussion",
+     "family": "Ibarra Real Nova",
+     "size": 26,
+     "weight": 700,
+     "color": "#1E2540",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 356,
+     "y": 737,
+     "w": 560,
+     "h": 26,
+     "text": "Open floor",
+     "family": "Red Hat Text",
+     "size": 18,
+     "weight": 400,
+     "color": "#5C5F72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1088,
+     "y": 703,
+     "w": 104,
+     "h": 30,
+     "label": "20 min",
+     "fill": "#e5d1bb",
+     "color": "#8C4418",
+     "family": "Red Hat Text",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 772,
+     "y": 706,
+     "w": 300,
+     "h": 24,
+     "text": "Everyone",
+     "family": "Red Hat Text",
+     "size": 17,
+     "weight": 500,
+     "color": "#5C5F72",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 827,
+     "w": 100,
+     "h": 26,
+     "text": "10:55",
+     "family": "Red Hat Text",
+     "size": 20,
+     "weight": 600,
+     "color": "#8C4418",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 213,
+     "y": 831,
+     "w": 14,
+     "h": 14,
+     "fill": "#F6F0E4",
+     "stroke": "#B5642F",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "rect",
+     "x": 252,
+     "y": 823,
+     "w": 964,
+     "h": 86,
+     "fill": "#EEE6D6",
+     "radius": 4,
+     "stroke": "#D9CFBC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 252,
+     "y": 823,
+     "w": 6,
+     "h": 86,
+     "fill": "#B5642F",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 282,
+     "y": 835,
+     "w": 60,
+     "h": 36,
+     "text": "V",
+     "family": "Ibarra Real Nova",
+     "size": 28,
+     "weight": 700,
+     "color": "#8C4418",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 356,
+     "y": 835,
+     "w": 560,
+     "h": 34,
+     "text": "Decisions",
+     "family": "Ibarra Real Nova",
+     "size": 26,
+     "weight": 700,
+     "color": "#1E2540",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 356,
+     "y": 871,
+     "w": 560,
+     "h": 26,
+     "text": "What we need from this room",
+     "family": "Red Hat Text",
+     "size": 18,
+     "weight": 400,
+     "color": "#5C5F72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1088,
+     "y": 837,
+     "w": 104,
+     "h": 30,
+     "label": "5 min",
+     "fill": "#e5d1bb",
+     "color": "#8C4418",
+     "family": "Red Hat Text",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 772,
+     "y": 840,
+     "w": 300,
+     "h": 24,
+     "text": "Dana Whitfield",
+     "family": "Red Hat Text",
+     "size": 17,
+     "weight": 500,
+     "color": "#5C5F72",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 911,
+     "w": 100,
+     "h": 26,
+     "text": "11:00",
+     "family": "Red Hat Text",
+     "size": 20,
+     "weight": 600,
+     "color": "#5C5F72",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 213,
+     "y": 915,
+     "w": 14,
+     "h": 14,
+     "fill": "#D9CFBC"
+    },
+    {
+     "kind": "text",
+     "x": 252,
+     "y": 915,
+     "w": 400,
+     "h": 24,
+     "text": "90 minutes, doors close at 09:35",
+     "family": "Red Hat Text",
+     "size": 16,
+     "weight": 500,
+     "color": "#5C5F72",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1300,
+     "y": 266,
+     "w": 524,
+     "h": 643,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#26304F",
+        0
+       ],
+       [
+        "#151A30",
+        1
+       ]
       ]
+     },
+     "radius": 4
+    },
+    {
+     "kind": "rect",
+     "x": 1300,
+     "y": 266,
+     "w": 524,
+     "h": 6,
+     "fill": "#DC9660",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1340,
+     "y": 298,
+     "w": 444,
+     "h": 28,
+     "text": "Quarterly review",
+     "family": "Red Hat Text",
+     "size": 20,
+     "weight": 600,
+     "color": "#E8AB78",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1340,
+     "y": 328,
+     "w": 300,
+     "h": 78,
+     "text": "8 Oct",
+     "family": "Ibarra Real Nova",
+     "size": 64,
+     "weight": 700,
+     "color": "#F6F0E4",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "ellipse",
+     "x": 1676,
+     "y": 302,
+     "w": 108,
+     "h": 108,
+     "stroke": "#DC9660",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1685,
+     "y": 311,
+     "w": 90,
+     "h": 90,
+     "stroke": "#DC9660",
+     "strokeWidth": 1,
+     "opacity": 0.6
+    },
+    {
+     "kind": "text",
+     "x": 1676,
+     "y": 302,
+     "w": 108,
+     "h": 108,
+     "text": "Q3",
+     "family": "Ibarra Real Nova",
+     "size": 38,
+     "weight": 700,
+     "color": "#E8AB78",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1340,
+     "y": 426,
+     "w": 160,
+     "h": 22,
+     "text": "Time",
+     "family": "Red Hat Text",
+     "size": 16,
+     "weight": 500,
+     "color": "#B9BDCC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1340,
+     "y": 450,
+     "w": 444,
+     "h": 30,
+     "text": "09:30 to 11:00",
+     "family": "Red Hat Text",
+     "size": 21,
+     "weight": 600,
+     "color": "#F6F0E4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1340,
+     "y": 484,
+     "w": 444,
+     "h": 1,
+     "fill": "#3B4667"
+    },
+    {
+     "kind": "text",
+     "x": 1340,
+     "y": 490,
+     "w": 160,
+     "h": 22,
+     "text": "Room",
+     "family": "Red Hat Text",
+     "size": 16,
+     "weight": 500,
+     "color": "#B9BDCC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1340,
+     "y": 514,
+     "w": 444,
+     "h": 30,
+     "text": "Room 4B",
+     "family": "Red Hat Text",
+     "size": 21,
+     "weight": 600,
+     "color": "#F6F0E4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1340,
+     "y": 548,
+     "w": 444,
+     "h": 1,
+     "fill": "#3B4667"
+    },
+    {
+     "kind": "text",
+     "x": 1340,
+     "y": 554,
+     "w": 160,
+     "h": 22,
+     "text": "Host",
+     "family": "Red Hat Text",
+     "size": 16,
+     "weight": 500,
+     "color": "#B9BDCC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1340,
+     "y": 578,
+     "w": 444,
+     "h": 30,
+     "text": "Dana Whitfield",
+     "family": "Red Hat Text",
+     "size": 21,
+     "weight": 600,
+     "color": "#F6F0E4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1340,
+     "y": 612,
+     "w": 444,
+     "h": 1,
+     "fill": "#3B4667"
+    },
+    {
+     "kind": "text",
+     "x": 1340,
+     "y": 618,
+     "w": 160,
+     "h": 22,
+     "text": "Notes",
+     "family": "Red Hat Text",
+     "size": 16,
+     "weight": 500,
+     "color": "#B9BDCC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1340,
+     "y": 642,
+     "w": 444,
+     "h": 30,
+     "text": "Shared after the session",
+     "family": "Red Hat Text",
+     "size": 21,
+     "weight": 600,
+     "color": "#F6F0E4",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1340,
+     "y": 676,
+     "w": 444,
+     "h": 1,
+     "fill": "#3B4667"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1480.5,
+     "y": 676,
+     "w": 163,
+     "h": 163,
+     "fill": "#DC9660",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496.8,
+     "y": 692.3,
+     "w": 130.4,
+     "h": 130.4,
+     "fill": "#DC9660",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1330,
+     "y": 847,
+     "w": 464,
+     "h": 90,
+     "text": "coffee is outside from nine",
+     "family": "La Belle Aurore",
+     "size": 36,
+     "weight": 400,
+     "color": "#E8AB78",
+     "lineHeight": 1.2,
+     "align": "center"
     }
-  ],
-  "fillable": [
-    { "node": "p0-n2", "kind": "text", "label": "Slide title", "hint": "Usually just Agenda" },
-    { "node": "p0-n5", "kind": "text", "label": "Agenda item 1", "hint": "First topic" },
-    { "node": "p0-n7", "kind": "text", "label": "Agenda item 2", "hint": "Second topic" },
-    { "node": "p0-n9", "kind": "text", "label": "Agenda item 3", "hint": "Third topic" },
-    { "node": "p0-n11", "kind": "text", "label": "Agenda item 4", "hint": "Fourth topic" },
-    { "node": "p0-n13", "kind": "text", "label": "Meeting date", "hint": "Date of the meeting" }
-  ]
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day79-coffee",
+     "x": 1472,
+     "y": 696,
+     "w": 180,
+     "h": 123,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n11",
+   "kind": "text",
+   "label": "Item 1",
+   "hint": "What this item is, in a few words"
+  },
+  {
+   "node": "p0-n20",
+   "kind": "text",
+   "label": "Item 2",
+   "hint": "What this item is, in a few words"
+  },
+  {
+   "node": "p0-n29",
+   "kind": "text",
+   "label": "Item 3",
+   "hint": "What this item is, in a few words"
+  },
+  {
+   "node": "p0-n38",
+   "kind": "text",
+   "label": "Item 4",
+   "hint": "What this item is, in a few words"
+  },
+  {
+   "node": "p0-n47",
+   "kind": "text",
+   "label": "Item 5",
+   "hint": "What this item is, in a few words"
+  },
+  {
+   "node": "p0-n57",
+   "kind": "text",
+   "label": "Date",
+   "hint": "The day of the meeting"
+  }
+ ],
+ "version": 3,
+ "created": "2026-07-04T00:00:00.000Z",
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 100
 }

@@ -25,6 +25,8 @@ import (
 	"errors"
 	"fmt"
 	"hycanvas/backend/internal/ai"
+	"hycanvas/backend/internal/brand"
+	"hycanvas/backend/internal/stock"
 	"hycanvas/backend/internal/uploads"
 	"io"
 	"net/http"
@@ -59,17 +61,19 @@ type mcpDeps struct {
 	keys *apikeys.Service
 	acct *accounts.Service
 	ai   *aistudio.Service
-	// gen and up fill the composed deck's picture regions server-side.
+	// gen, up and stock fill the composed deck's picture regions server-side.
 	gen   *ai.Service
 	up    *uploads.Service
+	stock *stock.Service
+	brand *brand.Service
 	p     *persistence.Service
 	reg   *jobs.Registry
 	share *sharing.Service
 	tpl   *templates.Service
 }
 
-func mountMCP(r chi.Router, keys *apikeys.Service, acct *accounts.Service, studio *aistudio.Service, gen *ai.Service, up *uploads.Service, p *persistence.Service, reg *jobs.Registry, share *sharing.Service, tpl *templates.Service) {
-	d := mcpDeps{keys: keys, acct: acct, ai: studio, gen: gen, up: up, p: p, reg: reg, share: share, tpl: tpl}
+func mountMCP(r chi.Router, keys *apikeys.Service, acct *accounts.Service, studio *aistudio.Service, gen *ai.Service, up *uploads.Service, st *stock.Service, br *brand.Service, p *persistence.Service, reg *jobs.Registry, share *sharing.Service, tpl *templates.Service) {
+	d := mcpDeps{keys: keys, acct: acct, ai: studio, gen: gen, up: up, stock: st, brand: br, p: p, reg: reg, share: share, tpl: tpl}
 	r.Post("/mcp", d.handle)
 	// The spec allows refusing the server-initiated stream outright.
 	r.Get("/mcp", func(w http.ResponseWriter, _ *http.Request) {
@@ -229,6 +233,9 @@ func mcpToolList() []map[string]any {
 				"language":   str("Write all text in this language, e.g. 'Spanish'."),
 				"themeId":    str("A built-in theme id from list_themes (e.g. 'theme-slate'); omit for an auto-picked look."),
 				"templateId": str("A template id from list_templates: the deck is composed on that template's layout system and theme."),
+				"motion":     map[string]any{"type": "string", "enum": []string{"subtle", "none"}, "description": "Entrance motion on the slides; defaults to subtle."},
+				"look":       map[string]any{"type": "string", "enum": []string{"classic", "editorial", "bold", "technical"}, "description": "The deck's house style; omit to let the model choose from the brief."},
+				"brandKitId": map[string]any{"type": "string", "description": "A brand kit id from this workspace to ground the deck in; omit for the workspace's default kit."},
 				"brandPalette": map[string]any{
 					"type": "array", "items": map[string]any{"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"}, "maxItems": 12,
 					"description": "Brand hex colors to ground the theme in.",
@@ -309,7 +316,7 @@ func (d mcpDeps) callTool(r *http.Request, key *apikeys.KeyInfo, name string, ar
 		if rej != nil {
 			return toolResult(rej.Msg, true)
 		}
-		job := startGenerationJob(d.ai, d.gen, d.up, d.p, d.reg, key.UserID, plan)
+		job := startGenerationJob(d.ai, d.gen, d.up, d.stock, d.brand, d.p, d.reg, key.UserID, plan)
 		d.keys.Audit(ctx, key, "mcp:generate_presentation", "")
 		// Wait inline while the client's request allows; a slow generation
 		// degrades to a poll handle instead of a broken connection.

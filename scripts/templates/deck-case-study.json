@@ -1,5 +1,4 @@
 {
- "kind": "deck-outline",
  "id": "deck-case-study",
  "title": "Customer Case Study",
  "categories": [
@@ -13,62 +12,2787 @@
   "sales"
  ],
  "styleTags": [
-  "professional"
+  "professional",
+  "classic",
+  "elegant"
  ],
- "themeId": "theme-forest",
  "size": [
   1920,
   1080
  ],
- "rank": 42,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Literata",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Fira Sans",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Homemade Apple",
+   "weight": 400
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1D3FA8",
+      0
+     ],
+     [
+      "#0D1F5E",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1560,
+     "y": -180,
+     "w": 520,
+     "h": 520,
+     "fill": "#F2C65C",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 1014,
+     "w": 1728,
+     "h": 2,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#F2C65C",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Northwind Systems",
+     "family": "Fira Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 760,
+     "y": 130,
+     "w": 400,
+     "h": 400,
+     "fill": "#F2C65C",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 800,
+     "y": 170,
+     "w": 320,
+     "h": 320,
+     "fill": "#F2C65C",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 500,
+     "w": 1728,
+     "h": 56,
+     "text": "One customer, in their own numbers",
+     "family": "Homemade Apple",
+     "size": 36,
+     "weight": 400,
+     "color": "#F2C65C",
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 560,
+     "w": 1728,
+     "h": 228,
+     "text": "Brightline Logistics:\nfrom four days to one",
+     "family": "Literata",
+     "size": 104,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "lineHeight": 1.02,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 460,
+     "y": 812,
+     "w": 1000,
+     "h": 80,
+     "text": "A four-day payroll run brought down to one, and the eight weeks behind it.",
+     "family": "Fira Sans",
+     "size": 26,
+     "weight": 400,
+     "color": "#C5D0F2",
+     "lineHeight": 1.4,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 300,
+     "y": 900,
+     "w": 440,
+     "h": 24,
+     "text": "Presented by",
+     "family": "Fira Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#F2C65C",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 300,
+     "y": 930,
+     "w": 440,
+     "h": 34,
+     "text": "Elena Sato, Customer Success",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 740,
+     "y": 900,
+     "w": 440,
+     "h": 24,
+     "text": "When",
+     "family": "Fira Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#F2C65C",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 740,
+     "y": 930,
+     "w": 440,
+     "h": 34,
+     "text": "October 2026",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 739,
+     "y": 904,
+     "w": 1,
+     "h": 60,
+     "fill": "#3B5BC2"
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 900,
+     "w": 440,
+     "h": 24,
+     "text": "Where",
+     "family": "Fira Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#F2C65C",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 930,
+     "w": 440,
+     "h": 34,
+     "text": "Brightline HQ, Rotterdam",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 1179,
+     "y": 904,
+     "w": 1,
+     "h": 60,
+     "fill": "#3B5BC2"
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 1030,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 9",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#C5D0F2",
+     "lineHeight": 1.3,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day14-forklift",
+     "x": 790,
+     "y": 190,
+     "w": 340,
+     "h": 280,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Facts",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#0E1B45"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1770,
+     "y": -110,
+     "w": 220,
+     "h": 220,
+     "fill": "#E9B949",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 96,
+     "w": 1200,
+     "h": 28,
+     "text": "The customer",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#1F3FBF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 132,
+     "w": 900,
+     "h": 74,
+     "text": "Who Brightline are",
+     "family": "Literata",
+     "size": 60,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 1030,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Systems  ·  Case study: Brightline Logistics",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4A5674",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 1030,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 9",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4A5674",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 230,
+     "w": 820,
+     "h": 90,
+     "text": "Regional freight across Europe, with a growing last-mile fleet. Third generation, family owned, run from Rotterdam.",
+     "family": "Fira Sans",
+     "size": 26,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 350,
+     "w": 56,
+     "h": 56,
+     "fill": "#cdd4f0"
+    },
+    {
+     "kind": "icon",
+     "icon": "truck",
+     "x": 110,
+     "y": 364,
+     "w": 28,
+     "h": 28,
+     "color": "#1F3FBF"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 348,
+     "w": 740,
+     "h": 34,
+     "text": "4,200 vehicles in twelve countries",
+     "family": "Literata",
+     "size": 26,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 384,
+     "w": 740,
+     "h": 30,
+     "text": "Regional freight and last mile",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 468,
+     "w": 56,
+     "h": 56,
+     "fill": "#cdd4f0"
+    },
+    {
+     "kind": "icon",
+     "icon": "user",
+     "x": 110,
+     "y": 482,
+     "w": 28,
+     "h": 28,
+     "color": "#1F3FBF"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 466,
+     "w": 740,
+     "h": 34,
+     "text": "3,800 drivers, paid every two weeks",
+     "family": "Literata",
+     "size": 26,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 502,
+     "w": 740,
+     "h": 30,
+     "text": "Hourly, salaried and contractor, in nine currencies",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 586,
+     "w": 56,
+     "h": 56,
+     "fill": "#cdd4f0"
+    },
+    {
+     "kind": "icon",
+     "icon": "coin",
+     "x": 110,
+     "y": 600,
+     "w": 28,
+     "h": 28,
+     "color": "#1F3FBF"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 584,
+     "w": 740,
+     "h": 34,
+     "text": "$1.2B in annual revenue",
+     "family": "Literata",
+     "size": 26,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 620,
+     "w": 740,
+     "h": 30,
+     "text": "Family owned, third generation",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 704,
+     "w": 56,
+     "h": 56,
+     "fill": "#cdd4f0"
+    },
+    {
+     "kind": "icon",
+     "icon": "briefcase",
+     "x": 110,
+     "y": 718,
+     "w": 28,
+     "h": 28,
+     "color": "#1F3FBF"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 702,
+     "w": 740,
+     "h": 34,
+     "text": "A finance team of six",
+     "family": "Literata",
+     "size": 26,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 738,
+     "w": 740,
+     "h": 30,
+     "text": "Payroll across all of it, before",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1080,
+     "y": 268,
+     "w": 700,
+     "h": 610,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#eae1cb",
+        0
+       ],
+       [
+        "#F3F5FB",
+        1
+       ]
+      ]
+     },
+     "radius": 4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1180,
+     "y": 295,
+     "w": 500,
+     "h": 500,
+     "fill": "#1F3FBF",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1230,
+     "y": 345,
+     "w": 400,
+     "h": 400,
+     "fill": "#1F3FBF",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "six people. remember that number.",
+     "family": "Homemade Apple",
+     "size": 29,
+     "weight": 400,
+     "color": "#1F3FBF",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day65-city-road",
+     "x": 1190,
+     "y": 320,
+     "w": 480,
+     "h": 420,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Two columns",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#0E1B45"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1770,
+     "y": -110,
+     "w": 220,
+     "h": 220,
+     "fill": "#E9B949",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 96,
+     "w": 1200,
+     "h": 28,
+     "text": "The challenge",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#1F3FBF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 132,
+     "w": 1240,
+     "h": 71,
+     "text": "The situation before, and what it cost",
+     "family": "Literata",
+     "size": 57,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 1030,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Systems  ·  Case study: Brightline Logistics",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4A5674",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 1030,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 9",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4A5674",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 247,
+     "w": 848,
+     "h": 600,
+     "fill": "#F3F5FB",
+     "radius": 4,
+     "stroke": "#DCE1EE",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "icon",
+     "icon": "alert-triangle",
+     "x": 856,
+     "y": 291,
+     "w": 40,
+     "h": 40,
+     "color": "#1F3FBF"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 295,
+     "w": 688,
+     "h": 28,
+     "text": "Before",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#1F3FBF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 339,
+     "w": 752,
+     "h": 112,
+     "text": "Five systems and a spreadsheet",
+     "family": "Literata",
+     "size": 40,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 507,
+     "w": 752,
+     "h": 1,
+     "fill": "#DCE1EE"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 531,
+     "w": 752,
+     "h": 40,
+     "text": "Timesheets from three telematics vendors",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#0E1B45",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 607,
+     "w": 752,
+     "h": 1,
+     "fill": "#DCE1EE"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 631,
+     "w": 752,
+     "h": 40,
+     "text": "Every country a separate export",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#0E1B45",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 707,
+     "w": 752,
+     "h": 1,
+     "fill": "#DCE1EE"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 731,
+     "w": 752,
+     "h": 40,
+     "text": "Errors found by drivers, after payday",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#0E1B45",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 976,
+     "y": 247,
+     "w": 848,
+     "h": 600,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#1D3FA8",
+        0
+       ],
+       [
+        "#0D1F5E",
+        1
+       ]
+      ]
+     },
+     "radius": 4
+    },
+    {
+     "kind": "icon",
+     "icon": "coin",
+     "x": 1736,
+     "y": 291,
+     "w": 40,
+     "h": 40,
+     "color": "#F2C65C"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 295,
+     "w": 688,
+     "h": 28,
+     "text": "The cost",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#F2C65C",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 339,
+     "w": 752,
+     "h": 112,
+     "text": "Four days a fortnight, and trust",
+     "family": "Literata",
+     "size": 40,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 507,
+     "w": 752,
+     "h": 1,
+     "fill": "#3B5BC2"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 531,
+     "w": 752,
+     "h": 40,
+     "text": "$380K a year in finance time",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 607,
+     "w": 752,
+     "h": 1,
+     "fill": "#3B5BC2"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 631,
+     "w": 752,
+     "h": 40,
+     "text": "Two payroll disputes a week",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 707,
+     "w": 752,
+     "h": 1,
+     "fill": "#3B5BC2"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 731,
+     "w": 752,
+     "h": 40,
+     "text": "A union complaint in March",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "the union letter reached the CFO's desk",
+     "family": "Homemade Apple",
+     "size": 29,
+     "weight": 400,
+     "color": "#1F3FBF",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Section",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1D3FA8",
+      0
+     ],
+     [
+      "#0D1F5E",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1560,
+     "y": -180,
+     "w": 520,
+     "h": 520,
+     "fill": "#F2C65C",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 1014,
+     "w": 1728,
+     "h": 2,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 84,
+     "w": 14,
+     "h": 14,
+     "fill": "#F2C65C"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 330,
+     "w": 120,
+     "h": 4,
+     "fill": "#F2C65C"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 358,
+     "w": 1100,
+     "h": 112,
+     "text": "What we did",
+     "family": "Literata",
+     "size": 96,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 490,
+     "w": 900,
+     "h": 90,
+     "text": "Connect the feeds read-only, run two payrolls in the shadows, then go live a country at a time.",
+     "family": "Fira Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#C5D0F2",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1240,
+     "y": 280,
+     "w": 560,
+     "h": 560,
+     "fill": "#F2C65C",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1296,
+     "y": 336,
+     "w": 448,
+     "h": 448,
+     "fill": "#F2C65C",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 1000,
+     "h": 50,
+     "text": "Eight weeks, start to finish",
+     "family": "Homemade Apple",
+     "size": 36,
+     "weight": 400,
+     "color": "#F2C65C",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 1030,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Systems  ·  Case study: Brightline Logistics",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#C5D0F2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 1030,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 9",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#C5D0F2",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 885,
+     "w": 720,
+     "h": 39,
+     "text": "we ran beside the old process, twice",
+     "family": "Homemade Apple",
+     "size": 31,
+     "weight": 400,
+     "color": "#F2C65C",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day37-calculator",
+     "x": 1300,
+     "y": 340,
+     "w": 440,
+     "h": 440,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Timeline",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#0E1B45"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1770,
+     "y": -110,
+     "w": 220,
+     "h": 220,
+     "fill": "#E9B949",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 96,
+     "w": 1200,
+     "h": 28,
+     "text": "The solution",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#1F3FBF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 132,
+     "w": 1240,
+     "h": 74,
+     "text": "What we deployed, and how fast",
+     "family": "Literata",
+     "size": 60,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 1030,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Systems  ·  Case study: Brightline Logistics",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4A5674",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 1030,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 9",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4A5674",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 433,
+     "w": 1728,
+     "h": 3,
+     "fill": "#DCE1EE"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 433,
+     "w": 1512,
+     "h": 3,
+     "fill": "#1F3FBF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 420,
+     "w": 30,
+     "h": 30,
+     "fill": "#1F3FBF"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 360,
+     "w": 300,
+     "h": 28,
+     "text": "Week 1",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#1F3FBF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 484,
+     "w": 384,
+     "h": 44,
+     "text": "Connected",
+     "family": "Literata",
+     "size": 32,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 536,
+     "w": 384,
+     "h": 120,
+     "text": "Three telematics feeds and the HR system, read-only, mirrored against the old process.",
+     "family": "Fira Sans",
+     "size": 21,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 528,
+     "y": 420,
+     "w": 30,
+     "h": 30,
+     "fill": "#1F3FBF"
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 360,
+     "w": 300,
+     "h": 28,
+     "text": "Weeks 2 to 3",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#1F3FBF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 484,
+     "w": 384,
+     "h": 44,
+     "text": "Shadow runs",
+     "family": "Literata",
+     "size": 32,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 536,
+     "w": 384,
+     "h": 120,
+     "text": "Two full payroll cycles run in parallel. Every difference explained before go-live.",
+     "family": "Fira Sans",
+     "size": 21,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 960,
+     "y": 420,
+     "w": 30,
+     "h": 30,
+     "fill": "#1F3FBF"
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 360,
+     "w": 300,
+     "h": 28,
+     "text": "Week 4",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#1F3FBF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 484,
+     "w": 384,
+     "h": 44,
+     "text": "Two countries live",
+     "family": "Literata",
+     "size": 32,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 536,
+     "w": 384,
+     "h": 120,
+     "text": "The Netherlands and Germany, with the finance team watching every line.",
+     "family": "Fira Sans",
+     "size": 21,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1392,
+     "y": 420,
+     "w": 30,
+     "h": 30,
+     "fill": "#1F3FBF"
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 360,
+     "w": 300,
+     "h": 28,
+     "text": "Week 8",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#1F3FBF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 484,
+     "w": 384,
+     "h": 44,
+     "text": "Live everywhere",
+     "family": "Literata",
+     "size": 32,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 536,
+     "w": 384,
+     "h": 120,
+     "text": "All twelve countries, nine currencies, one run.",
+     "family": "Fira Sans",
+     "size": 21,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "week four was the one everyone watched",
+     "family": "Homemade Apple",
+     "size": 29,
+     "weight": 400,
+     "color": "#1F3FBF",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Before and after",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#0E1B45"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1770,
+     "y": -110,
+     "w": 220,
+     "h": 220,
+     "fill": "#E9B949",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 96,
+     "w": 1200,
+     "h": 28,
+     "text": "The results",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#1F3FBF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 132,
+     "w": 1240,
+     "h": 74,
+     "text": "Before and after",
+     "family": "Literata",
+     "size": 60,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 1030,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Systems  ·  Case study: Brightline Logistics",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4A5674",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 1030,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 9",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4A5674",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 258,
+     "w": 414,
+     "h": 34,
+     "text": "Payroll run",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#0E1B45",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 316,
+     "w": 414,
+     "h": 22,
+     "text": "Before",
+     "family": "Fira Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#4A5674",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 344,
+     "w": 414,
+     "h": 66,
+     "text": "4 days",
+     "family": "Literata",
+     "size": 60,
+     "weight": 700,
+     "color": "#4A5674",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 90,
+     "y": 384,
+     "w": 190,
+     "h": 4,
+     "fill": "#4A5674",
+     "radius": 2
+    },
+    {
+     "kind": "rect",
+     "x": 175,
+     "y": 414,
+     "w": 2,
+     "h": 68,
+     "fill": "#DCE1EE"
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 424,
+     "w": 160,
+     "h": 40,
+     "label": "−3 days",
+     "fill": "#e6daba",
+     "color": "#8A6512",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 486,
+     "w": 414,
+     "h": 22,
+     "text": "After",
+     "family": "Fira Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#1F3FBF",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 514,
+     "w": 414,
+     "h": 108,
+     "text": "1 day",
+     "family": "Literata",
+     "size": 100,
+     "weight": 700,
+     "color": "#1F3FBF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 638,
+     "w": 398,
+     "h": 116,
+     "text": "The finance team closes payroll on a Tuesday afternoon.",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 522,
+     "y": 258,
+     "w": 1,
+     "h": 480,
+     "fill": "#DCE1EE"
+    },
+    {
+     "kind": "text",
+     "x": 534,
+     "y": 258,
+     "w": 414,
+     "h": 34,
+     "text": "Error rate",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#0E1B45",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 534,
+     "y": 316,
+     "w": 414,
+     "h": 22,
+     "text": "Before",
+     "family": "Fira Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#4A5674",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 534,
+     "y": 344,
+     "w": 414,
+     "h": 66,
+     "text": "3.1%",
+     "family": "Literata",
+     "size": 60,
+     "weight": 700,
+     "color": "#4A5674",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 528,
+     "y": 384,
+     "w": 152,
+     "h": 4,
+     "fill": "#4A5674",
+     "radius": 2
+    },
+    {
+     "kind": "rect",
+     "x": 613,
+     "y": 414,
+     "w": 2,
+     "h": 68,
+     "fill": "#DCE1EE"
+    },
+    {
+     "kind": "button",
+     "x": 534,
+     "y": 424,
+     "w": 160,
+     "h": 40,
+     "label": "−94%",
+     "fill": "#e6daba",
+     "color": "#8A6512",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 534,
+     "y": 486,
+     "w": 414,
+     "h": 22,
+     "text": "After",
+     "family": "Fira Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#1F3FBF",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 534,
+     "y": 514,
+     "w": 414,
+     "h": 108,
+     "text": "0.2%",
+     "family": "Literata",
+     "size": 100,
+     "weight": 700,
+     "color": "#1F3FBF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 534,
+     "y": 638,
+     "w": 398,
+     "h": 116,
+     "text": "Errors caught before the run, not after payday.",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 960,
+     "y": 258,
+     "w": 1,
+     "h": 480,
+     "fill": "#DCE1EE"
+    },
+    {
+     "kind": "text",
+     "x": 972,
+     "y": 258,
+     "w": 414,
+     "h": 34,
+     "text": "Disputes a week",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#0E1B45",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 972,
+     "y": 316,
+     "w": 414,
+     "h": 22,
+     "text": "Before",
+     "family": "Fira Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#4A5674",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 972,
+     "y": 344,
+     "w": 414,
+     "h": 66,
+     "text": "2",
+     "family": "Literata",
+     "size": 60,
+     "weight": 700,
+     "color": "#4A5674",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 966,
+     "y": 384,
+     "w": 48,
+     "h": 4,
+     "fill": "#4A5674",
+     "radius": 2
+    },
+    {
+     "kind": "rect",
+     "x": 1051,
+     "y": 414,
+     "w": 2,
+     "h": 68,
+     "fill": "#DCE1EE"
+    },
+    {
+     "kind": "button",
+     "x": 972,
+     "y": 424,
+     "w": 160,
+     "h": 40,
+     "label": "−100%",
+     "fill": "#e6daba",
+     "color": "#8A6512",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 972,
+     "y": 486,
+     "w": 414,
+     "h": 22,
+     "text": "After",
+     "family": "Fira Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#1F3FBF",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 972,
+     "y": 514,
+     "w": 414,
+     "h": 108,
+     "text": "0",
+     "family": "Literata",
+     "size": 100,
+     "weight": 700,
+     "color": "#1F3FBF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 972,
+     "y": 638,
+     "w": 398,
+     "h": 116,
+     "text": "Drivers see their hours before they are paid.",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1398,
+     "y": 258,
+     "w": 1,
+     "h": 480,
+     "fill": "#DCE1EE"
+    },
+    {
+     "kind": "text",
+     "x": 1410,
+     "y": 258,
+     "w": 414,
+     "h": 34,
+     "text": "Finance time a year",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#0E1B45",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1410,
+     "y": 316,
+     "w": 414,
+     "h": 22,
+     "text": "Before",
+     "family": "Fira Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#4A5674",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1410,
+     "y": 344,
+     "w": 414,
+     "h": 66,
+     "text": "$380K",
+     "family": "Literata",
+     "size": 60,
+     "weight": 700,
+     "color": "#4A5674",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1404,
+     "y": 384,
+     "w": 192,
+     "h": 4,
+     "fill": "#4A5674",
+     "radius": 2
+    },
+    {
+     "kind": "rect",
+     "x": 1489,
+     "y": 414,
+     "w": 2,
+     "h": 68,
+     "fill": "#DCE1EE"
+    },
+    {
+     "kind": "button",
+     "x": 1410,
+     "y": 424,
+     "w": 160,
+     "h": 40,
+     "label": "−$310K",
+     "fill": "#e6daba",
+     "color": "#8A6512",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1410,
+     "y": 486,
+     "w": 414,
+     "h": 22,
+     "text": "After",
+     "family": "Fira Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#1F3FBF",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1410,
+     "y": 514,
+     "w": 414,
+     "h": 108,
+     "text": "$70K",
+     "family": "Literata",
+     "size": 100,
+     "weight": 700,
+     "color": "#1F3FBF",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1410,
+     "y": 638,
+     "w": 398,
+     "h": 116,
+     "text": "Before counting the disputes that no longer happen.",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 778,
+     "w": 1728,
+     "h": 1,
+     "fill": "#DCE1EE"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 778,
+     "w": 56,
+     "h": 3,
+     "fill": "#C99A22"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 798,
+     "w": 1100,
+     "h": 26,
+     "text": "Brightline finance: the six payroll cycles after go-live, against the twelve months before.",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4A5674",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "zero is the number Rowan quotes first",
+     "family": "Homemade Apple",
+     "size": 29,
+     "weight": 400,
+     "color": "#1F3FBF",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Quote",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1D3FA8",
+      0
+     ],
+     [
+      "#0D1F5E",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1560,
+     "y": -180,
+     "w": 520,
+     "h": 520,
+     "fill": "#F2C65C",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 1014,
+     "w": 1728,
+     "h": 2,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 84,
+     "w": 14,
+     "h": 14,
+     "fill": "#F2C65C"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 1030,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Systems  ·  Case study: Brightline Logistics",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#C5D0F2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 1030,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 9",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#C5D0F2",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 260,
+     "h": 260,
+     "text": "“",
+     "family": "Literata",
+     "size": 280,
+     "weight": 700,
+     "color": "#F2C65C",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 400,
+     "w": 1400,
+     "h": 213,
+     "text": "We did not buy software. We bought back four days a fortnight, and the drivers' trust that their pay would be right.",
+     "family": "Literata",
+     "size": 52,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "lineHeight": 1.26
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 116,
+     "y": 673,
+     "w": 84,
+     "h": 84,
+     "fill": "#3558C4"
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 681,
+     "w": 800,
+     "h": 32,
+     "text": "Rowan Achebe",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 717,
+     "w": 800,
+     "h": 28,
+     "text": "Chief Financial Officer, Brightline Logistics",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#C5D0F2",
+     "lineHeight": 1.4
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "op-peep-50",
+     "x": 128,
+     "y": 681,
+     "w": 60,
+     "h": 68
+    }
+   ]
+  },
+  {
+   "name": "Text and picture",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#0E1B45"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1770,
+     "y": -110,
+     "w": 220,
+     "h": 220,
+     "fill": "#E9B949",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 96,
+     "w": 1200,
+     "h": 28,
+     "text": "Why it worked",
+     "family": "Fira Sans",
+     "size": 20,
+     "weight": 600,
+     "color": "#1F3FBF",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 132,
+     "w": 960,
+     "h": 74,
+     "text": "The pattern that repeats",
+     "family": "Literata",
+     "size": 60,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 1030,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Systems  ·  Case study: Brightline Logistics",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4A5674",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 1030,
+     "w": 240,
+     "h": 26,
+     "text": "08 / 9",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#4A5674",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 278,
+     "w": 34,
+     "h": 34,
+     "fill": "#cdd4f0"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 278,
+     "w": 34,
+     "h": 34,
+     "text": "1",
+     "family": "Literata",
+     "size": 17,
+     "weight": 700,
+     "color": "#1F3FBF",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 274,
+     "w": 840,
+     "h": 44,
+     "text": "Read-only first",
+     "family": "Literata",
+     "size": 32,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 326,
+     "w": 840,
+     "h": 70,
+     "text": "Every feed connected before anything changed. Nobody had to trust us on day one.",
+     "family": "Fira Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 456,
+     "w": 34,
+     "h": 34,
+     "fill": "#cdd4f0"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 456,
+     "w": 34,
+     "h": 34,
+     "text": "2",
+     "family": "Literata",
+     "size": 17,
+     "weight": 700,
+     "color": "#1F3FBF",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 452,
+     "w": 840,
+     "h": 44,
+     "text": "Two shadow cycles",
+     "family": "Literata",
+     "size": 32,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 504,
+     "w": 840,
+     "h": 70,
+     "text": "The old run and ours, side by side, until every difference had a name.",
+     "family": "Fira Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 634,
+     "w": 34,
+     "h": 34,
+     "fill": "#cdd4f0"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 634,
+     "w": 34,
+     "h": 34,
+     "text": "3",
+     "family": "Literata",
+     "size": 17,
+     "weight": 700,
+     "color": "#1F3FBF",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 630,
+     "w": 840,
+     "h": 44,
+     "text": "A country at a time",
+     "family": "Literata",
+     "size": 32,
+     "weight": 700,
+     "color": "#0E1B45",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 682,
+     "w": 840,
+     "h": 70,
+     "text": "Two live in week four, twelve by week eight, the same finance team of six.",
+     "family": "Fira Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4A5674",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1080,
+     "y": 196,
+     "w": 744,
+     "h": 690,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#eae1cb",
+        0
+       ],
+       [
+        "#F3F5FB",
+        1
+       ]
+      ]
+     },
+     "radius": 6
+    },
+    {
+     "kind": "ellipse",
+     "x": 1202,
+     "y": 291,
+     "w": 500,
+     "h": 500,
+     "fill": "#1F3FBF",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1252,
+     "y": 341,
+     "w": 400,
+     "h": 400,
+     "fill": "#1F3FBF",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 920,
+     "w": 760,
+     "h": 36,
+     "text": "same three steps, every fleet so far",
+     "family": "Homemade Apple",
+     "size": 29,
+     "weight": 400,
+     "color": "#1F3FBF",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-guy-with-glasses",
+     "x": 1160,
+     "y": 270,
+     "w": 584,
+     "h": 540
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1D3FA8",
+      0
+     ],
+     [
+      "#0D1F5E",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1560,
+     "y": -180,
+     "w": 520,
+     "h": 520,
+     "fill": "#F2C65C",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 1014,
+     "w": 1728,
+     "h": 2,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#F2C65C",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#F2C65C",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#F2C65C",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Northwind Systems",
+     "family": "Fira Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 47,
+     "text": "The pattern repeats",
+     "family": "Homemade Apple",
+     "size": 36,
+     "weight": 400,
+     "color": "#F2C65C",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 102,
+     "text": "What this means for you",
+     "family": "Literata",
+     "size": 84,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 436,
+     "w": 940,
+     "h": 120,
+     "text": "Every fleet operator we have deployed follows the same pattern: connect, shadow, go live. Eight weeks, start to finish.",
+     "family": "Fira Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#C5D0F2",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#F2C65C"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "elena@northwind.example",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "world",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#F2C65C"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "northwind.example/brightline",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "calendar",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#F2C65C"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "Book a thirty-minute walkthrough",
+     "family": "Fira Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#FFFFFF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Talk to us",
+     "fill": "#F2C65C",
+     "color": "#0E1B45",
+     "family": "Fira Sans",
+     "size": 22,
+     "weight": 700,
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "09 / 9",
+     "family": "Fira Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#C5D0F2",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 885,
+     "w": 720,
+     "h": 39,
+     "text": "bring your payroll calendar",
+     "family": "Homemade Apple",
+     "size": 31,
+     "weight": 400,
+     "color": "#F2C65C",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day17-walkie-talkie",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n8",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n14",
+   "kind": "text",
+   "label": "Presenter",
+   "hint": "Who presents"
+  },
+  {
+   "node": "p5-n8",
+   "kind": "text",
+   "label": "Payroll run, before",
+   "hint": "The figure before"
+  },
+  {
+   "node": "p5-n13",
+   "kind": "text",
+   "label": "Payroll run, after",
+   "hint": "The figure now"
+  },
+  {
+   "node": "p5-n18",
+   "kind": "text",
+   "label": "Error rate, before",
+   "hint": "The figure before"
+  },
+  {
+   "node": "p5-n23",
+   "kind": "text",
+   "label": "Error rate, after",
+   "hint": "The figure now"
+  },
+  {
+   "node": "p5-n28",
+   "kind": "text",
+   "label": "Disputes a week, before",
+   "hint": "The figure before"
+  },
+  {
+   "node": "p5-n33",
+   "kind": "text",
+   "label": "Disputes a week, after",
+   "hint": "The figure now"
+  },
+  {
+   "node": "p5-n38",
+   "kind": "text",
+   "label": "Finance time a year, before",
+   "hint": "The figure before"
+  },
+  {
+   "node": "p5-n43",
+   "kind": "text",
+   "label": "Finance time a year, after",
+   "hint": "The figure now"
+  },
+  {
+   "node": "p8-n11",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n13",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n15",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Customer Case Study",
-  "theme": "credible, specific",
-  "pages": [
-   {
-    "title": "The customer",
-    "points": [
-     "Who they are and what they do"
-    ],
-    "visualRole": "cover"
-   },
-   {
-    "title": "The challenge",
-    "points": [
-     "The situation before",
-     "What it cost them"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "The solution",
-    "points": [
-     "What we deployed and how fast"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "The results",
-    "points": [
-     "The before-and-after numbers"
-    ],
-    "visualRole": "data"
-   },
-   {
-    "title": "In their words",
-    "points": [
-     "The quote that says it all"
-    ],
-    "visualRole": "quote"
-   },
-   {
-    "title": "What this means for you",
-    "points": [
-     "The pattern that repeats across customers"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 42
 }

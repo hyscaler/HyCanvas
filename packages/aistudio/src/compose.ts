@@ -11,25 +11,31 @@
 import {
   createNode,
   currentSchemaVersion,
+  roundedCorners,
   themeFromPalette,
   type DesignFile,
   type Fill,
+  type Node,
   type Page,
   type SlideLayout,
   type SlideMaster,
   type Theme,
 } from "@hc/schema";
 import { fromHex } from "@hc/color";
-import { normalizeOutline } from "./outline";
+import { normalizeOutline, type DesignType } from "./outline";
 import { deckThemes } from "./theme";
-import { layoutDeck } from "./deck";
+import { layoutDeck, type DeckRecipe } from "./deck";
+import { slotsFromThemeRecord } from "./kit/look";
 import { layoutDesign, readableTextColor } from "./layout";
 import type { DesignSystem } from "./designSystem";
 import { fallbackLayoutFill, repairLayoutSelection } from "./layoutSchema";
 import { accentRuleRect, pageTreatment, slotTypeScale } from "./deckStyle";
 import { reflowPage } from "./reflow";
 import { themeSlotNames } from "./themeGen";
-import { catalogEntryForMood, designSystemSlots } from "./designSystem";
+import { qualityCheck } from "./quality";
+import { repairContrast } from "./repair";
+import { catalogEntryForMood, designSystemSlots, type DeckLogo, type DeckMotion } from "./designSystem";
+import { applyMotion } from "./archetypes";
 import { measureDeck, type DeckReport } from "./measure";
 import { themeCatalogEntry, type ThemeCatalogEntry } from "./themeCatalog";
 import type { DeckTheme } from "./outline";
@@ -57,6 +63,23 @@ export interface ComposeDeckInput {
    *  materialized text (fonts by role, ink readable against the background). */
   themeRecord?: Theme;
   dir?: "ltr" | "rtl";
+  /** Entrance motion on the composed pages: "subtle" (default) or "none". */
+  motion?: DeckMotion;
+  /** The brand kit's faces by role; the generated theme sets headings and
+   *  body in them. A catalog theme or a template keeps its own. */
+  brandFonts?: { heading?: string; body?: string };
+  /** The brand kit's primary logo, placed on every archetype page and listed
+   *  in the file's assets. */
+  logo?: DeckLogo | null;
+  /** What the pages are: "deck" (default), "doc", "poster" or "social" /
+   *  "social-set". A post or poster composes without deck furniture. */
+  designType?: string;
+  /** The deck's house style: "classic", "editorial", "bold" or "technical".
+   *  Overrides the look the outline named; a catalog style stands in for both. */
+  look?: string;
+  /** Which composer draws a deck's pages: the kit (the default) or the
+   *  classic archetype composer. */
+  renderer?: "kit" | "classic";
 }
 
 /** A T19 theme record as a generation DeckTheme (the template path's
@@ -179,7 +202,7 @@ export function composeDeckFileWithReport(input: ComposeDeckInput): { file: Desi
     record = themeRecordFromCatalog(entry);
     catalog = entry;
   } else {
-    theme = deckThemes({ brandPalette: input.brandPalette ?? [], kicker: outline.title, count: 1, seed })[0];
+    theme = deckThemes({ brandPalette: input.brandPalette ?? [], kicker: outline.title, count: 1, seed, fontHeading: input.brandFonts?.heading, fontBody: input.brandFonts?.body })[0];
     if (!(input.brandPalette ?? []).length) catalog = catalogEntryForMood(outline.theme, seed);
   }
 
@@ -188,6 +211,7 @@ export function composeDeckFileWithReport(input: ComposeDeckInput): { file: Desi
   let layoutsOut: SlideLayout[] | undefined;
   let system: DesignSystem | null = null;
   let report: DeckReport | null = null;
+  let recipe: DeckRecipe | null = null;
   if (input.layoutSet?.layouts?.length) {
     // Layout-grounded composition (E14): the template's own layout system,
     // materialized the way the editor's apply pass does it - deterministic
@@ -307,13 +331,15 @@ export function composeDeckFileWithReport(input: ComposeDeckInput): { file: Desi
             transform: { x: bar.x, y: bar.y, scaleX: 1, scaleY: 1, rotation: 0 },
             size: { width: bar.width, height: bar.height },
             fills: [{ type: "solid", color: accentColor }],
-            cornerRadius: Math.round(bar.height / 2),
+            cornerRadius: roundedCorners(Math.round(bar.height / 2)),
             // Same tag the editor uses, so a layout change in the editor
             // carries (or drops) a headless-composed deck's rule too.
             data: { accentRule: true },
           } as never) as never);
         }
       }
+      // The same quiet reveal the archetype door gives its pages.
+      applyMotion(children as Array<{ name?: string; animation?: unknown }>, input.motion ?? "subtle");
       return {
         id: `api-page-${i + 1}`,
         name: item.title || `Page ${i + 1}`,
@@ -326,20 +352,31 @@ export function composeDeckFileWithReport(input: ComposeDeckInput): { file: Desi
       } as unknown as Page;
     });
     report = measureDeck(
-      pages.map((pg, i) => ({
-        archetype: (outline.pages[i].archetype ?? "bullets"),
-        impact: pageTreatment(outline.pages[i].visualRole, theme.background).impact,
-        nodes: pg.children,
-        overfull: overfullByPage[i],
-        issues: [],
-      })),
+      pages.map((pg, i) => {
+        const page = { background: pg.background as Fill, nodes: pg.children as Node[], size: { width, height } };
+        const repairs = repairContrast(page);
+        return {
+          archetype: (outline.pages[i].archetype ?? "bullets"),
+          impact: pageTreatment(outline.pages[i].visualRole, theme.background).impact,
+          nodes: pg.children as Node[],
+          overfull: overfullByPage[i],
+          issues: qualityCheck(page).issues,
+          repairs,
+        };
+      }),
       { width, height },
       Math.round(Math.min(width, height) * 0.012) * 6,
     );
   } else {
-    const deck = layoutDeck(outline, theme, { width, height }, { dir: input.dir, catalog, brandPalette: input.brandPalette, seed });
+    const dt = (input.designType ?? "").toLowerCase();
+    const designType: DesignType = dt === "social" || dt === "social-set" ? "social-set" : dt === "poster" ? "poster" : dt === "doc" ? "doc" : "deck";
+    // A brand kit or a theme the caller chose authored the fonts; a look's
+    // own pairing must not replace them.
+    const fontsAuthored = !!(input.brandFonts?.heading || input.brandFonts?.body || input.themeId || input.themeRecord);
+    const deck = layoutDeck(outline, theme, { width, height }, { dir: input.dir, catalog, brandPalette: input.brandPalette, seed, motion: input.motion, logo: input.logo, designType, look: input.look, outlineLook: outline.look, fontsAuthored, renderer: input.renderer === "classic" ? "classic" : "kit", brandFonts: input.brandFonts, themeChosen: !!(input.themeId || input.themeRecord), themeSlots: input.themeRecord ? slotsFromThemeRecord(input.themeRecord) : null });
     system = deck.system;
     report = deck.report;
+    recipe = deck.recipe ?? null;
     pages = deck.pages.map((p, i) => ({
       id: `api-page-${i + 1}`,
       name: p.name || `Page ${i + 1}`,
@@ -348,6 +385,9 @@ export function composeDeckFileWithReport(input: ComposeDeckInput): { file: Desi
       background: p.background,
       children: p.nodes,
       ...(p.note ? { notes: p.note } : {}),
+      // The item the page was set from, so the editor can revise and set
+      // this one page again later (per-slide regeneration).
+      ...(p.item ? { data: { aiOutline: p.item } } : {}),
     }) as unknown as Page);
   }
 
@@ -358,15 +398,25 @@ export function composeDeckFileWithReport(input: ComposeDeckInput): { file: Desi
     title: outline.title,
     unit: "px",
     dpi: 96,
+    // Required by the file schema even when empty; the editor tolerates its
+    // absence on load but the .hyc door validates strictly. A composed deck
+    // records how it was set, for per-slide regeneration in the editor.
+    meta: recipe ? { aiDeck: recipe } : {},
     pages,
-    assets: [],
+    // The logo is the one asset a composed deck references before any
+    // picture lands; the archetype door placed it on every page.
+    assets: system?.logo ? [{ id: system.logo.assetId, kind: "image", url: system.logo.url, mime: "image/*", checksum: "" }] : [],
     fonts: [],
     ...(masters ? { masters } : {}),
     ...(layoutsOut ? { layouts: layoutsOut } : {}),
     // The file's theme record carries the very slots the pages were painted
     // with, so the theme picker shows the deck's palette and a later swap can
     // remap it precisely.
-    theme: record ?? themeRecordFromSlots(system ? designSystemSlots(system) : null, theme, outline.theme),
+    // The record carries the pairing the pages were set in: the design
+    // system's, which is the look's or the seeded one for an unbranded deck,
+    // as the editor door already stamps it. The deck theme's own fonts are
+    // empty for such a deck and used to leave the record with none.
+    theme: record ?? (system ? themeRecordFromDesignSystem(system, theme, outline.theme) : themeRecordFromSlots(null, theme, outline.theme)),
   } as unknown as DesignFile;
   return { file, report: report ?? { pages: [], bulletShare: 0, repetition: [], shorten: [], ok: true } };
 }

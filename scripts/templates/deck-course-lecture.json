@@ -1,10 +1,9 @@
 {
- "kind": "deck-outline",
  "id": "deck-course-lecture",
  "title": "Course Lecture",
  "categories": [
   "presentations",
-  "education"
+  "business"
  ],
  "tags": [
   "education",
@@ -13,62 +12,2992 @@
   "teaching"
  ],
  "styleTags": [
+  "editorial",
+  "elegant",
   "warm"
  ],
- "themeId": "theme-sand",
  "size": [
   1920,
   1080
  ],
- "rank": 44,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Fira Sans",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Atkinson Hyperlegible",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Schoolbell",
+   "weight": 400
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#2E4A42",
+      0
+     ],
+     [
+      "#1B2F2A",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 40,
+     "y": 40,
+     "w": 1840,
+     "h": 1000,
+     "stroke": "#FFD24A",
+     "strokeWidth": 1.5,
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1805,
+     "y": 388,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFD24A",
+     "opacity": 0.6499999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1827,
+     "y": 428,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFD24A",
+     "opacity": 0.52
+    },
+    {
+     "kind": "ellipse",
+     "x": 1816,
+     "y": 674,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFD24A",
+     "opacity": 0.51
+    },
+    {
+     "kind": "ellipse",
+     "x": 1626,
+     "y": 74,
+     "w": 7,
+     "h": 7,
+     "fill": "#FFD24A",
+     "opacity": 0.75
+    },
+    {
+     "kind": "ellipse",
+     "x": 1750,
+     "y": 198,
+     "w": 8,
+     "h": 8,
+     "fill": "#FFD24A",
+     "opacity": 0.45999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1733,
+     "y": 593,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFD24A",
+     "opacity": 0.71
+    },
+    {
+     "kind": "ellipse",
+     "x": 1339,
+     "y": 678,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFD24A",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1481,
+     "y": 506,
+     "w": 8,
+     "h": 8,
+     "fill": "#FFD24A",
+     "opacity": 0.48
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#FFD24A",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Meridian Institute",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 52,
+     "text": "Lecture four",
+     "family": "Schoolbell",
+     "size": 40,
+     "weight": 400,
+     "color": "#FFD24A",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 180,
+     "text": "Tokens: the smallest\nunit of a design system",
+     "family": "Fira Sans",
+     "size": 81,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 656,
+     "w": 900,
+     "h": 120,
+     "text": "By the end you will be able to name a token, decide what deserves one, and read a system's tokens to predict how it will age.",
+     "family": "Atkinson Hyperlegible",
+     "size": 28,
+     "weight": 400,
+     "color": "#C0CCC6",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Dr. Priya Raman  ·  Thursday, 10:00, Room 204",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#C0CCC6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 9",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#C0CCC6",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 170,
+     "w": 700,
+     "h": 700,
+     "fill": "#FFD24A",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1220,
+     "y": 240,
+     "w": 560,
+     "h": 560,
+     "fill": "#FFD24A",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 839,
+     "w": 720,
+     "h": 85,
+     "text": "slides go up Friday. listen first, write second",
+     "family": "Schoolbell",
+     "size": 34,
+     "weight": 400,
+     "color": "#FFD24A",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day11-blackboard",
+     "x": 1210,
+     "y": 230,
+     "w": 580,
+     "h": 580,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Agenda",
+   "bg": "#37554D",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 76,
+     "w": 56,
+     "h": 3,
+     "fill": "#FFD24A"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Where we left off",
+     "family": "Atkinson Hyperlegible",
+     "size": 20,
+     "weight": 600,
+     "color": "#FFD24A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "The three ideas from last time",
+     "family": "Fira Sans",
+     "size": 60,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Meridian Institute  ·  Design systems, lecture 4",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 9",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 248,
+     "w": 96,
+     "h": 60,
+     "text": "01",
+     "family": "Fira Sans",
+     "size": 44,
+     "weight": 700,
+     "color": "#FFD24A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 246,
+     "w": 900,
+     "h": 44,
+     "text": "Components are promises",
+     "family": "Fira Sans",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 292,
+     "w": 900,
+     "h": 30,
+     "text": "A component is a contract about behaviour, not a picture",
+     "family": "Atkinson Hyperlegible",
+     "size": 21,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 250,
+     "w": 160,
+     "h": 34,
+     "label": "Recap",
+     "fill": "#5e7155",
+     "color": "#FFD24A",
+     "family": "Atkinson Hyperlegible",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 348,
+     "w": 1204,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 366,
+     "w": 96,
+     "h": 60,
+     "text": "02",
+     "family": "Fira Sans",
+     "size": 44,
+     "weight": 700,
+     "color": "#FFD24A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 364,
+     "w": 900,
+     "h": 44,
+     "text": "Variants multiply",
+     "family": "Fira Sans",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 410,
+     "w": 900,
+     "h": 30,
+     "text": "Every variant doubles the surface you must test",
+     "family": "Atkinson Hyperlegible",
+     "size": 21,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 368,
+     "w": 160,
+     "h": 34,
+     "label": "Recap",
+     "fill": "#5e7155",
+     "color": "#FFD24A",
+     "family": "Atkinson Hyperlegible",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 466,
+     "w": 1204,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 484,
+     "w": 96,
+     "h": 60,
+     "text": "03",
+     "family": "Fira Sans",
+     "size": 44,
+     "weight": 700,
+     "color": "#FFD24A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 482,
+     "w": 900,
+     "h": 44,
+     "text": "Systems age",
+     "family": "Fira Sans",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 528,
+     "w": 900,
+     "h": 30,
+     "text": "The parts nobody owns are the parts that rot",
+     "family": "Atkinson Hyperlegible",
+     "size": 21,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 486,
+     "w": 160,
+     "h": 34,
+     "label": "Recap",
+     "fill": "#5e7155",
+     "color": "#FFD24A",
+     "family": "Atkinson Hyperlegible",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 584,
+     "w": 1204,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 602,
+     "w": 96,
+     "h": 60,
+     "text": "04",
+     "family": "Fira Sans",
+     "size": 44,
+     "weight": 700,
+     "color": "#FFD24A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 600,
+     "w": 900,
+     "h": 44,
+     "text": "Today: tokens",
+     "family": "Fira Sans",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 646,
+     "w": 900,
+     "h": 30,
+     "text": "The unit underneath components",
+     "family": "Atkinson Hyperlegible",
+     "size": 21,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 604,
+     "w": 160,
+     "h": 34,
+     "label": "New",
+     "fill": "#5e7155",
+     "color": "#FFD24A",
+     "family": "Atkinson Hyperlegible",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 702,
+     "w": 1204,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 720,
+     "w": 96,
+     "h": 60,
+     "text": "05",
+     "family": "Fira Sans",
+     "size": 44,
+     "weight": 700,
+     "color": "#FFD24A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 718,
+     "w": 900,
+     "h": 44,
+     "text": "Next: theming",
+     "family": "Fira Sans",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 764,
+     "w": 900,
+     "h": 30,
+     "text": "How tokens make a second brand cheap",
+     "family": "Atkinson Hyperlegible",
+     "size": 21,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 722,
+     "w": 160,
+     "h": 34,
+     "label": "Preview",
+     "fill": "#5e7155",
+     "color": "#FFD24A",
+     "family": "Atkinson Hyperlegible",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 820,
+     "w": 1204,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "rect",
+     "x": 1396,
+     "y": 242,
+     "w": 428,
+     "h": 560,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#2E4A42",
+        0
+       ],
+       [
+        "#1B2F2A",
+        1
+       ]
+      ]
+     },
+     "radius": 6
+    },
+    {
+     "kind": "rect",
+     "x": 1396,
+     "y": 242,
+     "w": 428,
+     "h": 6,
+     "fill": "#FFD24A",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 282,
+     "w": 348,
+     "h": 28,
+     "text": "Today",
+     "family": "Atkinson Hyperlegible",
+     "size": 20,
+     "weight": 600,
+     "color": "#FFD24A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 322,
+     "w": 348,
+     "h": 120,
+     "text": "Wk 4",
+     "family": "Fira Sans",
+     "size": 76,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 478,
+     "w": 120,
+     "h": 26,
+     "text": "Reading",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#C0CCC6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 506,
+     "w": 348,
+     "h": 30,
+     "text": "Chapter 5, pages 88 to 112",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1436,
+     "y": 542,
+     "w": 348,
+     "h": 1,
+     "fill": "#46605A"
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 552,
+     "w": 120,
+     "h": 26,
+     "text": "Exercise",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#C0CCC6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 580,
+     "w": 348,
+     "h": 30,
+     "text": "Due Tuesday, in the portal",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1436,
+     "y": 616,
+     "w": 348,
+     "h": 1,
+     "fill": "#46605A"
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 626,
+     "w": 120,
+     "h": 26,
+     "text": "Office hours",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#C0CCC6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 654,
+     "w": 348,
+     "h": 30,
+     "text": "Wednesday, 14:00",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1436,
+     "y": 690,
+     "w": 348,
+     "h": 1,
+     "fill": "#46605A"
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 700,
+     "w": 120,
+     "h": 26,
+     "text": "Recording",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#C0CCC6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 728,
+     "w": 348,
+     "h": 30,
+     "text": "Posted by Friday",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 876,
+     "w": 760,
+     "h": 80,
+     "text": "the recap is five minutes. hold your questions",
+     "family": "Schoolbell",
+     "size": 32,
+     "weight": 400,
+     "color": "#FFD24A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Definition",
+   "bg": "#37554D",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 76,
+     "w": 56,
+     "h": 3,
+     "fill": "#FFD24A"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The core concept",
+     "family": "Atkinson Hyperlegible",
+     "size": 20,
+     "weight": 600,
+     "color": "#FFD24A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "What we mean by a token",
+     "family": "Fira Sans",
+     "size": 60,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Meridian Institute  ·  Design systems, lecture 4",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 9",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 1728,
+     "h": 640,
+     "fill": "#3F5F57",
+     "radius": 6,
+     "stroke": "#516D65",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "button",
+     "x": 144,
+     "y": 282,
+     "w": 210,
+     "h": 36,
+     "label": "Definition 4.1",
+     "fill": "#FFD24A",
+     "color": "#1B2F2A",
+     "family": "Atkinson Hyperlegible",
+     "size": 15,
+     "weight": 700,
+     "upper": true,
+     "letterSpacing": 1,
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 338,
+     "w": 544,
+     "h": 170,
+     "text": "token",
+     "family": "Fira Sans",
+     "size": 150,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 156,
+     "y": 508,
+     "w": 405,
+     "h": 6,
+     "fill": "#FFD24A",
+     "rotation": -1,
+     "radius": 3,
+     "opacity": 0.9
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 538,
+     "w": 544,
+     "h": 48,
+     "text": "noun",
+     "family": "Schoolbell",
+     "size": 34,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 594,
+     "w": 504,
+     "h": 64,
+     "text": "Old English tacen: a sign, a mark that stands in for the thing itself.",
+     "family": "Atkinson Hyperlegible",
+     "size": 20,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 694,
+     "w": 544,
+     "h": 24,
+     "text": "See also",
+     "family": "Atkinson Hyperlegible",
+     "size": 16,
+     "weight": 600,
+     "color": "#FFD24A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 728,
+     "w": 504,
+     "h": 30,
+     "text": "Variable",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 758,
+     "w": 504,
+     "h": 30,
+     "text": "A name with no decision behind it.",
+     "family": "Atkinson Hyperlegible",
+     "size": 19,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 800,
+     "w": 504,
+     "h": 30,
+     "text": "Style",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 830,
+     "w": 504,
+     "h": 30,
+     "text": "A bundle of tokens with one use.",
+     "family": "Atkinson Hyperlegible",
+     "size": 19,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 752,
+     "y": 290,
+     "w": 1,
+     "h": 544,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "rect",
+     "x": 808,
+     "y": 294,
+     "w": 72,
+     "h": 4,
+     "fill": "#FFD24A"
+    },
+    {
+     "kind": "text",
+     "x": 808,
+     "y": 316,
+     "w": 960,
+     "h": 100,
+     "text": "A name for a value the system has decided on. Components use the name, never the value.",
+     "family": "Atkinson Hyperlegible",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.35
+    },
+    {
+     "kind": "rect",
+     "x": 808,
+     "y": 454,
+     "w": 960,
+     "h": 380,
+     "stroke": "#FFD24A",
+     "strokeWidth": 2,
+     "radius": 6
+    },
+    {
+     "kind": "rect",
+     "x": 832,
+     "y": 442,
+     "w": 236,
+     "h": 24,
+     "fill": "#3F5F57"
+    },
+    {
+     "kind": "text",
+     "x": 840,
+     "y": 441,
+     "w": 230,
+     "h": 26,
+     "text": "Worked example",
+     "family": "Atkinson Hyperlegible",
+     "size": 16,
+     "weight": 600,
+     "color": "#FFD24A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 840,
+     "y": 488,
+     "w": 300,
+     "h": 24,
+     "text": "Name",
+     "family": "Atkinson Hyperlegible",
+     "size": 15,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3,
+     "upper": true,
+     "letterSpacing": 3
+    },
+    {
+     "kind": "text",
+     "x": 1200,
+     "y": 488,
+     "w": 300,
+     "h": 24,
+     "text": "Value",
+     "family": "Atkinson Hyperlegible",
+     "size": 15,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3,
+     "upper": true,
+     "letterSpacing": 3
+    },
+    {
+     "kind": "text",
+     "x": 1400,
+     "y": 488,
+     "w": 300,
+     "h": 24,
+     "text": "Used by",
+     "family": "Atkinson Hyperlegible",
+     "size": 15,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3,
+     "upper": true,
+     "letterSpacing": 3
+    },
+    {
+     "kind": "rect",
+     "x": 840,
+     "y": 520,
+     "w": 896,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 840,
+     "y": 544,
+     "w": 340,
+     "h": 34,
+     "text": "colour.accent",
+     "family": "Atkinson Hyperlegible",
+     "size": 24,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1200,
+     "y": 542,
+     "w": 190,
+     "h": 36,
+     "text": "#FFD24A",
+     "family": "Fira Sans",
+     "size": 26,
+     "weight": 700,
+     "color": "#FFD24A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1400,
+     "y": 546,
+     "w": 336,
+     "h": 60,
+     "text": "The button, the link, the focus ring",
+     "family": "Atkinson Hyperlegible",
+     "size": 20,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 840,
+     "y": 620,
+     "w": 896,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 840,
+     "y": 640,
+     "w": 340,
+     "h": 34,
+     "text": "space.unit",
+     "family": "Atkinson Hyperlegible",
+     "size": 24,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1200,
+     "y": 638,
+     "w": 190,
+     "h": 36,
+     "text": "8 px",
+     "family": "Fira Sans",
+     "size": 26,
+     "weight": 700,
+     "color": "#FFD24A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1400,
+     "y": 642,
+     "w": 336,
+     "h": 60,
+     "text": "Every gap on every screen is a multiple of it",
+     "family": "Atkinson Hyperlegible",
+     "size": 20,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 840,
+     "y": 716,
+     "w": 896,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 840,
+     "y": 736,
+     "w": 340,
+     "h": 34,
+     "text": "type.body",
+     "family": "Atkinson Hyperlegible",
+     "size": 24,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1200,
+     "y": 734,
+     "w": 190,
+     "h": 36,
+     "text": "18 / 1.5",
+     "family": "Fira Sans",
+     "size": 26,
+     "weight": 700,
+     "color": "#FFD24A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1400,
+     "y": 738,
+     "w": 336,
+     "h": 60,
+     "text": "Paragraphs, labels, this slide",
+     "family": "Atkinson Hyperlegible",
+     "size": 20,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 916,
+     "w": 760,
+     "h": 40,
+     "text": "say it back in your own words first",
+     "family": "Schoolbell",
+     "size": 32,
+     "weight": 400,
+     "color": "#FFD24A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Text and picture",
+   "bg": "#37554D",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 76,
+     "w": 56,
+     "h": 3,
+     "fill": "#FFD24A"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Holding the idea",
+     "family": "Atkinson Hyperlegible",
+     "size": 20,
+     "weight": 600,
+     "color": "#FFD24A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 960,
+     "h": 74,
+     "text": "A token is a named decision",
+     "family": "Fira Sans",
+     "size": 60,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Meridian Institute  ·  Design systems, lecture 4",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 9",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 270,
+     "w": 34,
+     "h": 34,
+     "fill": "#627455"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 270,
+     "w": 34,
+     "h": 34,
+     "text": "1",
+     "family": "Fira Sans",
+     "size": 17,
+     "weight": 700,
+     "color": "#FFD24A",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 266,
+     "w": 840,
+     "h": 44,
+     "text": "The intuition",
+     "family": "Fira Sans",
+     "size": 32,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 318,
+     "w": 840,
+     "h": 70,
+     "text": "When the value changes, every use changes with it. When the name is missing, every use is a separate decision waiting to drift.",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 448,
+     "w": 34,
+     "h": 34,
+     "fill": "#627455"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 448,
+     "w": 34,
+     "h": 34,
+     "text": "2",
+     "family": "Fira Sans",
+     "size": 17,
+     "weight": 700,
+     "color": "#FFD24A",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 444,
+     "w": 840,
+     "h": 44,
+     "text": "The test",
+     "family": "Fira Sans",
+     "size": 32,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 496,
+     "w": 840,
+     "h": 70,
+     "text": "If two designers would pick a different value, it deserves a token. If everyone would pick the same one, it does not.",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 626,
+     "w": 34,
+     "h": 34,
+     "fill": "#627455"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 626,
+     "w": 34,
+     "h": 34,
+     "text": "3",
+     "family": "Fira Sans",
+     "size": 17,
+     "weight": 700,
+     "color": "#FFD24A",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 622,
+     "w": 840,
+     "h": 44,
+     "text": "The boundary",
+     "family": "Fira Sans",
+     "size": 32,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 674,
+     "w": 840,
+     "h": 70,
+     "text": "A token is not a component and not a style. It is the one number or colour underneath both, named for why.",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1080,
+     "y": 196,
+     "w": 744,
+     "h": 690,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#577979",
+        0
+       ],
+       [
+        "#3F5F57",
+        1
+       ]
+      ]
+     },
+     "radius": 9
+    },
+    {
+     "kind": "ellipse",
+     "x": 1202,
+     "y": 291,
+     "w": 500,
+     "h": 500,
+     "fill": "#FFD24A",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1252,
+     "y": 341,
+     "w": 400,
+     "h": 400,
+     "fill": "#FFD24A",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 916,
+     "w": 760,
+     "h": 40,
+     "text": "the test is the part everyone forgets",
+     "family": "Schoolbell",
+     "size": 32,
+     "weight": 400,
+     "color": "#FFD24A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day15-color-tool",
+     "x": 1160,
+     "y": 270,
+     "w": 584,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Section",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#2E4A42",
+      0
+     ],
+     [
+      "#1B2F2A",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 40,
+     "y": 40,
+     "w": 1840,
+     "h": 1000,
+     "stroke": "#FFD24A",
+     "strokeWidth": 1.5,
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1805,
+     "y": 388,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFD24A",
+     "opacity": 0.6499999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1827,
+     "y": 428,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFD24A",
+     "opacity": 0.52
+    },
+    {
+     "kind": "ellipse",
+     "x": 1816,
+     "y": 674,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFD24A",
+     "opacity": 0.51
+    },
+    {
+     "kind": "ellipse",
+     "x": 1626,
+     "y": 74,
+     "w": 7,
+     "h": 7,
+     "fill": "#FFD24A",
+     "opacity": 0.75
+    },
+    {
+     "kind": "ellipse",
+     "x": 1750,
+     "y": 198,
+     "w": 8,
+     "h": 8,
+     "fill": "#FFD24A",
+     "opacity": 0.45999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1733,
+     "y": 593,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFD24A",
+     "opacity": 0.71
+    },
+    {
+     "kind": "ellipse",
+     "x": 1339,
+     "y": 678,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFD24A",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1481,
+     "y": 506,
+     "w": 8,
+     "h": 8,
+     "fill": "#FFD24A",
+     "opacity": 0.48
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 330,
+     "w": 120,
+     "h": 4,
+     "fill": "#FFD24A"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 358,
+     "w": 1100,
+     "h": 212,
+     "text": "Twelve values,\none accent",
+     "family": "Fira Sans",
+     "size": 96,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 590,
+     "w": 900,
+     "h": 90,
+     "text": "A product with a light and a dark theme. The accent must read on both, and every value gets a name.",
+     "family": "Atkinson Hyperlegible",
+     "size": 28,
+     "weight": 400,
+     "color": "#C0CCC6",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1240,
+     "y": 280,
+     "w": 560,
+     "h": 560,
+     "fill": "#FFD24A",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1296,
+     "y": 336,
+     "w": 448,
+     "h": 448,
+     "fill": "#FFD24A",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 1000,
+     "h": 50,
+     "text": "Now, on the board",
+     "family": "Schoolbell",
+     "size": 40,
+     "weight": 400,
+     "color": "#FFD24A",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#46605A"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Meridian Institute  ·  Design systems, lecture 4",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#C0CCC6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 9",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#C0CCC6",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 839,
+     "w": 720,
+     "h": 85,
+     "text": "count the values with me. there are twelve",
+     "family": "Schoolbell",
+     "size": 34,
+     "weight": 400,
+     "color": "#FFD24A",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day36-abacus",
+     "x": 1300,
+     "y": 340,
+     "w": 440,
+     "h": 440,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Process",
+   "bg": "#37554D",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 76,
+     "w": 56,
+     "h": 3,
+     "fill": "#FFD24A"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Worked example",
+     "family": "Atkinson Hyperlegible",
+     "size": 20,
+     "weight": 600,
+     "color": "#FFD24A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "One real case, stepped through",
+     "family": "Fira Sans",
+     "size": 60,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Meridian Institute  ·  Design systems, lecture 4",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 9",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "fill": "#FFD24A"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "text": "1",
+     "family": "Fira Sans",
+     "size": 34,
+     "weight": 700,
+     "color": "#1B2F2A",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 200,
+     "y": 315,
+     "w": 322,
+     "h": 2,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 404,
+     "w": 402,
+     "h": 44,
+     "text": "The brief",
+     "family": "Fira Sans",
+     "size": 32,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 458,
+     "w": 378,
+     "h": 150,
+     "text": "A product with a light and a dark theme, and one accent that must read on both.",
+     "family": "Atkinson Hyperlegible",
+     "size": 21,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 538,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "fill": "#2E4A42"
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "text": "2",
+     "family": "Fira Sans",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 642,
+     "y": 315,
+     "w": 322,
+     "h": 2,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 404,
+     "w": 402,
+     "h": 44,
+     "text": "Name the decisions",
+     "family": "Fira Sans",
+     "size": 32,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 538,
+     "y": 458,
+     "w": 378,
+     "h": 150,
+     "text": "Ground, surface, ink, muted ink, accent, line. Six names, twelve values.",
+     "family": "Atkinson Hyperlegible",
+     "size": 21,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 980,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "fill": "#2E4A42"
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "text": "3",
+     "family": "Fira Sans",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 1084,
+     "y": 315,
+     "w": 322,
+     "h": 2,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 404,
+     "w": 402,
+     "h": 44,
+     "text": "Bind the components",
+     "family": "Fira Sans",
+     "size": 32,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 980,
+     "y": 458,
+     "w": 378,
+     "h": 150,
+     "text": "The button uses accent and ink-on-accent. It never mentions a hex.",
+     "family": "Atkinson Hyperlegible",
+     "size": 21,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1422,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "fill": "#2E4A42"
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 272,
+     "w": 88,
+     "h": 88,
+     "text": "4",
+     "family": "Fira Sans",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 404,
+     "w": 402,
+     "h": 44,
+     "text": "Flip the theme",
+     "family": "Fira Sans",
+     "size": 32,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1422,
+     "y": 458,
+     "w": 378,
+     "h": 150,
+     "text": "Twelve values change, zero components change. That is the whole point.",
+     "family": "Atkinson Hyperlegible",
+     "size": 21,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 916,
+     "w": 760,
+     "h": 40,
+     "text": "step four is the whole lecture",
+     "family": "Schoolbell",
+     "size": 32,
+     "weight": 400,
+     "color": "#FFD24A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#37554D",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 76,
+     "w": 56,
+     "h": 3,
+     "fill": "#FFD24A"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Common mistakes",
+     "family": "Atkinson Hyperlegible",
+     "size": 20,
+     "weight": 600,
+     "color": "#FFD24A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "Where students usually stumble",
+     "family": "Fira Sans",
+     "size": 60,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Meridian Institute  ·  Design systems, lecture 4",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 9",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#3F5F57",
+     "radius": 6,
+     "stroke": "#516D65",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#FFD24A",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#657654"
+    },
+    {
+     "kind": "icon",
+     "icon": "tag",
+     "x": 156,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#FFD24A"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "Naming the value, not the decision",
+     "family": "Fira Sans",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "'blue-500' is a value with a name. 'accent' is a decision. The first breaks the moment the brand turns green.",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#3F5F57",
+     "radius": 6,
+     "stroke": "#516D65",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#AED6F1",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#557776"
+    },
+    {
+     "kind": "icon",
+     "icon": "alert-triangle",
+     "x": 740,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#AED6F1"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "Tokens for everything",
+     "family": "Fira Sans",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "Forty spacing tokens is a ruler, not a system. Six is a decision.",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#3F5F57",
+     "radius": 6,
+     "stroke": "#516D65",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#FFD24A",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#657654"
+    },
+    {
+     "kind": "icon",
+     "icon": "palette",
+     "x": 1324,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#FFD24A"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "Skipping the on-colours",
+     "family": "Fira Sans",
+     "size": 34,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "Every ground needs an ink that reads on it. The dark theme is where this is discovered, expensively.",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 400,
+     "color": "#CDD6D0",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 916,
+     "w": 760,
+     "h": 40,
+     "text": "I have made all three of these. Twice.",
+     "family": "Schoolbell",
+     "size": 32,
+     "weight": 400,
+     "color": "#FFD24A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Statement",
+   "bg": "#37554D",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 76,
+     "w": 56,
+     "h": 3,
+     "fill": "#FFD24A"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#516D65"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Meridian Institute  ·  Design systems, lecture 4",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "08 / 9",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 52,
+     "text": "Lecture four",
+     "family": "Schoolbell",
+     "size": 40,
+     "weight": 400,
+     "color": "#FFD24A",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 302,
+     "w": 120,
+     "h": 6,
+     "fill": "#FFD24A"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 348,
+     "w": 1560,
+     "h": 265,
+     "text": "Name the decision, not the value. Everything else in a design system follows from that.",
+     "family": "Fira Sans",
+     "size": 76,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 653,
+     "w": 1000,
+     "h": 32,
+     "text": "Lecture four, the one line to write down",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#CDD6D0",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 916,
+     "w": 760,
+     "h": 40,
+     "text": "if you write one thing down, this is it",
+     "family": "Schoolbell",
+     "size": 32,
+     "weight": 400,
+     "color": "#FFD24A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#2E4A42",
+      0
+     ],
+     [
+      "#1B2F2A",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 40,
+     "y": 40,
+     "w": 1840,
+     "h": 1000,
+     "stroke": "#FFD24A",
+     "strokeWidth": 1.5,
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1805,
+     "y": 388,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFD24A",
+     "opacity": 0.6499999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1827,
+     "y": 428,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFD24A",
+     "opacity": 0.52
+    },
+    {
+     "kind": "ellipse",
+     "x": 1816,
+     "y": 674,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFD24A",
+     "opacity": 0.51
+    },
+    {
+     "kind": "ellipse",
+     "x": 1626,
+     "y": 74,
+     "w": 7,
+     "h": 7,
+     "fill": "#FFD24A",
+     "opacity": 0.75
+    },
+    {
+     "kind": "ellipse",
+     "x": 1750,
+     "y": 198,
+     "w": 8,
+     "h": 8,
+     "fill": "#FFD24A",
+     "opacity": 0.45999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1733,
+     "y": 593,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFD24A",
+     "opacity": 0.71
+    },
+    {
+     "kind": "ellipse",
+     "x": 1339,
+     "y": 678,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFD24A",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1481,
+     "y": 506,
+     "w": 8,
+     "h": 8,
+     "fill": "#FFD24A",
+     "opacity": 0.48
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#FFD24A",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#FFD24A",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#FFD24A",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Meridian Institute",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 52,
+     "text": "Until next Thursday",
+     "family": "Schoolbell",
+     "size": 40,
+     "weight": 400,
+     "color": "#FFD24A",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 128,
+     "text": "Before next session",
+     "family": "Fira Sans",
+     "size": 107,
+     "weight": 700,
+     "color": "#F4F1E8",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 462,
+     "w": 940,
+     "h": 120,
+     "text": "Take any product you use daily and write its six tokens from observation alone. Bring the one you could not name.",
+     "family": "Atkinson Hyperlegible",
+     "size": 28,
+     "weight": 400,
+     "color": "#C0CCC6",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "world",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#FFD24A"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "institute.example/design-systems",
+     "family": "Atkinson Hyperlegible",
+     "size": 24,
+     "weight": 500,
+     "color": "#F4F1E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#FFD24A"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "praman@institute.example",
+     "family": "Atkinson Hyperlegible",
+     "size": 24,
+     "weight": 500,
+     "color": "#F4F1E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "calendar",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#FFD24A"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "Office hours: Wednesday, 14:00",
+     "family": "Atkinson Hyperlegible",
+     "size": 24,
+     "weight": 500,
+     "color": "#F4F1E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Open the exercise",
+     "fill": "#FFD24A",
+     "color": "#1B2F2A",
+     "family": "Atkinson Hyperlegible",
+     "size": 22,
+     "weight": 700,
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "09 / 9",
+     "family": "Atkinson Hyperlegible",
+     "size": 18,
+     "weight": 500,
+     "color": "#C0CCC6",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 839,
+     "w": 720,
+     "h": 85,
+     "text": "one product, six names, no peeking at the code",
+     "family": "Schoolbell",
+     "size": 34,
+     "weight": 400,
+     "color": "#FFD24A",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day63-school-bag",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n10",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n12",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n13",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n14",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p2-n7-label",
+   "kind": "text",
+   "label": "Tag",
+   "hint": "Definition number"
+  },
+  {
+   "node": "p2-n8",
+   "kind": "text",
+   "label": "Term",
+   "hint": "One word, the thing being defined"
+  },
+  {
+   "node": "p2-n11",
+   "kind": "text",
+   "label": "Origin",
+   "hint": "Where the word comes from"
+  },
+  {
+   "node": "p2-n19",
+   "kind": "text",
+   "label": "Definition",
+   "hint": "One sentence, no jargon"
+  },
+  {
+   "node": "p2-n27",
+   "kind": "text",
+   "label": "Token 1",
+   "hint": "The token's name"
+  },
+  {
+   "node": "p2-n31",
+   "kind": "text",
+   "label": "Token 2",
+   "hint": "The token's name"
+  },
+  {
+   "node": "p2-n35",
+   "kind": "text",
+   "label": "Token 3",
+   "hint": "The token's name"
+  },
+  {
+   "node": "p8-n17",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n19",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n21",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Lecture",
-  "theme": "clear, paced for learning",
-  "pages": [
-   {
-    "title": "Today's topic",
-    "points": [
-     "What you will be able to do by the end"
-    ],
-    "visualRole": "cover"
-   },
-   {
-    "title": "Where we left off",
-    "points": [
-     "The three ideas from last time"
-    ],
-    "visualRole": "agenda"
-   },
-   {
-    "title": "The core concept",
-    "points": [
-     "The definition, in plain words",
-     "The intuition behind it"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Worked example",
-    "points": [
-     "Step through one real case together"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Common mistakes",
-    "points": [
-     "Where students usually stumble"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Practice and next steps",
-    "points": [
-     "What to try before next session"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 44
 }

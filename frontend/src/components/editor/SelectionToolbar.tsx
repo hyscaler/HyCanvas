@@ -3,7 +3,8 @@
 // delete, lock, and z-order without going to the side panel. Rendered in screen
 // space alongside the Gizmo; it owns no transform logic, only quick actions.
 
-import { CopyPlus, Trash2, Lock, LockOpen, BringToFront, SendToBack, Group as GroupIcon, Ungroup } from "lucide-react";
+import { useState } from "react";
+import { CopyPlus, Trash2, Lock, LockOpen, BringToFront, SendToBack, Group as GroupIcon, Ungroup, ArrowUp, ArrowDown, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, Crosshair } from "lucide-react";
 import { unionAABB, locate } from "@hc/editor";
 import { useEditor } from "@/store/editor";
 import { usePresence } from "@/store/presence";
@@ -35,6 +36,13 @@ export function SelectionToolbar({ api }: { api: CanvasApi }) {
   const presenting = useEditor((s) => s.presenting);
   // Re-render when access changes so viewers don't get edit actions.
   usePresence((s) => s.accessMode);
+  // The align row, opened from the bar. It remembers WHICH selection it was
+  // opened for, so a new selection starts with it closed, with no effect and
+  // no state written during render.
+  const [alignOpenFor, setAlignOpenFor] = useState<string | null>(null);
+  const selectionKey = selection.join("|");
+  const alignOpen = alignOpenFor === selectionKey;
+  const setAlignOpen = (open: boolean) => setAlignOpenFor(open ? selectionKey : null);
 
   if (!selection.length || cropping || presenting) return null;
   if (!usePresence.getState().canEdit() || useEditor.getState().readonlyPreview()) return null;
@@ -82,10 +90,44 @@ export function SelectionToolbar({ api }: { api: CanvasApi }) {
         onClick={() => st.setLockedSel(!allLocked)}
       />
       <span className="mx-0.5 h-5 w-px bg-neutral-200" />
+      {/* Alignment, to the page for one element and to the selection for
+          many, opened here where the element is rather than in a collapsed
+          panel section. */}
+      <button
+        type="button"
+        title={tr("editor.align")}
+        aria-label={tr("editor.align")}
+        aria-expanded={alignOpen}
+        onClick={() => setAlignOpen(!alignOpen)}
+        className={`grid h-8 w-8 place-items-center rounded-lg transition ${alignOpen ? "bg-brand-50 text-brand-ink" : "text-neutral-600 hover:bg-neutral-100 hover:text-brand-ink"}`}
+      >
+        <AlignCenterVertical size={16} />
+      </button>
+      <span className="mx-0.5 h-5 w-px bg-neutral-200" />
       <ToolBtn icon={BringToFront} label={tr("editor.bring_to_front")} onClick={() => st.orderSelection("front")} />
+      <ToolBtn icon={ArrowUp} label={tr("editor.bring_forward")} onClick={() => st.orderSelection("forward")} />
+      <ToolBtn icon={ArrowDown} label={tr("editor.send_backward")} onClick={() => st.orderSelection("backward")} />
       <ToolBtn icon={SendToBack} label={tr("editor.send_to_back")} onClick={() => st.orderSelection("back")} />
       <span className="mx-0.5 h-5 w-px bg-neutral-200" />
       <ToolBtn icon={Trash2} label={tr("editor.delete")} danger onClick={() => st.deleteSelection()} />
+      {alignOpen && (
+        <div
+          role="group"
+          aria-label={selection.length > 1 ? tr("editor.align_to_selection") : tr("editor.align_to_page")}
+          className="absolute left-1/2 top-full mt-1.5 flex -translate-x-1/2 items-center gap-0.5 rounded-xl border border-neutral-200 bg-surface p-1 shadow-lg ring-1 ring-black/5"
+        >
+          <span className="whitespace-nowrap px-1.5 text-[11px] text-neutral-500">{selection.length > 1 ? tr("editor.align_to_selection") : tr("editor.align_to_page")}</span>
+          <ToolBtn icon={AlignStartVertical} label={tr("editor.align_left")} onClick={() => st.alignSelection("left")} />
+          <ToolBtn icon={AlignCenterVertical} label={tr("editor.align_center")} onClick={() => st.alignSelection("hcenter")} />
+          <ToolBtn icon={AlignEndVertical} label={tr("editor.align_right")} onClick={() => st.alignSelection("right")} />
+          <span className="mx-0.5 h-5 w-px bg-neutral-200" />
+          <ToolBtn icon={AlignStartHorizontal} label={tr("editor.align_top")} onClick={() => st.alignSelection("top")} />
+          <ToolBtn icon={AlignCenterHorizontal} label={tr("editor.align_middle")} onClick={() => st.alignSelection("vmiddle")} />
+          <ToolBtn icon={AlignEndHorizontal} label={tr("editor.align_bottom")} onClick={() => st.alignSelection("bottom")} />
+          <span className="mx-0.5 h-5 w-px bg-neutral-200" />
+          <ToolBtn icon={Crosshair} label={tr("editor.center_on_page")} onClick={() => st.alignSelection("center")} />
+        </div>
+      )}
     </div>
   );
 }

@@ -25,7 +25,7 @@ const tools = (): { id: Tool; icon: typeof Shapes; label: string }[] => [
   { id: "layers", icon: Layers, label: tr("editor.layers") },
 ];
 
-export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = false, kind = "design", openTool }: { workspaceId: string | null; overlay?: boolean; defaultCollapsed?: boolean; kind?: "design" | "whiteboard"; openTool?: Tool }) {
+export function ToolRail({ workspaceId, designId = null, overlay = false, defaultCollapsed = false, kind = "design", openTool }: { workspaceId: string | null; designId?: string | null; overlay?: boolean; defaultCollapsed?: boolean; kind?: "design" | "whiteboard"; openTool?: Tool }) {
   // null = panel collapsed (just the icon rail shows). Clicking the active tab
   // toggles it closed. Boards open with the panel collapsed for a canvas-first
   // start; the icon rail stays so any tool is one click away. openTool lets the
@@ -134,7 +134,7 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
           the response of a message already sent. */}
       {aiUsed && (
         <div className={active === "ai" ? (overlay ? "absolute start-full top-0 z-30 h-full shadow-xl" : "contents") : "hidden"}>
-          <AiPanel workspaceId={workspaceId} />
+          <AiPanel workspaceId={workspaceId} designId={designId} />
         </div>
       )}
     </aside>

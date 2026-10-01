@@ -66,6 +66,9 @@ interface Op {
   text?: string;
   /** Recorded x for fillText, for asserting alignment. */
   x?: number;
+  /** Recorded source sample size for the nine-argument drawImage. */
+  sw?: number;
+  sh?: number;
 }
 const gradientStub = { addColorStop() {} };
 class RecordingCtx implements CanvasLike {
@@ -103,8 +106,13 @@ class RecordingCtx implements CanvasLike {
   createConicGradient() {
     return gradientStub;
   }
-  drawImage() {
+  drawImage(...args: unknown[]) {
     this.rec("drawImage");
+    if (args.length === 9) {
+      const op = this.ops[this.ops.length - 1];
+      op.sw = args[3] as number;
+      op.sh = args[4] as number;
+    }
   }
   save() {
     this.saves++;
@@ -866,6 +874,21 @@ describe("asset/font readiness (FR-11)", () => {
     const ctx = new RecordingCtx();
     renderScene(createScene(imageDesign()), ctx, defaultViewport(800, 600), { assets });
     expect(ctx.ops.some((o) => o.op === "drawImage")).toBe(true);
+  });
+
+  it("samples the whole picture when the node records no natural size", () => {
+    // A composer or an import writes zeros for the natural size; the loaded
+    // picture's own dimensions stand in, so the sample is not one pixel.
+    const assets = new FakeAssets();
+    assets.statuses.set("asset-1", "ready");
+    assets.images.set("asset-1", { naturalWidth: 200, naturalHeight: 100 });
+    const d = imageDesign();
+    (d.pages[0].children[0] as ImageNode).fit = "contain"; // the whole picture, letterboxed
+    const ctx = new RecordingCtx();
+    renderScene(createScene(d), ctx, defaultViewport(800, 600), { assets });
+    const draw = ctx.ops.find((o) => o.op === "drawImage");
+    expect(draw?.sw).toBe(200);
+    expect(draw?.sh).toBe(100);
   });
 
   it("shows a neutral placeholder while loading and a missing placeholder when dangling", () => {

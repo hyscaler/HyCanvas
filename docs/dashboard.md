@@ -25,7 +25,7 @@ Every design lives in exactly one workspace. You get a personal workspace on sig
 
 ## Templates
 
-The **Templates** section browses the library by category: business, education, events, food, marketing, personal, presentations, print, quotes, and social. Picking a template creates a new design from it in the current workspace. The same library is searchable from the top bar and reachable from the editor. Hovering a card offers a `.hyc` download of the template file, and **Import template** adds a `.hyc` file as a workspace template, so templates travel between instances as plain files.
+The **Templates** section browses the library by category: business, education, events, food, marketing, personal, presentations, print, quotes, and social. Picking a template creates a new design from it in the current workspace. The presentations category leads with six presentation kits, sixteen-slide systems that carry every layout a deck needs in one style; a card's slide count marks a kit, and in the editor the same kit offers its slides one at a time. The same library is searchable from the top bar and reachable from the editor. Hovering a card offers a `.hyc` download of the template file, and **Import template** adds a `.hyc` file as a workspace template, so templates travel between instances as plain files.
 
 ![The template library](images/templates.png)
 

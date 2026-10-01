@@ -1,0 +1,51 @@
+{
+  "name": "HyCanvas",
+  "palettes": [
+    {
+      "id": "p-hycanvas-brand",
+      "name": "Brand",
+      "colors": [
+        { "id": "s-plum", "role": "primary", "name": "Plum", "hex": "#9B2C72" },
+        { "id": "s-magenta", "role": "accent", "name": "Magenta", "hex": "#D6409A" },
+        { "id": "s-deep-plum", "role": "deep", "name": "Deep plum", "hex": "#3E1030" },
+        { "id": "s-blush", "role": "tint", "name": "Blush", "hex": "#F6DDEE" },
+        { "id": "s-ink", "role": "ink", "name": "Ink", "hex": "#160A12" },
+        { "id": "s-paper", "role": "paper", "name": "Paper", "hex": "#FBF7FA" }
+      ]
+    },
+    {
+      "id": "p-hycanvas-gradient",
+      "name": "Gradient",
+      "colors": [
+        { "id": "s-wine", "role": "gradient start", "name": "Wine", "hex": "#6D1E50" },
+        { "id": "s-orchid", "role": "gradient end", "name": "Orchid", "hex": "#C84B9A" }
+      ]
+    }
+  ],
+  "fonts": [
+    { "id": "f-heading", "role": "heading", "fontFamily": "Plus Jakarta Sans", "defaultStyle": { "weight": 800 } },
+    { "id": "f-body", "role": "body", "fontFamily": "Plus Jakarta Sans", "defaultStyle": { "weight": 500 } }
+  ],
+  "logos": [
+    { "id": "l-logo", "label": "HyCanvas logo", "file": "hycanvas-logo-ink.png", "dark": "hycanvas-logo-paper.png", "minSizePx": 96, "clearSpaceRatio": 0.25 },
+    { "id": "l-mark", "label": "HyCanvas mark", "file": "hycanvas-mark-ink.png", "dark": "hycanvas-mark-paper.png", "minSizePx": 24, "clearSpaceRatio": 0.25 },
+    { "id": "l-tile", "label": "HyCanvas app tile", "file": "hycanvas-tile.png", "minSizePx": 24, "clearSpaceRatio": 0.2 },
+    { "id": "l-logo-color", "label": "HyCanvas logo in colour", "file": "hycanvas-logo-color.png", "minSizePx": 96, "clearSpaceRatio": 0.25 }
+  ],
+  "voice": {
+    "tone": ["confident", "plain-spoken", "warm", "specific"],
+    "doSay": [
+      "lead with what the reader can make",
+      "say that everything is free, with no tiers, paywalls or watermarks",
+      "mention self-hosting and bring-your-own AI keys where they matter",
+      "keep sentences short and concrete"
+    ],
+    "dontSay": [
+      "compare HyCanvas with other design tools",
+      "use buzzwords such as seamless, unlock, supercharge or game-changing",
+      "call anything enterprise-grade, best-in-class or world-class",
+      "use long dashes"
+    ],
+    "sampleCopy": "Design anything, own everything. Brief in, beautiful deck out: tell HyCanvas what you need and it composes a finished, on-brand presentation you can edit, export and share. Free, open and self-hostable."
+  }
+}

@@ -13,8 +13,8 @@
   "kanban"
  ],
  "styleTags": [
-  "editorial",
-  "clean"
+  "minimal",
+  "modern"
  ],
  "size": [
   1920,
@@ -23,707 +23,1543 @@
  "typography": [
   {
    "role": "heading",
-   "family": "Manrope",
+   "family": "Overpass",
    "weight": 800
   },
   {
    "role": "body",
-   "family": "Inter",
+   "family": "Public Sans",
    "weight": 400
-  }
- ],
- "created": "2026-07-10T00:00:00.000Z",
- "fillable": [
-  {
-   "node": "p0-n4",
-   "kind": "text",
-   "label": "Headline",
-   "hint": "Your roadmap title with the product name, three short lines"
   },
   {
-   "node": "p0-n5",
-   "kind": "text",
-   "label": "Intro",
-   "hint": "One or two sentences framing how to read the roadmap"
+   "role": "accent",
+   "family": "Permanent Marker",
+   "weight": 400
   },
   {
-   "node": "p0-n6-label",
-   "kind": "text",
-   "label": "Quarter badge",
-   "hint": "The quarter this view covers, e.g. Q3 2026"
-  },
-  {
-   "node": "p0-n17",
-   "kind": "text",
-   "label": "Top Now item",
-   "hint": "Your headline in-flight initiative, 2-3 words"
+   "role": "label",
+   "family": "Overpass Mono",
+   "weight": 500
   }
  ],
  "pages": [
   {
    "name": "Roadmap",
-   "bg": "#edf5f9",
+   "bg": "#FFFFFF",
    "nodes": [
     {
-     "kind": "rect",
-     "x": 0,
-     "y": 0,
-     "w": 620,
-     "h": 1080,
-     "fill": "#0d2c40"
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
     },
     {
-     "kind": "rect",
-     "x": 617,
-     "y": 0,
-     "w": 6,
-     "h": 1080,
-     "fill": "#f4a54e"
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
     },
     {
-     "kind": "rect",
-     "x": 110,
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
      "y": 120,
-     "w": 56,
-     "h": 8,
-     "fill": "#f4a54e",
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#111820",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Product roadmap",
+     "family": "Overpass Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#0A4DB2",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1000,
+     "h": 74,
+     "text": "The road ahead for Atlas",
+     "family": "Overpass",
+     "size": 60,
+     "weight": 800,
+     "color": "#111820",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D6DCE3"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Atlas  ·  Product planning, Q3 2026",
+     "family": "Overpass Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5563",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1480,
+     "y": 56,
+     "w": 344,
+     "h": 168,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#c9d9f1",
+        0
+       ],
+       [
+        "#F3F5F8",
+        1
+       ]
+      ]
+     },
+     "radius": 10
+    },
+    {
+     "kind": "ellipse",
+     "x": 1577,
+     "y": 65,
+     "w": 150,
+     "h": 150,
+     "fill": "#0C5BD1",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1592,
+     "y": 80,
+     "w": 120,
+     "h": 120,
+     "fill": "#0C5BD1",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1643,
+     "y": 47,
+     "w": 18,
+     "h": 18,
+     "fill": "#F5A300"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1649,
+     "y": 53,
+     "w": 6,
+     "h": 6,
+     "fill": "#111820",
+     "opacity": 0.55
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 172,
+     "h": 56,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#0E4FBF",
+        0
+       ],
+       [
+        "#072E7A",
+        1
+       ]
+      ]
+     },
+     "radius": 10
+    },
+    {
+     "kind": "text",
+     "x": 110,
+     "y": 242,
+     "w": 144,
+     "h": 56,
+     "text": "Now",
+     "family": "Overpass",
+     "size": 26,
+     "weight": 800,
+     "color": "#FFFFFF",
+     "lineHeight": 1,
+     "upper": true,
+     "letterSpacing": 3,
+     "align": "center",
+     "vAlign": "middle"
+    },
+    {
+     "kind": "text",
+     "x": 288,
+     "y": 248,
+     "w": 368,
+     "h": 18,
+     "text": "Shipping this quarter",
+     "family": "Overpass Mono",
+     "size": 13,
+     "weight": 600,
+     "color": "#4B5563",
+     "upper": true,
+     "letterSpacing": 3,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 288,
+     "y": 270,
+     "w": 368,
+     "h": 24,
+     "text": "Jul to Sep 2026",
+     "family": "Overpass Mono",
+     "size": 17,
+     "weight": 600,
+     "color": "#111820",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 124,
+     "y": 298,
+     "w": 4,
+     "h": 36,
+     "fill": "#111820"
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 242,
+     "w": 172,
+     "h": 56,
+     "fill": "#FFFFFF",
+     "radius": 10,
+     "stroke": "#111820",
+     "strokeWidth": 2.5
+    },
+    {
+     "kind": "text",
+     "x": 694,
+     "y": 242,
+     "w": 144,
+     "h": 56,
+     "text": "Next",
+     "family": "Overpass",
+     "size": 26,
+     "weight": 800,
+     "color": "#111820",
+     "lineHeight": 1,
+     "upper": true,
+     "letterSpacing": 3,
+     "align": "center",
+     "vAlign": "middle"
+    },
+    {
+     "kind": "text",
+     "x": 872,
+     "y": 248,
+     "w": 368,
+     "h": 18,
+     "text": "In design",
+     "family": "Overpass Mono",
+     "size": 13,
+     "weight": 600,
+     "color": "#4B5563",
+     "upper": true,
+     "letterSpacing": 3,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 872,
+     "y": 270,
+     "w": 368,
+     "h": 24,
+     "text": "Oct to Dec 2026",
+     "family": "Overpass Mono",
+     "size": 17,
+     "weight": 600,
+     "color": "#111820",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 708,
+     "y": 298,
+     "w": 4,
+     "h": 36,
+     "fill": "#111820"
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 242,
+     "w": 172,
+     "h": 56,
+     "fill": "#F5A300",
+     "radius": 10
+    },
+    {
+     "kind": "text",
+     "x": 1278,
+     "y": 242,
+     "w": 144,
+     "h": 56,
+     "text": "Later",
+     "family": "Overpass",
+     "size": 26,
+     "weight": 800,
+     "color": "#111820",
+     "lineHeight": 1,
+     "upper": true,
+     "letterSpacing": 3,
+     "align": "center",
+     "vAlign": "middle"
+    },
+    {
+     "kind": "text",
+     "x": 1456,
+     "y": 248,
+     "w": 368,
+     "h": 18,
+     "text": "Exploring",
+     "family": "Overpass Mono",
+     "size": 13,
+     "weight": 600,
+     "color": "#4B5563",
+     "upper": true,
+     "letterSpacing": 3,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1456,
+     "y": 270,
+     "w": 368,
+     "h": 24,
+     "text": "2027 and beyond",
+     "family": "Overpass Mono",
+     "size": 17,
+     "weight": 600,
+     "color": "#111820",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 1292,
+     "y": 298,
+     "w": 4,
+     "h": 36,
+     "fill": "#111820"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 334,
+     "w": 1680,
+     "h": 56,
+     "fill": "#111820",
      "radius": 4
     },
     {
-     "kind": "text",
-     "x": 110,
-     "y": 150,
-     "w": 420,
-     "h": 28,
-     "family": "Inter",
-     "size": 20,
-     "weight": 700,
-     "color": "#f4a54e",
-     "letterSpacing": 4,
-     "upper": true,
-     "lineHeight": 1.2,
-     "text": "Product roadmap"
+     "kind": "rect",
+     "x": 120,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 172,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 224,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 276,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 328,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 380,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 432,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 484,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 536,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 588,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 640,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 692,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 744,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 796,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 848,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 900,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 952,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 1004,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 1056,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 1108,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 1160,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 1212,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 1316,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 1368,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 1420,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 1472,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 1524,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 1576,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 1628,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 1680,
+     "y": 360,
+     "w": 30,
+     "h": 4,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       1770,
+       320
+      ],
+      [
+       1824,
+       362
+      ],
+      [
+       1770,
+       404
+      ]
+     ],
+     "fill": "#111820",
+     "closed": true,
+     "join": "round"
+    },
+    {
+     "kind": "ellipse",
+     "x": 114,
+     "y": 350,
+     "w": 24,
+     "h": 24,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 120,
+     "y": 356,
+     "w": 12,
+     "h": 12,
+     "fill": "#0C5BD1"
+    },
+    {
+     "kind": "ellipse",
+     "x": 698,
+     "y": 350,
+     "w": 24,
+     "h": 24,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 704,
+     "y": 356,
+     "w": 12,
+     "h": 12,
+     "fill": "#111820"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1282,
+     "y": 350,
+     "w": 24,
+     "h": 24,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1288,
+     "y": 356,
+     "w": 12,
+     "h": 12,
+     "fill": "#F5A300"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 416,
+     "w": 560,
+     "h": 132,
+     "fill": "#F3F5F8",
+     "radius": 6,
+     "stroke": "#D6DCE3",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 114,
+     "y": 436,
+     "w": 6,
+     "h": 92,
+     "fill": "#0C5BD1",
+     "radius": 3
     },
     {
      "kind": "text",
-     "x": 110,
-     "y": 204,
-     "w": 450,
-     "h": 246,
-     "family": "Manrope",
-     "size": 76,
-     "weight": 800,
-     "color": "#f2f8fc",
-     "lineHeight": 1.06,
-     "text": "The road\nahead for\nAtlas"
-    },
-    {
-     "kind": "text",
-     "x": 110,
-     "y": 482,
-     "w": 430,
-     "h": 100,
-     "family": "Inter",
+     "x": 138,
+     "y": 434,
+     "w": 378,
+     "h": 30,
+     "text": "Realtime co-editing",
+     "family": "Public Sans",
      "size": 21,
-     "weight": 400,
-     "color": "#a9c4d6",
-     "lineHeight": 1.5,
-     "text": "Every bet we're making, sorted by horizon. Dates may shift as we learn; the direction doesn't."
+     "weight": 600,
+     "color": "#111820",
+     "lineHeight": 1.3
     },
     {
      "kind": "button",
-     "x": 110,
-     "y": 612,
-     "w": 210,
-     "h": 54,
-     "fill": "#f4a54e",
-     "label": "Q3 2026",
-     "family": "Manrope",
-     "size": 20,
-     "weight": 800,
-     "color": "#0d2c40",
-     "radius": 27,
-     "letterSpacing": 2,
+     "x": 528,
+     "y": 436,
+     "w": 108,
+     "h": 26,
+     "label": "Sep",
+     "fill": "#cedcf2",
+     "color": "#0A4DB2",
+     "family": "Overpass Mono",
+     "size": 12,
+     "weight": 700,
+     "letterSpacing": 1,
      "upper": true
     },
     {
-     "kind": "rect",
-     "x": 700,
-     "y": 140,
-     "w": 56,
-     "h": 8,
-     "fill": "#f4a54e",
-     "radius": 4
-    },
-    {
      "kind": "text",
-     "x": 700,
-     "y": 174,
-     "w": 350,
-     "h": 40,
-     "family": "Manrope",
-     "size": 32,
-     "weight": 800,
-     "color": "#12374e",
-     "letterSpacing": 3,
-     "upper": true,
-     "lineHeight": 1.1,
-     "text": "Now"
-    },
-    {
-     "kind": "text",
-     "x": 700,
-     "y": 222,
-     "w": 350,
-     "h": 20,
-     "family": "Inter",
-     "size": 15,
-     "weight": 700,
-     "color": "#b26a1e",
-     "letterSpacing": 2,
-     "upper": true,
-     "lineHeight": 1.2,
-     "text": "Shipping this quarter"
-    },
-    {
-     "kind": "rect",
-     "x": 1080,
-     "y": 140,
-     "w": 56,
-     "h": 8,
-     "fill": "#2b8aa6",
-     "radius": 4
-    },
-    {
-     "kind": "text",
-     "x": 1080,
-     "y": 174,
-     "w": 350,
-     "h": 40,
-     "family": "Manrope",
-     "size": 32,
-     "weight": 800,
-     "color": "#12374e",
-     "letterSpacing": 3,
-     "upper": true,
-     "lineHeight": 1.1,
-     "text": "Next"
-    },
-    {
-     "kind": "text",
-     "x": 1080,
-     "y": 222,
-     "w": 350,
-     "h": 20,
-     "family": "Inter",
-     "size": 15,
-     "weight": 700,
-     "color": "#19708a",
-     "letterSpacing": 2,
-     "upper": true,
-     "lineHeight": 1.2,
-     "text": "In design"
-    },
-    {
-     "kind": "rect",
-     "x": 1460,
-     "y": 140,
-     "w": 56,
-     "h": 8,
-     "fill": "#8fa5b5",
-     "radius": 4
-    },
-    {
-     "kind": "text",
-     "x": 1460,
-     "y": 174,
-     "w": 350,
-     "h": 40,
-     "family": "Manrope",
-     "size": 32,
-     "weight": 800,
-     "color": "#12374e",
-     "letterSpacing": 3,
-     "upper": true,
-     "lineHeight": 1.1,
-     "text": "Later"
-    },
-    {
-     "kind": "text",
-     "x": 1460,
-     "y": 222,
-     "w": 350,
-     "h": 20,
-     "family": "Inter",
-     "size": 15,
-     "weight": 700,
-     "color": "#5b7386",
-     "letterSpacing": 2,
-     "upper": true,
-     "lineHeight": 1.2,
-     "text": "Exploring"
-    },
-    {
-     "kind": "rect",
-     "x": 700,
-     "y": 284,
-     "w": 350,
-     "h": 132,
-     "fill": "#ffffff",
-     "radius": 14,
-     "stroke": "#d8e6ee",
-     "strokeWidth": 2
-    },
-    {
-     "kind": "text",
-     "x": 724,
-     "y": 306,
-     "w": 302,
-     "h": 28,
-     "family": "Inter",
-     "size": 21,
-     "weight": 700,
-     "color": "#12374e",
-     "lineHeight": 1.25,
-     "text": "Realtime co-editing"
-    },
-    {
-     "kind": "text",
-     "x": 724,
-     "y": 340,
-     "w": 302,
-     "h": 52,
-     "family": "Inter",
-     "size": 16,
-     "weight": 400,
-     "color": "#5b7285",
-     "lineHeight": 1.45,
-     "text": "Multiplayer cursors, comments, and presence in every doc."
-    },
-    {
-     "kind": "rect",
-     "x": 700,
-     "y": 438,
-     "w": 350,
-     "h": 132,
-     "fill": "#ffffff",
-     "radius": 14,
-     "stroke": "#d8e6ee",
-     "strokeWidth": 2
-    },
-    {
-     "kind": "text",
-     "x": 724,
-     "y": 460,
-     "w": 302,
-     "h": 28,
-     "family": "Inter",
-     "size": 21,
-     "weight": 700,
-     "color": "#12374e",
-     "lineHeight": 1.25,
-     "text": "Mobile quick capture"
-    },
-    {
-     "kind": "text",
-     "x": 724,
-     "y": 494,
-     "w": 302,
-     "h": 52,
-     "family": "Inter",
-     "size": 16,
-     "weight": 400,
-     "color": "#5b7285",
-     "lineHeight": 1.45,
-     "text": "Send notes and tasks to any project from your phone."
-    },
-    {
-     "kind": "rect",
-     "x": 700,
-     "y": 592,
-     "w": 350,
-     "h": 132,
-     "fill": "#ffffff",
-     "radius": 14,
-     "stroke": "#d8e6ee",
-     "strokeWidth": 2
-    },
-    {
-     "kind": "text",
-     "x": 724,
-     "y": 614,
-     "w": 302,
-     "h": 28,
-     "family": "Inter",
-     "size": 21,
-     "weight": 700,
-     "color": "#12374e",
-     "lineHeight": 1.25,
-     "text": "Granular permissions"
-    },
-    {
-     "kind": "text",
-     "x": 724,
-     "y": 648,
-     "w": 302,
-     "h": 52,
-     "family": "Inter",
-     "size": 16,
-     "weight": 400,
-     "color": "#5b7285",
-     "lineHeight": 1.45,
-     "text": "Role-based access, down to a single page."
-    },
-    {
-     "kind": "rect",
-     "x": 1080,
-     "y": 284,
-     "w": 350,
-     "h": 132,
-     "fill": "#ffffff",
-     "radius": 14,
-     "stroke": "#d8e6ee",
-     "strokeWidth": 2
-    },
-    {
-     "kind": "text",
-     "x": 1104,
-     "y": 306,
-     "w": 302,
-     "h": 28,
-     "family": "Inter",
-     "size": 21,
-     "weight": 700,
-     "color": "#12374e",
-     "lineHeight": 1.25,
-     "text": "Workflow automations"
-    },
-    {
-     "kind": "text",
-     "x": 1104,
-     "y": 340,
-     "w": 302,
-     "h": 52,
-     "family": "Inter",
-     "size": 16,
-     "weight": 400,
-     "color": "#5b7285",
-     "lineHeight": 1.45,
-     "text": "Trigger actions when a task changes status or owner."
-    },
-    {
-     "kind": "rect",
-     "x": 1080,
-     "y": 438,
-     "w": 350,
-     "h": 132,
-     "fill": "#ffffff",
-     "radius": 14,
-     "stroke": "#d8e6ee",
-     "strokeWidth": 2
-    },
-    {
-     "kind": "text",
-     "x": 1104,
-     "y": 460,
-     "w": 302,
-     "h": 28,
-     "family": "Inter",
-     "size": 21,
-     "weight": 700,
-     "color": "#12374e",
-     "lineHeight": 1.25,
-     "text": "Public API v2"
-    },
-    {
-     "kind": "text",
-     "x": 1104,
-     "y": 494,
-     "w": 302,
-     "h": 52,
-     "family": "Inter",
-     "size": 16,
-     "weight": 400,
-     "color": "#5b7285",
-     "lineHeight": 1.45,
-     "text": "Webhooks, typed SDKs, and saner rate limits."
-    },
-    {
-     "kind": "rect",
-     "x": 1080,
-     "y": 592,
-     "w": 350,
-     "h": 132,
-     "fill": "#ffffff",
-     "radius": 14,
-     "stroke": "#d8e6ee",
-     "strokeWidth": 2
-    },
-    {
-     "kind": "text",
-     "x": 1104,
-     "y": 614,
-     "w": 302,
-     "h": 28,
-     "family": "Inter",
-     "size": 21,
-     "weight": 700,
-     "color": "#12374e",
-     "lineHeight": 1.25,
-     "text": "Template gallery"
-    },
-    {
-     "kind": "text",
-     "x": 1104,
-     "y": 648,
-     "w": 302,
-     "h": 52,
-     "family": "Inter",
-     "size": 16,
-     "weight": 400,
-     "color": "#5b7285",
-     "lineHeight": 1.45,
-     "text": "Start any project from a community template."
-    },
-    {
-     "kind": "rect",
-     "x": 1460,
-     "y": 284,
-     "w": 350,
-     "h": 132,
-     "fill": "#ffffff",
-     "radius": 14,
-     "stroke": "#d8e6ee",
-     "strokeWidth": 2
-    },
-    {
-     "kind": "text",
-     "x": 1484,
-     "y": 306,
-     "w": 302,
-     "h": 28,
-     "family": "Inter",
-     "size": 21,
-     "weight": 700,
-     "color": "#12374e",
-     "lineHeight": 1.25,
-     "text": "AI meeting recaps"
-    },
-    {
-     "kind": "text",
-     "x": 1484,
-     "y": 340,
-     "w": 302,
-     "h": 52,
-     "family": "Inter",
-     "size": 16,
-     "weight": 400,
-     "color": "#5b7285",
-     "lineHeight": 1.45,
-     "text": "Summaries and action items, filed to the timeline."
-    },
-    {
-     "kind": "rect",
-     "x": 1460,
-     "y": 438,
-     "w": 350,
-     "h": 132,
-     "fill": "#ffffff",
-     "radius": 14,
-     "stroke": "#d8e6ee",
-     "strokeWidth": 2
-    },
-    {
-     "kind": "text",
-     "x": 1484,
-     "y": 460,
-     "w": 302,
-     "h": 28,
-     "family": "Inter",
-     "size": 21,
-     "weight": 700,
-     "color": "#12374e",
-     "lineHeight": 1.25,
-     "text": "Offline mode"
-    },
-    {
-     "kind": "text",
-     "x": 1484,
-     "y": 494,
-     "w": 302,
-     "h": 52,
-     "family": "Inter",
-     "size": 16,
-     "weight": 400,
-     "color": "#5b7285",
-     "lineHeight": 1.45,
-     "text": "Full editing without a connection; sync on return."
-    },
-    {
-     "kind": "rect",
-     "x": 1460,
-     "y": 592,
-     "w": 350,
-     "h": 132,
-     "fill": "#ffffff",
-     "radius": 14,
-     "stroke": "#d8e6ee",
-     "strokeWidth": 2
-    },
-    {
-     "kind": "text",
-     "x": 1484,
-     "y": 614,
-     "w": 302,
-     "h": 28,
-     "family": "Inter",
-     "size": 21,
-     "weight": 700,
-     "color": "#12374e",
-     "lineHeight": 1.25,
-     "text": "Desktop apps"
-    },
-    {
-     "kind": "text",
-     "x": 1484,
-     "y": 648,
-     "w": 302,
-     "h": 52,
-     "family": "Inter",
-     "size": 16,
-     "weight": 400,
-     "color": "#5b7285",
-     "lineHeight": 1.45,
-     "text": "Fast, focused native clients for macOS and Windows."
-    },
-    {
-     "kind": "rect",
-     "x": 700,
-     "y": 828,
-     "w": 1110,
-     "h": 4,
-     "fill": "#c3d7e3",
-     "radius": 2
-    },
-    {
-     "kind": "ellipse",
-     "x": 867,
-     "y": 822,
-     "w": 16,
-     "h": 16,
-     "fill": "#f4a54e"
-    },
-    {
-     "kind": "ellipse",
-     "x": 1247,
-     "y": 822,
-     "w": 16,
-     "h": 16,
-     "fill": "#2b8aa6"
-    },
-    {
-     "kind": "ellipse",
-     "x": 1627,
-     "y": 822,
-     "w": 16,
-     "h": 16,
-     "fill": "#8fa5b5"
-    },
-    {
-     "kind": "rect",
-     "x": 1799,
-     "y": 823,
-     "w": 14,
-     "h": 14,
-     "fill": "#c3d7e3",
-     "rotation": 45
-    },
-    {
-     "kind": "text",
-     "x": 775,
-     "y": 856,
-     "w": 200,
-     "h": 24,
-     "family": "Inter",
+     "x": 138,
+     "y": 472,
+     "w": 486,
+     "h": 56,
+     "text": "Multiplayer cursors, comments and presence in every doc.",
+     "family": "Public Sans",
      "size": 17,
-     "weight": 700,
-     "color": "#12374e",
-     "align": "center",
-     "letterSpacing": 2,
-     "upper": true,
-     "lineHeight": 1.2,
-     "text": "Q3 2026"
+     "weight": 400,
+     "color": "#4B5563",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 562,
+     "w": 560,
+     "h": 132,
+     "fill": "#F3F5F8",
+     "radius": 6,
+     "stroke": "#D6DCE3",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 114,
+     "y": 582,
+     "w": 6,
+     "h": 92,
+     "fill": "#0C5BD1",
+     "radius": 3
     },
     {
      "kind": "text",
-     "x": 1155,
-     "y": 856,
-     "w": 200,
-     "h": 24,
-     "family": "Inter",
+     "x": 138,
+     "y": 580,
+     "w": 378,
+     "h": 30,
+     "text": "Mobile quick capture",
+     "family": "Public Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#111820",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 528,
+     "y": 582,
+     "w": 108,
+     "h": 26,
+     "label": "Aug",
+     "fill": "#cedcf2",
+     "color": "#0A4DB2",
+     "family": "Overpass Mono",
+     "size": 12,
+     "weight": 700,
+     "letterSpacing": 1,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 138,
+     "y": 618,
+     "w": 486,
+     "h": 56,
+     "text": "Send notes and tasks to any project from your phone.",
+     "family": "Public Sans",
      "size": 17,
-     "weight": 700,
-     "color": "#12374e",
-     "align": "center",
-     "letterSpacing": 2,
-     "upper": true,
-     "lineHeight": 1.2,
-     "text": "Q4 2026"
+     "weight": 400,
+     "color": "#4B5563",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 708,
+     "w": 560,
+     "h": 132,
+     "fill": "#F3F5F8",
+     "radius": 6,
+     "stroke": "#D6DCE3",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 114,
+     "y": 728,
+     "w": 6,
+     "h": 92,
+     "fill": "#0C5BD1",
+     "radius": 3
     },
     {
      "kind": "text",
-     "x": 1535,
-     "y": 856,
-     "w": 200,
-     "h": 24,
-     "family": "Inter",
+     "x": 138,
+     "y": 726,
+     "w": 378,
+     "h": 30,
+     "text": "Granular permissions",
+     "family": "Public Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#111820",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 528,
+     "y": 728,
+     "w": 108,
+     "h": 26,
+     "label": "Sep",
+     "fill": "#cedcf2",
+     "color": "#0A4DB2",
+     "family": "Overpass Mono",
+     "size": 12,
+     "weight": 700,
+     "letterSpacing": 1,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 138,
+     "y": 764,
+     "w": 486,
+     "h": 56,
+     "text": "Role-based access, down to a single page.",
+     "family": "Public Sans",
      "size": 17,
+     "weight": 400,
+     "color": "#4B5563",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 416,
+     "w": 560,
+     "h": 132,
+     "fill": "#F3F5F8",
+     "radius": 6,
+     "stroke": "#D6DCE3",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 698,
+     "y": 436,
+     "w": 6,
+     "h": 92,
+     "fill": "#111820",
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 722,
+     "y": 434,
+     "w": 378,
+     "h": 30,
+     "text": "Workflow automations",
+     "family": "Public Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#111820",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1112,
+     "y": 436,
+     "w": 108,
+     "h": 26,
+     "label": "Q4",
+     "fill": "#E6EAF0",
+     "color": "#111820",
+     "family": "Overpass Mono",
+     "size": 12,
      "weight": 700,
-     "color": "#12374e",
+     "letterSpacing": 1,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 722,
+     "y": 472,
+     "w": 486,
+     "h": 56,
+     "text": "Trigger actions when a task changes status or owner.",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 400,
+     "color": "#4B5563",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 562,
+     "w": 560,
+     "h": 132,
+     "fill": "#F3F5F8",
+     "radius": 6,
+     "stroke": "#D6DCE3",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 698,
+     "y": 582,
+     "w": 6,
+     "h": 92,
+     "fill": "#111820",
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 722,
+     "y": 580,
+     "w": 378,
+     "h": 30,
+     "text": "Public API v2",
+     "family": "Public Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#111820",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1112,
+     "y": 582,
+     "w": 108,
+     "h": 26,
+     "label": "Q4",
+     "fill": "#E6EAF0",
+     "color": "#111820",
+     "family": "Overpass Mono",
+     "size": 12,
+     "weight": 700,
+     "letterSpacing": 1,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 722,
+     "y": 618,
+     "w": 486,
+     "h": 56,
+     "text": "Webhooks, typed SDKs and saner rate limits.",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 400,
+     "color": "#4B5563",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 708,
+     "w": 560,
+     "h": 132,
+     "fill": "#F3F5F8",
+     "radius": 6,
+     "stroke": "#D6DCE3",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 698,
+     "y": 728,
+     "w": 6,
+     "h": 92,
+     "fill": "#111820",
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 722,
+     "y": 726,
+     "w": 378,
+     "h": 30,
+     "text": "Template gallery",
+     "family": "Public Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#111820",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1112,
+     "y": 728,
+     "w": 108,
+     "h": 26,
+     "label": "Dec",
+     "fill": "#E6EAF0",
+     "color": "#111820",
+     "family": "Overpass Mono",
+     "size": 12,
+     "weight": 700,
+     "letterSpacing": 1,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 722,
+     "y": 764,
+     "w": 486,
+     "h": 56,
+     "text": "Start any project from a community template.",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 400,
+     "color": "#4B5563",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 416,
+     "w": 560,
+     "h": 132,
+     "fill": "#F3F5F8",
+     "radius": 6,
+     "stroke": "#D6DCE3",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1282,
+     "y": 436,
+     "w": 6,
+     "h": 92,
+     "fill": "#F5A300",
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 1306,
+     "y": 434,
+     "w": 378,
+     "h": 30,
+     "text": "AI meeting recaps",
+     "family": "Public Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#111820",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1696,
+     "y": 436,
+     "w": 108,
+     "h": 26,
+     "label": "H1 27",
+     "fill": "#f3e3c1",
+     "color": "#7A4E00",
+     "family": "Overpass Mono",
+     "size": 12,
+     "weight": 700,
+     "letterSpacing": 1,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 1306,
+     "y": 472,
+     "w": 486,
+     "h": 56,
+     "text": "Summaries and action items, filed to the timeline.",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 400,
+     "color": "#4B5563",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 562,
+     "w": 560,
+     "h": 132,
+     "fill": "#F3F5F8",
+     "radius": 6,
+     "stroke": "#D6DCE3",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1282,
+     "y": 582,
+     "w": 6,
+     "h": 92,
+     "fill": "#F5A300",
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 1306,
+     "y": 580,
+     "w": 378,
+     "h": 30,
+     "text": "Offline mode",
+     "family": "Public Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#111820",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1696,
+     "y": 582,
+     "w": 108,
+     "h": 26,
+     "label": "2027",
+     "fill": "#f3e3c1",
+     "color": "#7A4E00",
+     "family": "Overpass Mono",
+     "size": 12,
+     "weight": 700,
+     "letterSpacing": 1,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 1306,
+     "y": 618,
+     "w": 486,
+     "h": 56,
+     "text": "Full editing without a connection; sync on return.",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 400,
+     "color": "#4B5563",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 708,
+     "w": 560,
+     "h": 132,
+     "fill": "#F3F5F8",
+     "radius": 6,
+     "stroke": "#D6DCE3",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1282,
+     "y": 728,
+     "w": 6,
+     "h": 92,
+     "fill": "#F5A300",
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 1306,
+     "y": 726,
+     "w": 378,
+     "h": 30,
+     "text": "Desktop apps",
+     "family": "Public Sans",
+     "size": 21,
+     "weight": 600,
+     "color": "#111820",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1696,
+     "y": 728,
+     "w": 108,
+     "h": 26,
+     "label": "TBD",
+     "fill": "#f3e3c1",
+     "color": "#7A4E00",
+     "family": "Overpass Mono",
+     "size": 12,
+     "weight": 700,
+     "letterSpacing": 1,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 1306,
+     "y": 764,
+     "w": 486,
+     "h": 56,
+     "text": "Fast, focused native clients for macOS and Windows.",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 400,
+     "color": "#4B5563",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       1118,
+       904
+      ],
+      [
+       1140,
+       943.6
+      ],
+      [
+       1096,
+       943.6
+      ]
+     ],
+     "fill": "#F5A300",
+     "stroke": "#111820",
+     "strokeWidth": 3,
+     "closed": true,
+     "join": "round"
+    },
+    {
+     "kind": "text",
+     "x": 1108,
+     "y": 916,
+     "w": 20,
+     "h": 26,
+     "text": "!",
+     "family": "Overpass",
+     "size": 19,
+     "weight": 800,
+     "color": "#111820",
      "align": "center",
-     "letterSpacing": 2,
-     "upper": true,
-     "lineHeight": 1.2,
-     "text": "2027+"
+     "lineHeight": 1
     },
     {
      "kind": "text",
-     "x": 700,
-     "y": 994,
-     "w": 600,
-     "h": 22,
-     "family": "Inter",
-     "size": 16,
-     "weight": 500,
-     "color": "#6b8296",
+     "x": 1160,
+     "y": 906,
+     "w": 664,
+     "h": 35,
+     "text": "dates will move, the order won't",
+     "family": "Permanent Marker",
+     "size": 28,
+     "weight": 400,
+     "color": "#0A4DB2",
      "lineHeight": 1.2,
-     "text": "Atlas \u00b7 Product planning \u00b7 July 2026"
-    },
-    {
-     "kind": "text",
-     "x": 1310,
-     "y": 994,
-     "w": 500,
-     "h": 22,
-     "family": "Inter",
-     "size": 16,
-     "weight": 500,
-     "color": "#6b8296",
-     "align": "right",
-     "lineHeight": 1.2,
-     "text": "Live status: atlas.app/roadmap"
+     "align": "left"
     }
    ],
    "illustrations": [
     {
      "asset": "il-day65-city-road",
-     "x": 150,
-     "y": 700,
-     "w": 320,
-     "h": 320
+     "x": 1496,
+     "y": 68,
+     "w": 312,
+     "h": 144,
+     "cleanCard": true
     }
    ]
   }
  ],
+ "fillable": [
+  {
+   "node": "p0-n19",
+   "kind": "text",
+   "label": "Title",
+   "hint": "One short line"
+  },
+  {
+   "node": "p0-n28",
+   "kind": "text",
+   "label": "Now, sign",
+   "hint": "The name of this stretch of the road"
+  },
+  {
+   "node": "p0-n30",
+   "kind": "text",
+   "label": "Now, dates",
+   "hint": "The window this stretch covers"
+  },
+  {
+   "node": "p0-n33",
+   "kind": "text",
+   "label": "Next, sign",
+   "hint": "The name of this stretch of the road"
+  },
+  {
+   "node": "p0-n35",
+   "kind": "text",
+   "label": "Next, dates",
+   "hint": "The window this stretch covers"
+  },
+  {
+   "node": "p0-n38",
+   "kind": "text",
+   "label": "Later, sign",
+   "hint": "The name of this stretch of the road"
+  },
+  {
+   "node": "p0-n40",
+   "kind": "text",
+   "label": "Later, dates",
+   "hint": "The window this stretch covers"
+  },
+  {
+   "node": "p0-n83",
+   "kind": "text",
+   "label": "Now 1",
+   "hint": "What ships in this stretch"
+  },
+  {
+   "node": "p0-n88",
+   "kind": "text",
+   "label": "Now 2",
+   "hint": "What ships in this stretch"
+  },
+  {
+   "node": "p0-n93",
+   "kind": "text",
+   "label": "Now 3",
+   "hint": "What ships in this stretch"
+  },
+  {
+   "node": "p0-n98",
+   "kind": "text",
+   "label": "Next 1",
+   "hint": "What ships in this stretch"
+  },
+  {
+   "node": "p0-n103",
+   "kind": "text",
+   "label": "Next 2",
+   "hint": "What ships in this stretch"
+  },
+  {
+   "node": "p0-n108",
+   "kind": "text",
+   "label": "Next 3",
+   "hint": "What ships in this stretch"
+  },
+  {
+   "node": "p0-n113",
+   "kind": "text",
+   "label": "Later 1",
+   "hint": "What ships in this stretch"
+  },
+  {
+   "node": "p0-n118",
+   "kind": "text",
+   "label": "Later 2",
+   "hint": "What ships in this stretch"
+  },
+  {
+   "node": "p0-n123",
+   "kind": "text",
+   "label": "Later 3",
+   "hint": "What ships in this stretch"
+  },
+  {
+   "node": "p0-n128",
+   "kind": "text",
+   "label": "Note",
+   "hint": "The one thing to say about the dates"
+  }
+ ],
+ "version": 3,
+ "created": "2026-07-04T00:00:00.000Z",
+ "updated": "2026-09-30T00:00:00.000Z",
  "rank": 20
 }

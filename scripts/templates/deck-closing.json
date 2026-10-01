@@ -11,7 +11,7 @@
   "thanks"
  ],
  "styleTags": [
-  "minimal",
+  "bold",
   "modern"
  ],
  "size": [
@@ -21,159 +21,640 @@
  "typography": [
   {
    "role": "heading",
-   "family": "Poppins",
-   "weight": 800
+   "family": "Epilogue",
+   "weight": 900
   },
   {
    "role": "body",
-   "family": "Inter",
+   "family": "Instrument Sans",
    "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Shantell Sans",
+   "weight": 700
+  },
+  {
+   "role": "label",
+   "family": "DM Mono",
+   "weight": 500
   }
  ],
  "pages": [
   {
    "name": "Closing",
    "bg": {
-    "angle": 135,
+    "angle": 160,
     "stops": [
      [
-      "#0F172A",
+      "#1735B2",
       0
      ],
      [
-      "#0C4A6E",
+      "#0A175C",
       1
      ]
     ]
    },
    "nodes": [
     {
-     "kind": "ellipse",
-     "x": 1440,
-     "y": 440,
-     "w": 840,
-     "h": 840,
-     "fill": "#38BDF8",
-     "opacity": 0.13,
+     "kind": "rect",
+     "x": 2104,
+     "y": -1012,
+     "w": 1171,
+     "h": 1171,
+     "fill": "#FF6B4F",
+     "rotation": 45,
+     "opacity": 0.92,
      "bleed": true
     },
     {
      "kind": "ellipse",
-     "x": 1260,
-     "y": 700,
-     "w": 320,
-     "h": 320,
-     "fill": "#7DD3FC",
-     "opacity": 0.09
+     "x": 1730,
+     "y": 669,
+     "w": 9,
+     "h": 9,
+     "fill": "#F8F6F2",
+     "opacity": 0.61
     },
     {
-     "kind": "text",
-     "x": 160,
-     "y": 360,
-     "w": 1100,
-     "h": 160,
-     "text": "Thank you",
-     "family": "Poppins",
-     "size": 140,
-     "weight": 800,
-     "color": "#FFFFFF",
-     "lineHeight": 1.05
+     "kind": "ellipse",
+     "x": 1518,
+     "y": 667,
+     "w": 7,
+     "h": 7,
+     "fill": "#F8F6F2",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1575,
+     "y": 478,
+     "w": 5,
+     "h": 5,
+     "fill": "#F8F6F2",
+     "opacity": 0.73
+    },
+    {
+     "kind": "ellipse",
+     "x": 1626,
+     "y": 501,
+     "w": 8,
+     "h": 8,
+     "fill": "#F8F6F2",
+     "opacity": 0.69
+    },
+    {
+     "kind": "ellipse",
+     "x": 1377,
+     "y": 700,
+     "w": 8,
+     "h": 8,
+     "fill": "#F8F6F2",
+     "opacity": 0.77
+    },
+    {
+     "kind": "ellipse",
+     "x": 1371,
+     "y": 573,
+     "w": 9,
+     "h": 9,
+     "fill": "#F8F6F2",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1494,
+     "y": 484,
+     "w": 8,
+     "h": 8,
+     "fill": "#F8F6F2",
+     "opacity": 0.6599999999999999
     },
     {
      "kind": "rect",
-     "x": 160,
-     "y": 568,
-     "w": 120,
-     "h": 10,
-     "fill": "#38BDF8",
-     "radius": 5
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#FF6B4F",
+     "radius": 6
     },
     {
      "kind": "text",
-     "x": 160,
-     "y": 626,
-     "w": 1000,
-     "h": 58,
-     "text": "Let's keep the conversation going.",
-     "family": "Inter",
-     "size": 44,
-     "weight": 500,
-     "color": "#BAE6FD"
-    },
-    {
-     "kind": "text",
-     "x": 160,
-     "y": 780,
-     "w": 1000,
-     "h": 36,
-     "text": "hello@northwindlabs.com  \u00b7  northwindlabs.com",
-     "family": "Inter",
-     "size": 26,
-     "weight": 400,
-     "color": "#7DD3FC",
-     "letterSpacing": 1
-    },
-    {
-     "kind": "text",
-     "x": 160,
-     "y": 990,
+     "x": 132,
+     "y": 93,
      "w": 700,
      "h": 30,
-     "text": "Northwind Labs \u00b7 Q3 business review",
-     "family": "Inter",
+     "text": "Northwind Labs",
+     "family": "Instrument Sans",
      "size": 22,
-     "weight": 500,
-     "color": "#7DD3FC",
+     "weight": 600,
+     "color": "#F8F6F2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 52,
+     "text": "That's it from us",
+     "family": "Shantell Sans",
+     "size": 40,
+     "weight": 700,
+     "color": "#FFBFAE",
      "lineHeight": 1.2
     },
     {
      "kind": "text",
-     "x": 1460,
-     "y": 990,
+     "x": 96,
+     "y": 296,
+     "w": 1000,
+     "h": 151,
+     "text": "Thank you",
+     "family": "Epilogue",
+     "size": 128,
+     "weight": 900,
+     "color": "#F8F6F2",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 473,
+     "w": 900,
+     "h": 80,
+     "text": "Let's keep the conversation going.\nQuestions now, or any time this week.",
+     "family": "Instrument Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#C5CCF6",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 604,
+     "w": 1000,
+     "h": 284,
+     "fill": "#2244C6",
+     "radius": 6,
+     "stroke": "#3450D0",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 796,
+     "y": 604,
      "w": 300,
+     "h": 284,
+     "fill": "#DDF24A",
+     "radius": 6
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 620,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 634,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 648,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 662,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 676,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 690,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 704,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 718,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 732,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 746,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 760,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 774,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 788,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 802,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 816,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 830,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 844,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 799,
+     "y": 858,
+     "w": 2,
+     "h": 8,
+     "fill": "#0A175C",
+     "opacity": 0.8
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 640,
+     "w": 612,
+     "h": 26,
+     "text": "One thing before you go",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 600,
+     "color": "#FFBFAE",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 678,
+     "w": 612,
+     "h": 96,
+     "text": "Give us one call\nthis week.",
+     "family": "Epilogue",
+     "size": 38,
+     "weight": 900,
+     "color": "#F8F6F2",
+     "lineHeight": 1.12
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 786,
+     "w": 612,
+     "h": 60,
+     "text": "Your questions, the numbers you asked for,\nand nothing to prepare.",
+     "family": "Instrument Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#C5CCF6",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 828,
+     "y": 640,
+     "w": 236,
+     "h": 24,
+     "text": "Takes",
+     "family": "DM Mono",
+     "size": 16,
+     "weight": 600,
+     "color": "#0F1E66",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 828,
+     "y": 672,
+     "w": 236,
+     "h": 104,
+     "text": "20",
+     "family": "Epilogue",
+     "size": 96,
+     "weight": 900,
+     "color": "#0F1E66",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 828,
+     "y": 780,
+     "w": 236,
+     "h": 24,
+     "text": "minutes, any day you like",
+     "family": "DM Mono",
+     "size": 15,
+     "weight": 500,
+     "color": "#0F1E66",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "button",
+     "x": 828,
+     "y": 816,
+     "w": 236,
+     "h": 52,
+     "label": "Book a follow-up",
+     "fill": "#FF6B4F",
+     "color": "#0F1E66",
+     "family": "Instrument Sans",
+     "size": 18,
+     "weight": 700,
+     "radius": 6
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 960,
+     "w": 1728,
+     "h": 1,
+     "fill": "#3450D0"
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 984,
+     "w": 24,
+     "h": 24,
+     "color": "#FF6B4F"
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 982,
+     "w": 330,
      "h": 30,
-     "text": "24 / 24",
-     "family": "Inter",
+     "text": "hello@northwindlabs.example",
+     "family": "Instrument Sans",
      "size": 22,
      "weight": 500,
-     "color": "#7DD3FC",
-     "align": "right",
-     "lineHeight": 1.2
+     "color": "#F8F6F2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "world",
+     "x": 500,
+     "y": 984,
+     "w": 24,
+     "h": 24,
+     "color": "#FF6B4F"
+    },
+    {
+     "kind": "text",
+     "x": 536,
+     "y": 982,
+     "w": 280,
+     "h": 30,
+     "text": "northwindlabs.example",
+     "family": "Instrument Sans",
+     "size": 22,
+     "weight": 500,
+     "color": "#F8F6F2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "phone",
+     "x": 840,
+     "y": 984,
+     "w": 24,
+     "h": 24,
+     "color": "#FF6B4F"
+    },
+    {
+     "kind": "text",
+     "x": 876,
+     "y": 982,
+     "w": 220,
+     "h": 30,
+     "text": "+1 415 555 0142",
+     "family": "Instrument Sans",
+     "size": 22,
+     "weight": 500,
+     "color": "#F8F6F2",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1190,
+     "y": 190,
+     "w": 620,
+     "h": 620,
+     "fill": "#FF6B4F",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1252,
+     "y": 252,
+     "w": 496,
+     "h": 496,
+     "fill": "#FF6B4F",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1150,
+     "y": 800,
+     "w": 700,
+     "h": 43,
+     "text": "one call. we'll bring the numbers.",
+     "family": "Shantell Sans",
+     "size": 34,
+     "weight": 700,
+     "color": "#FFBFAE",
+     "lineHeight": 1.2,
+     "align": "center"
     }
    ],
    "illustrations": [
     {
-     "asset": "la-conversation-illustration",
-     "x": 1350,
-     "y": 250,
+     "asset": "il-day17-walkie-talkie",
+     "x": 1240,
+     "y": 240,
      "w": 520,
-     "h": 700,
-     "position": "after:deck-closing-p0-n1"
+     "h": 520,
+     "cleanCard": true
     }
    ]
   }
  ],
  "fillable": [
   {
-   "node": "p0-n2",
+   "node": "p0-n9",
    "kind": "text",
-   "label": "Closing line",
-   "hint": "Short thank-you or sign-off, one line"
+   "label": "Company",
+   "hint": "Your company or team name"
   },
   {
-   "node": "p0-n4",
+   "node": "p0-n11",
    "kind": "text",
-   "label": "Invitation",
-   "hint": "Follow-up message, e.g. Let's keep the conversation going."
+   "label": "Title",
+   "hint": "Two words, one line"
   },
   {
-   "node": "p0-n5",
+   "node": "p0-n12",
    "kind": "text",
-   "label": "Contact details",
-   "hint": "Email and website"
+   "label": "Subtitle",
+   "hint": "One sentence on where the conversation goes next"
+  },
+  {
+   "node": "p0-n34",
+   "kind": "text",
+   "label": "The ask",
+   "hint": "The one thing you want from the room"
+  },
+  {
+   "node": "p0-n35",
+   "kind": "text",
+   "label": "The ask, detail",
+   "hint": "What it involves, and what it does not"
+  },
+  {
+   "node": "p0-n37",
+   "kind": "text",
+   "label": "Figure",
+   "hint": "How long the ask takes"
+  },
+  {
+   "node": "p0-n39-label",
+   "kind": "text",
+   "label": "Button",
+   "hint": "The action, two or three words"
+  },
+  {
+   "node": "p0-n42",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p0-n44",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p0-n46",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
   }
  ],
- "version": 2,
- "updated": "2026-07-10T00:00:00.000Z",
+ "version": 3,
+ "created": "2026-07-04T00:00:00.000Z",
+ "updated": "2026-09-30T00:00:00.000Z",
  "rank": 20
 }

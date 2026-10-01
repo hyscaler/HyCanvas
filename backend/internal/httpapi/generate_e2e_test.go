@@ -24,6 +24,7 @@ import (
 	"hycanvas/backend/internal/aistudio"
 	"hycanvas/backend/internal/jobs"
 	"hycanvas/backend/internal/persistence"
+	"hycanvas/backend/internal/stock"
 	"hycanvas/backend/internal/storage"
 	"hycanvas/backend/internal/uploads"
 )
@@ -119,10 +120,15 @@ func TestGenerationJobPlacesImages_DB(t *testing.T) {
 	persist := persistence.NewService(tx).WithStorage(store)
 	studio := aistudio.NewService(tx, aiSvc)
 	reg := jobs.NewRegistry()
+	// The stock step runs with the live photo provider off: the bundled
+	// catalog answers, offers nothing an automatic insertion may import, and
+	// the ladder falls through to generation, which is the path under test.
+	t.Setenv("STOCK_PHOTO_PROVIDER", "off")
+	st := stock.NewService(tx)
 
 	plan := generatePlan{Workspace: ws.ID, Dt: "presentation", PageCount: 1, Brief: "a one-slide deck about the shoreline"}
 	plan.Size.w, plan.Size.h = 1920, 1080
-	job := startGenerationJob(studio, aiSvc, up, persist, reg, user.ID, plan)
+	job := startGenerationJob(studio, aiSvc, up, st, nil, persist, reg, user.ID, plan)
 
 	var done *jobs.Job
 	for deadline := time.Now().Add(90 * time.Second); time.Now().Before(deadline); {
@@ -140,7 +146,7 @@ func TestGenerationJobPlacesImages_DB(t *testing.T) {
 	}
 	result, _ := done.Result.(map[string]any)
 	images, _ := result["images"].(imagePlacement)
-	if images.Requested != 1 || images.Placed != 1 || images.Unsupported {
+	if images.Requested != 1 || images.Placed != 1 || images.Generated != 1 || images.Unsupported {
 		t.Fatalf("image placement = %+v", images)
 	}
 	if n := atomic.LoadInt32(&imageCalls); n != 1 {

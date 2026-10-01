@@ -1,5 +1,4 @@
 {
- "kind": "deck-outline",
  "id": "deck-product-launch",
  "title": "Product Launch Plan",
  "categories": [
@@ -13,71 +12,3151 @@
   "gtm"
  ],
  "styleTags": [
-  "bold"
+  "bold",
+  "modern",
+  "playful"
  ],
- "themeId": "theme-crimson",
  "size": [
   1920,
   1080
  ],
- "rank": 36,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Unbounded",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Hanken Grotesk",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Permanent Marker",
+   "weight": 400
+  },
+  {
+   "role": "label",
+   "family": "Martian Mono",
+   "weight": 500
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#181614",
+      0
+     ],
+     [
+      "#070605",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2104,
+     "y": -1012,
+     "w": 1171,
+     "h": 1171,
+     "fill": "#FF4A00",
+     "rotation": 45,
+     "opacity": 0.92,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1733,
+     "y": 760,
+     "w": 9,
+     "h": 9,
+     "fill": "#F2E9D8",
+     "opacity": 0.61
+    },
+    {
+     "kind": "ellipse",
+     "x": 1527,
+     "y": 757,
+     "w": 7,
+     "h": 7,
+     "fill": "#F2E9D8",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1582,
+     "y": 549,
+     "w": 5,
+     "h": 5,
+     "fill": "#F2E9D8",
+     "opacity": 0.73
+    },
+    {
+     "kind": "ellipse",
+     "x": 1632,
+     "y": 575,
+     "w": 8,
+     "h": 8,
+     "fill": "#F2E9D8",
+     "opacity": 0.69
+    },
+    {
+     "kind": "ellipse",
+     "x": 1390,
+     "y": 794,
+     "w": 8,
+     "h": 8,
+     "fill": "#F2E9D8",
+     "opacity": 0.77
+    },
+    {
+     "kind": "ellipse",
+     "x": 1384,
+     "y": 653,
+     "w": 9,
+     "h": 9,
+     "fill": "#F2E9D8",
+     "opacity": 0.53
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#FF4A00",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Loop",
+     "family": "Hanken Grotesk",
+     "size": 22,
+     "weight": 600,
+     "color": "#F2E9D8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 42,
+     "text": "T minus 42 days",
+     "family": "Permanent Marker",
+     "size": 32,
+     "weight": 400,
+     "color": "#FF4A00",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 203,
+     "text": "42 days to\nLoop Insights",
+     "family": "Unbounded",
+     "size": 92,
+     "weight": 800,
+     "color": "#F2E9D8",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 679,
+     "w": 900,
+     "h": 80,
+     "text": "Payroll analytics for finance leaders, in one sentence: see next month's cost before you run this month's payroll.",
+     "family": "Hanken Grotesk",
+     "size": 28,
+     "weight": 400,
+     "color": "#B3AA99",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Mei Lin, Product Marketing  ·  1 October 2026",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B3AA99",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B3AA99",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#232019",
+     "radius": 4,
+     "stroke": "#302B25",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "42",
+     "family": "Martian Mono",
+     "size": 26,
+     "weight": 800,
+     "color": "#FF4A00",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 246,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "days to go",
+     "family": "Martian Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#B3AA99",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 396,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#232019",
+     "radius": 4,
+     "stroke": "#302B25",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 416,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "12",
+     "family": "Martian Mono",
+     "size": 26,
+     "weight": 800,
+     "color": "#FF4A00",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 546,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "pilots live",
+     "family": "Martian Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#B3AA99",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 696,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#232019",
+     "radius": 4,
+     "stroke": "#302B25",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "5",
+     "family": "Martian Mono",
+     "size": 26,
+     "weight": 800,
+     "color": "#FF4A00",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 846,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "owners",
+     "family": "Martian Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#B3AA99",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 170,
+     "w": 700,
+     "h": 700,
+     "fill": "#FF4A00",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1220,
+     "y": 240,
+     "w": 560,
+     "h": 560,
+     "fill": "#FF4A00",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 890,
+     "w": 720,
+     "h": 34,
+     "text": "every date here has a name next to it",
+     "family": "Permanent Marker",
+     "size": 27,
+     "weight": 400,
+     "color": "#FF4A00",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day17-walkie-talkie",
+     "x": 1210,
+     "y": 230,
+     "w": 580,
+     "h": 580,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Text and picture",
+   "bg": "#F2E9D8",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2040,
+     "y": -660,
+     "w": 764,
+     "h": 764,
+     "fill": "#FF4A00",
+     "rotation": 45,
+     "opacity": 0.9,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Who it is for",
+     "family": "Martian Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#9E2B00",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 960,
+     "h": 63,
+     "text": "Who buys, and when",
+     "family": "Unbounded",
+     "size": 50,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8CCB4"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Loop  ·  Launch plan: Loop Insights",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A544B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 259,
+     "w": 34,
+     "h": 34,
+     "fill": "#eec5a6"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 259,
+     "w": 34,
+     "h": 34,
+     "text": "1",
+     "family": "Unbounded",
+     "size": 17,
+     "weight": 800,
+     "color": "#9E2B00",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 255,
+     "w": 840,
+     "h": 44,
+     "text": "Finance leaders",
+     "family": "Unbounded",
+     "size": 32,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 307,
+     "w": 840,
+     "h": 70,
+     "text": "At 200 to 2,000 people. They present headcount cost to the board quarterly and rebuild the number by hand every time.",
+     "family": "Hanken Grotesk",
+     "size": 22,
+     "weight": 400,
+     "color": "#5A544B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 437,
+     "w": 34,
+     "h": 34,
+     "fill": "#eec5a6"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 437,
+     "w": 34,
+     "h": 34,
+     "text": "2",
+     "family": "Unbounded",
+     "size": 17,
+     "weight": 800,
+     "color": "#9E2B00",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 433,
+     "w": 840,
+     "h": 44,
+     "text": "The week before the board pack",
+     "family": "Unbounded",
+     "size": 32,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 485,
+     "w": 840,
+     "h": 70,
+     "text": "Every competitor sells to payroll operators. Nobody sells to the person who has to explain the number.",
+     "family": "Hanken Grotesk",
+     "size": 22,
+     "weight": 400,
+     "color": "#5A544B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 615,
+     "w": 34,
+     "h": 34,
+     "fill": "#eec5a6"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 615,
+     "w": 34,
+     "h": 34,
+     "text": "3",
+     "family": "Unbounded",
+     "size": 17,
+     "weight": 800,
+     "color": "#9E2B00",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 611,
+     "w": 840,
+     "h": 44,
+     "text": "The insight they missed",
+     "family": "Unbounded",
+     "size": 32,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 663,
+     "w": 840,
+     "h": 70,
+     "text": "The data is already in payroll. The product is the question, not the spreadsheet.",
+     "family": "Hanken Grotesk",
+     "size": 22,
+     "weight": 400,
+     "color": "#5A544B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1080,
+     "y": 196,
+     "w": 744,
+     "h": 690,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#bbb3a2",
+        0
+       ],
+       [
+        "#EAE0CB",
+        1
+       ]
+      ]
+     },
+     "radius": 6
+    },
+    {
+     "kind": "ellipse",
+     "x": 1202,
+     "y": 291,
+     "w": 500,
+     "h": 500,
+     "fill": "#FF4A00",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1252,
+     "y": 341,
+     "w": 400,
+     "h": 400,
+     "fill": "#FF4A00",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 923,
+     "w": 760,
+     "h": 33,
+     "text": "we sold to the wrong desk for two years",
+     "family": "Permanent Marker",
+     "size": 26,
+     "weight": 400,
+     "color": "#9E2B00",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day37-calculator",
+     "x": 1160,
+     "y": 270,
+     "w": 584,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#F2E9D8",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2040,
+     "y": -660,
+     "w": 764,
+     "h": 764,
+     "fill": "#FF4A00",
+     "rotation": 45,
+     "opacity": 0.9,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Positioning",
+     "family": "Martian Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#9E2B00",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 63,
+     "text": "Category, promise, proof",
+     "family": "Unbounded",
+     "size": 50,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8CCB4"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Loop  ·  Launch plan: Loop Insights",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A544B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 231,
+     "w": 560,
+     "h": 580,
+     "fill": "#EAE0CB",
+     "radius": 4,
+     "stroke": "#D8CCB4",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 231,
+     "w": 560,
+     "h": 6,
+     "fill": "#FF4A00",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 279,
+     "w": 80,
+     "h": 80,
+     "fill": "#eec2a2"
+    },
+    {
+     "kind": "icon",
+     "icon": "flag",
+     "x": 156,
+     "y": 299,
+     "w": 40,
+     "h": 40,
+     "color": "#9E2B00"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 395,
+     "w": 480,
+     "h": 100,
+     "text": "The category we claim",
+     "family": "Unbounded",
+     "size": 34,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 507,
+     "w": 480,
+     "h": 160,
+     "text": "Payroll analytics. Not reporting, not BI: answers to the questions a finance leader is actually asked.",
+     "family": "Hanken Grotesk",
+     "size": 22,
+     "weight": 400,
+     "color": "#5A544B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 727,
+     "w": 480,
+     "h": 1,
+     "fill": "#D8CCB4"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 751,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A544B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 231,
+     "w": 560,
+     "h": 580,
+     "fill": "#EAE0CB",
+     "radius": 4,
+     "stroke": "#D8CCB4",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 231,
+     "w": 560,
+     "h": 6,
+     "fill": "#141210",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 279,
+     "w": 80,
+     "h": 80,
+     "fill": "#bfb7a6"
+    },
+    {
+     "kind": "icon",
+     "icon": "sparkles",
+     "x": 740,
+     "y": 299,
+     "w": 40,
+     "h": 40,
+     "color": "#141210"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 395,
+     "w": 480,
+     "h": 100,
+     "text": "The promise we make",
+     "family": "Unbounded",
+     "size": 34,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 507,
+     "w": 480,
+     "h": 160,
+     "text": "See next month's cost before you run this month's payroll.",
+     "family": "Hanken Grotesk",
+     "size": 22,
+     "weight": 400,
+     "color": "#5A544B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 727,
+     "w": 480,
+     "h": 1,
+     "fill": "#D8CCB4"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 751,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A544B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 231,
+     "w": 560,
+     "h": 580,
+     "fill": "#EAE0CB",
+     "radius": 4,
+     "stroke": "#D8CCB4",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 231,
+     "w": 560,
+     "h": 6,
+     "fill": "#FF4A00",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 279,
+     "w": 80,
+     "h": 80,
+     "fill": "#eec2a2"
+    },
+    {
+     "kind": "icon",
+     "icon": "chart-pie",
+     "x": 1324,
+     "y": 299,
+     "w": 40,
+     "h": 40,
+     "color": "#9E2B00"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 395,
+     "w": 480,
+     "h": 100,
+     "text": "The proof we bring",
+     "family": "Unbounded",
+     "size": 34,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 507,
+     "w": 480,
+     "h": 160,
+     "text": "Twelve pilot customers cut board-pack preparation from three days to one afternoon.",
+     "family": "Hanken Grotesk",
+     "size": 22,
+     "weight": 400,
+     "color": "#5A544B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 727,
+     "w": 480,
+     "h": 1,
+     "fill": "#D8CCB4"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 751,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A544B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 923,
+     "w": 760,
+     "h": 33,
+     "text": "say the promise the same way, everywhere",
+     "family": "Permanent Marker",
+     "size": 26,
+     "weight": 400,
+     "color": "#9E2B00",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Quote",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#181614",
+      0
+     ],
+     [
+      "#070605",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2104,
+     "y": -1012,
+     "w": 1171,
+     "h": 1171,
+     "fill": "#FF4A00",
+     "rotation": 45,
+     "opacity": 0.92,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1733,
+     "y": 760,
+     "w": 9,
+     "h": 9,
+     "fill": "#F2E9D8",
+     "opacity": 0.61
+    },
+    {
+     "kind": "ellipse",
+     "x": 1527,
+     "y": 757,
+     "w": 7,
+     "h": 7,
+     "fill": "#F2E9D8",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1582,
+     "y": 549,
+     "w": 5,
+     "h": 5,
+     "fill": "#F2E9D8",
+     "opacity": 0.73
+    },
+    {
+     "kind": "ellipse",
+     "x": 1632,
+     "y": 575,
+     "w": 8,
+     "h": 8,
+     "fill": "#F2E9D8",
+     "opacity": 0.69
+    },
+    {
+     "kind": "ellipse",
+     "x": 1390,
+     "y": 794,
+     "w": 8,
+     "h": 8,
+     "fill": "#F2E9D8",
+     "opacity": 0.77
+    },
+    {
+     "kind": "ellipse",
+     "x": 1384,
+     "y": 653,
+     "w": 9,
+     "h": 9,
+     "fill": "#F2E9D8",
+     "opacity": 0.53
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#302B25"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Loop  ·  Launch plan: Loop Insights",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B3AA99",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B3AA99",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 260,
+     "h": 260,
+     "text": "“",
+     "family": "Unbounded",
+     "size": 280,
+     "weight": 800,
+     "color": "#FF4A00",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 400,
+     "w": 1400,
+     "h": 174,
+     "text": "We rebuilt the headcount number\nby hand for six years. Last quarter\nthe board pack took one afternoon.",
+     "family": "Unbounded",
+     "size": 42,
+     "weight": 800,
+     "color": "#F2E9D8",
+     "lineHeight": 1.26
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 116,
+     "y": 634,
+     "w": 84,
+     "h": 84,
+     "fill": "#2E2922"
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 642,
+     "w": 800,
+     "h": 32,
+     "text": "Dana Okafor",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#F2E9D8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 678,
+     "w": 800,
+     "h": 28,
+     "text": "Finance Director, Calder Freight. Pilot customer since July",
+     "family": "Hanken Grotesk",
+     "size": 20,
+     "weight": 400,
+     "color": "#B3AA99",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 890,
+     "w": 720,
+     "h": 34,
+     "text": "nine of the twelve pilots said this",
+     "family": "Permanent Marker",
+     "size": 27,
+     "weight": 400,
+     "color": "#FF4A00",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "op-peep-28",
+     "x": 128,
+     "y": 642,
+     "w": 60,
+     "h": 68
+    }
+   ]
+  },
+  {
+   "name": "Timeline",
+   "bg": "#F2E9D8",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2040,
+     "y": -660,
+     "w": 764,
+     "h": 764,
+     "fill": "#FF4A00",
+     "rotation": 45,
+     "opacity": 0.9,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Launch timeline",
+     "family": "Martian Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#9E2B00",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 63,
+     "text": "Teaser, launch, and after",
+     "family": "Unbounded",
+     "size": 50,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8CCB4"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Loop  ·  Launch plan: Loop Insights",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A544B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 414,
+     "w": 1728,
+     "h": 3,
+     "fill": "#D8CCB4"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 401,
+     "w": 30,
+     "h": 30,
+     "fill": "#F2E9D8",
+     "stroke": "#FF4A00",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 341,
+     "w": 300,
+     "h": 28,
+     "text": "29 Oct",
+     "family": "Martian Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#9E2B00",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 465,
+     "w": 384,
+     "h": 44,
+     "text": "Teaser",
+     "family": "Unbounded",
+     "size": 32,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 517,
+     "w": 384,
+     "h": 120,
+     "text": "Pilot customers post their numbers; the waitlist page goes live.",
+     "family": "Hanken Grotesk",
+     "size": 21,
+     "weight": 400,
+     "color": "#5A544B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 528,
+     "y": 401,
+     "w": 30,
+     "h": 30,
+     "fill": "#F2E9D8",
+     "stroke": "#FF4A00",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 341,
+     "w": 300,
+     "h": 28,
+     "text": "12 Nov",
+     "family": "Martian Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#9E2B00",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 465,
+     "w": 384,
+     "h": 44,
+     "text": "Launch day",
+     "family": "Unbounded",
+     "size": 32,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 517,
+     "w": 384,
+     "h": 120,
+     "text": "Product live for every customer, press at 07:00, webinar at 16:00.",
+     "family": "Hanken Grotesk",
+     "size": 21,
+     "weight": 400,
+     "color": "#5A544B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 960,
+     "y": 401,
+     "w": 30,
+     "h": 30,
+     "fill": "#F2E9D8",
+     "stroke": "#FF4A00",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 341,
+     "w": 300,
+     "h": 28,
+     "text": "19 Nov",
+     "family": "Martian Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#9E2B00",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 465,
+     "w": 384,
+     "h": 44,
+     "text": "Follow-through",
+     "family": "Unbounded",
+     "size": 32,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 517,
+     "w": 384,
+     "h": 120,
+     "text": "Case studies from two pilots; every rep runs the demo with live data.",
+     "family": "Hanken Grotesk",
+     "size": 21,
+     "weight": 400,
+     "color": "#5A544B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1392,
+     "y": 401,
+     "w": 30,
+     "h": 30,
+     "fill": "#F2E9D8",
+     "stroke": "#FF4A00",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 341,
+     "w": 300,
+     "h": 28,
+     "text": "10 Dec",
+     "family": "Martian Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#9E2B00",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 465,
+     "w": 384,
+     "h": 44,
+     "text": "Review",
+     "family": "Unbounded",
+     "size": 32,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 517,
+     "w": 384,
+     "h": 120,
+     "text": "Day-30 metrics, the pricing decision, and what the next release fixes.",
+     "family": "Hanken Grotesk",
+     "size": 21,
+     "weight": 400,
+     "color": "#5A544B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 923,
+     "w": 760,
+     "h": 33,
+     "text": "forty-two days, four dates, zero slipped",
+     "family": "Permanent Marker",
+     "size": 26,
+     "weight": 400,
+     "color": "#9E2B00",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Comparison table",
+   "bg": "#F2E9D8",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2040,
+     "y": -660,
+     "w": 764,
+     "h": 764,
+     "fill": "#FF4A00",
+     "rotation": 45,
+     "opacity": 0.9,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Channels and owners",
+     "family": "Martian Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#9E2B00",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 63,
+     "text": "Five channels, five owners",
+     "family": "Unbounded",
+     "size": 50,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8CCB4"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Loop  ·  Launch plan: Loop Insights",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A544B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 231,
+     "w": 1728,
+     "h": 76,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#181614",
+        0
+       ],
+       [
+        "#070605",
+        1
+       ]
+      ]
+     },
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 253,
+     "w": 376,
+     "h": 32,
+     "text": "Owner",
+     "family": "Hanken Grotesk",
+     "size": 22,
+     "weight": 600,
+     "color": "#F2E9D8",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1072,
+     "y": 253,
+     "w": 376,
+     "h": 32,
+     "text": "Ready by",
+     "family": "Hanken Grotesk",
+     "size": 22,
+     "weight": 600,
+     "color": "#F2E9D8",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 253,
+     "w": 376,
+     "h": 32,
+     "text": "Day-one target",
+     "family": "Hanken Grotesk",
+     "size": 22,
+     "weight": 600,
+     "color": "#F2E9D8",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 337,
+     "w": 536,
+     "h": 36,
+     "text": "Product and in-app",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#141210",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 337,
+     "w": 376,
+     "h": 36,
+     "text": "Priya",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1072,
+     "y": 337,
+     "w": 376,
+     "h": 36,
+     "text": "5 Nov",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 337,
+     "w": 376,
+     "h": 36,
+     "text": "Every customer sees it",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 402,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8CCB4"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 403,
+     "w": 1728,
+     "h": 96,
+     "fill": "#EAE0CB"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 433,
+     "w": 536,
+     "h": 36,
+     "text": "Email and blog",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#141210",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 433,
+     "w": 376,
+     "h": 36,
+     "text": "Mei",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1072,
+     "y": 433,
+     "w": 376,
+     "h": 36,
+     "text": "10 Nov",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 433,
+     "w": 376,
+     "h": 36,
+     "text": "40% open rate",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 498,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8CCB4"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 529,
+     "w": 536,
+     "h": 36,
+     "text": "Press and analysts",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#141210",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 529,
+     "w": 376,
+     "h": 36,
+     "text": "Elena",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1072,
+     "y": 529,
+     "w": 376,
+     "h": 36,
+     "text": "11 Nov",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 529,
+     "w": 376,
+     "h": 36,
+     "text": "Three pieces",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 594,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8CCB4"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 595,
+     "w": 1728,
+     "h": 96,
+     "fill": "#EAE0CB"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 625,
+     "w": 536,
+     "h": 36,
+     "text": "Paid search and social",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#141210",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 625,
+     "w": 376,
+     "h": 36,
+     "text": "Jonah",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1072,
+     "y": 625,
+     "w": 376,
+     "h": 36,
+     "text": "12 Nov",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 625,
+     "w": 376,
+     "h": 36,
+     "text": "2,000 visits",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 690,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8CCB4"
+    },
+    {
+     "kind": "text",
+     "x": 128,
+     "y": 721,
+     "w": 536,
+     "h": 36,
+     "text": "Partners",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#141210",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 696,
+     "y": 721,
+     "w": 376,
+     "h": 36,
+     "text": "Marcus",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1072,
+     "y": 721,
+     "w": 376,
+     "h": 36,
+     "text": "12 Nov",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1448,
+     "y": 721,
+     "w": 376,
+     "h": 36,
+     "text": "Ten partner posts",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 786,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8CCB4"
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 923,
+     "w": 760,
+     "h": 33,
+     "text": "if your date slips, say so on the Monday",
+     "family": "Permanent Marker",
+     "size": 26,
+     "weight": 400,
+     "color": "#9E2B00",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Countdown",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#181614",
+      0
+     ],
+     [
+      "#070605",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2104,
+     "y": -1012,
+     "w": 1171,
+     "h": 1171,
+     "fill": "#FF4A00",
+     "rotation": 45,
+     "opacity": 0.92,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 844,
+     "y": 370,
+     "w": 5,
+     "h": 5,
+     "fill": "#F2E9D8",
+     "opacity": 0.52
+    },
+    {
+     "kind": "ellipse",
+     "x": 947,
+     "y": 160,
+     "w": 8,
+     "h": 8,
+     "fill": "#F2E9D8",
+     "opacity": 0.6399999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 999,
+     "y": 145,
+     "w": 4,
+     "h": 4,
+     "fill": "#F2E9D8",
+     "opacity": 0.41
+    },
+    {
+     "kind": "ellipse",
+     "x": 922,
+     "y": 261,
+     "w": 5,
+     "h": 5,
+     "fill": "#F2E9D8",
+     "opacity": 0.59
+    },
+    {
+     "kind": "ellipse",
+     "x": 847,
+     "y": 156,
+     "w": 5,
+     "h": 5,
+     "fill": "#F2E9D8",
+     "opacity": 0.75
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1100,
+     "h": 28,
+     "text": "T minus  ·  launch day is Thursday 12 November",
+     "family": "Martian Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#FF4A00",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 56,
+     "y": 10,
+     "w": 760,
+     "h": 760,
+     "fill": "#FF4A00",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 132,
+     "y": 86,
+     "w": 608,
+     "h": 608,
+     "fill": "#FF4A00",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 86,
+     "y": 130,
+     "w": 1000,
+     "h": 480,
+     "text": "42",
+     "family": "Unbounded",
+     "size": 460,
+     "weight": 800,
+     "color": "#FF4A00",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 618,
+     "w": 1000,
+     "h": 60,
+     "text": "days to launch",
+     "family": "Unbounded",
+     "size": 48,
+     "weight": 800,
+     "color": "#F2E9D8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1200,
+     "y": 190,
+     "w": 720,
+     "h": 130,
+     "text": "Five owners.\nOne date.\nNothing moves it.",
+     "family": "Unbounded",
+     "size": 36,
+     "weight": 800,
+     "color": "#070605",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1280,
+     "y": 330,
+     "w": 560,
+     "h": 44,
+     "text": "update the number every Monday",
+     "family": "Permanent Marker",
+     "size": 27,
+     "weight": 400,
+     "color": "#070605",
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 800,
+     "w": 1728,
+     "h": 2,
+     "fill": "#302B25"
+    },
+    {
+     "kind": "rect",
+     "x": 240,
+     "y": 799,
+     "w": 1296,
+     "h": 4,
+     "fill": "#FF4A00"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 748,
+     "w": 100,
+     "h": 26,
+     "text": "06:00",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B3AA99",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1724,
+     "y": 748,
+     "w": 100,
+     "h": 26,
+     "text": "18:00",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B3AA99",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 228,
+     "y": 789,
+     "w": 24,
+     "h": 24,
+     "fill": "#FF4A00"
+    },
+    {
+     "kind": "ellipse",
+     "x": 235,
+     "y": 796,
+     "w": 10,
+     "h": 10,
+     "fill": "#070605"
+    },
+    {
+     "kind": "text",
+     "x": 228,
+     "y": 748,
+     "w": 200,
+     "h": 30,
+     "text": "07:00",
+     "family": "Martian Mono",
+     "size": 24,
+     "weight": 700,
+     "color": "#FF4A00",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 228,
+     "y": 832,
+     "w": 270,
+     "h": 36,
+     "text": "Press",
+     "family": "Unbounded",
+     "size": 26,
+     "weight": 800,
+     "color": "#F2E9D8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 228,
+     "y": 872,
+     "w": 270,
+     "h": 56,
+     "text": "Embargo lifts. Three pieces, two analysts briefed.",
+     "family": "Hanken Grotesk",
+     "size": 19,
+     "weight": 400,
+     "color": "#B3AA99",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 516,
+     "y": 789,
+     "w": 24,
+     "h": 24,
+     "fill": "#FF4A00"
+    },
+    {
+     "kind": "ellipse",
+     "x": 523,
+     "y": 796,
+     "w": 10,
+     "h": 10,
+     "fill": "#070605"
+    },
+    {
+     "kind": "text",
+     "x": 516,
+     "y": 748,
+     "w": 200,
+     "h": 30,
+     "text": "09:00",
+     "family": "Martian Mono",
+     "size": 24,
+     "weight": 700,
+     "color": "#FF4A00",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 516,
+     "y": 832,
+     "w": 270,
+     "h": 36,
+     "text": "Product live",
+     "family": "Unbounded",
+     "size": 26,
+     "weight": 800,
+     "color": "#F2E9D8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 516,
+     "y": 872,
+     "w": 270,
+     "h": 56,
+     "text": "Insights on for every customer, in-app note out.",
+     "family": "Hanken Grotesk",
+     "size": 19,
+     "weight": 400,
+     "color": "#B3AA99",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1524,
+     "y": 789,
+     "w": 24,
+     "h": 24,
+     "fill": "#FF4A00"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1531,
+     "y": 796,
+     "w": 10,
+     "h": 10,
+     "fill": "#070605"
+    },
+    {
+     "kind": "text",
+     "x": 1524,
+     "y": 748,
+     "w": 200,
+     "h": 30,
+     "text": "16:00",
+     "family": "Martian Mono",
+     "size": 24,
+     "weight": 700,
+     "color": "#FF4A00",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1524,
+     "y": 832,
+     "w": 270,
+     "h": 36,
+     "text": "Webinar",
+     "family": "Unbounded",
+     "size": 26,
+     "weight": 800,
+     "color": "#F2E9D8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1524,
+     "y": 872,
+     "w": 270,
+     "h": 56,
+     "text": "Live demo on pilot data. Every rep on the call.",
+     "family": "Hanken Grotesk",
+     "size": 19,
+     "weight": 400,
+     "color": "#B3AA99",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#302B25"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Loop  ·  Launch plan: Loop Insights",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B3AA99",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B3AA99",
+     "lineHeight": 1.3,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Figures",
+   "bg": "#F2E9D8",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2040,
+     "y": -660,
+     "w": 764,
+     "h": 764,
+     "fill": "#FF4A00",
+     "rotation": 45,
+     "opacity": 0.9,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Success metrics",
+     "family": "Martian Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#9E2B00",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 63,
+     "text": "Day 1, day 7, day 30",
+     "family": "Unbounded",
+     "size": 50,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D8CCB4"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Loop  ·  Launch plan: Loop Insights",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A544B",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "08 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A544B",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 231,
+     "w": 414,
+     "h": 560,
+     "fill": "#EAE0CB",
+     "radius": 4,
+     "stroke": "#D8CCB4",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 231,
+     "w": 414,
+     "h": 6,
+     "fill": "#FF4A00",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 287,
+     "w": 342,
+     "h": 100,
+     "text": "60%",
+     "family": "Unbounded",
+     "size": 84,
+     "weight": 800,
+     "color": "#9E2B00",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 427,
+     "w": 342,
+     "h": 34,
+     "text": "Customers who open it",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#141210",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 132,
+     "y": 481,
+     "w": 190,
+     "h": 40,
+     "label": "Day 1",
+     "fill": "#eec5a6",
+     "color": "#9E2B00",
+     "family": "Hanken Grotesk",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 551,
+     "w": 342,
+     "h": 140,
+     "text": "Of active customers, in the product, on launch day.",
+     "family": "Hanken Grotesk",
+     "size": 20,
+     "weight": 400,
+     "color": "#5A544B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 231,
+     "w": 414,
+     "h": 560,
+     "fill": "#EAE0CB",
+     "radius": 4,
+     "stroke": "#D8CCB4",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 231,
+     "w": 414,
+     "h": 6,
+     "fill": "#141210",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 287,
+     "w": 342,
+     "h": 100,
+     "text": "25%",
+     "family": "Unbounded",
+     "size": 84,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 427,
+     "w": 342,
+     "h": 34,
+     "text": "Weekly active",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#141210",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 570,
+     "y": 481,
+     "w": 190,
+     "h": 40,
+     "label": "Day 7",
+     "fill": "#c3bba9",
+     "color": "#141210",
+     "family": "Hanken Grotesk",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 551,
+     "w": 342,
+     "h": 140,
+     "text": "Customers who come back to it in the first week.",
+     "family": "Hanken Grotesk",
+     "size": 20,
+     "weight": 400,
+     "color": "#5A544B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 231,
+     "w": 414,
+     "h": 560,
+     "fill": "#EAE0CB",
+     "radius": 4,
+     "stroke": "#D8CCB4",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 231,
+     "w": 414,
+     "h": 6,
+     "fill": "#FF4A00",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 287,
+     "w": 342,
+     "h": 100,
+     "text": "40",
+     "family": "Unbounded",
+     "size": 84,
+     "weight": 800,
+     "color": "#9E2B00",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 427,
+     "w": 342,
+     "h": 34,
+     "text": "Upgrades",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#141210",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1008,
+     "y": 481,
+     "w": 190,
+     "h": 40,
+     "label": "Day 30",
+     "fill": "#eec5a6",
+     "color": "#9E2B00",
+     "family": "Hanken Grotesk",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 551,
+     "w": 342,
+     "h": 140,
+     "text": "Accounts on the Insights tier by December.",
+     "family": "Hanken Grotesk",
+     "size": 20,
+     "weight": 400,
+     "color": "#5A544B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 231,
+     "w": 414,
+     "h": 560,
+     "fill": "#EAE0CB",
+     "radius": 4,
+     "stroke": "#D8CCB4",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 231,
+     "w": 414,
+     "h": 6,
+     "fill": "#141210",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 287,
+     "w": 342,
+     "h": 100,
+     "text": "$80K",
+     "family": "Unbounded",
+     "size": 84,
+     "weight": 800,
+     "color": "#141210",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 427,
+     "w": 342,
+     "h": 34,
+     "text": "New monthly revenue",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 600,
+     "color": "#141210",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1446,
+     "y": 481,
+     "w": 190,
+     "h": 40,
+     "label": "Day 30",
+     "fill": "#c3bba9",
+     "color": "#141210",
+     "family": "Hanken Grotesk",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 551,
+     "w": 342,
+     "h": 140,
+     "text": "From upgrades and two new logos won on the launch.",
+     "family": "Hanken Grotesk",
+     "size": 20,
+     "weight": 400,
+     "color": "#5A544B",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 923,
+     "w": 760,
+     "h": 33,
+     "text": "we call it on day 30, not day 1",
+     "family": "Permanent Marker",
+     "size": 26,
+     "weight": 400,
+     "color": "#9E2B00",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#181614",
+      0
+     ],
+     [
+      "#070605",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 2104,
+     "y": -1012,
+     "w": 1171,
+     "h": 1171,
+     "fill": "#FF4A00",
+     "rotation": 45,
+     "opacity": 0.92,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1733,
+     "y": 760,
+     "w": 9,
+     "h": 9,
+     "fill": "#F2E9D8",
+     "opacity": 0.61
+    },
+    {
+     "kind": "ellipse",
+     "x": 1527,
+     "y": 757,
+     "w": 7,
+     "h": 7,
+     "fill": "#F2E9D8",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1582,
+     "y": 549,
+     "w": 5,
+     "h": 5,
+     "fill": "#F2E9D8",
+     "opacity": 0.73
+    },
+    {
+     "kind": "ellipse",
+     "x": 1632,
+     "y": 575,
+     "w": 8,
+     "h": 8,
+     "fill": "#F2E9D8",
+     "opacity": 0.69
+    },
+    {
+     "kind": "ellipse",
+     "x": 1390,
+     "y": 794,
+     "w": 8,
+     "h": 8,
+     "fill": "#F2E9D8",
+     "opacity": 0.77
+    },
+    {
+     "kind": "ellipse",
+     "x": 1384,
+     "y": 653,
+     "w": 9,
+     "h": 9,
+     "fill": "#F2E9D8",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#FF4A00",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#FF4A00",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#FF4A00",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Loop",
+     "family": "Hanken Grotesk",
+     "size": 22,
+     "weight": 600,
+     "color": "#F2E9D8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 42,
+     "text": "Launch day is 12 November",
+     "family": "Permanent Marker",
+     "size": 32,
+     "weight": 400,
+     "color": "#FF4A00",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 111,
+     "text": "Launch day",
+     "family": "Unbounded",
+     "size": 92,
+     "weight": 800,
+     "color": "#F2E9D8",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 445,
+     "w": 940,
+     "h": 120,
+     "text": "12 November. If it is not on the checklist, it does not ship. Screenshot this page.",
+     "family": "Hanken Grotesk",
+     "size": 28,
+     "weight": 400,
+     "color": "#B3AA99",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#FF4A00"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "#launch-insights on Slack",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 500,
+     "color": "#F2E9D8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#FF4A00"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "mei@loop.example",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 500,
+     "color": "#F2E9D8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "calendar",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#FF4A00"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "Retro: 13 November, 15:00",
+     "family": "Hanken Grotesk",
+     "size": 24,
+     "weight": 500,
+     "color": "#F2E9D8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Open the launch checklist",
+     "fill": "#FF4A00",
+     "color": "#141210",
+     "family": "Hanken Grotesk",
+     "size": 22,
+     "weight": 700,
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "09 / 9",
+     "family": "Martian Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B3AA99",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 890,
+     "w": 720,
+     "h": 34,
+     "text": "the retro is already on the calendar",
+     "family": "Permanent Marker",
+     "size": 27,
+     "weight": 400,
+     "color": "#FF4A00",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day97-champagne",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n8",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n10",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n11",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n12",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p6-n6",
+   "kind": "text",
+   "label": "Launch day",
+   "hint": "The date, spelled out"
+  },
+  {
+   "node": "p6-n9",
+   "kind": "text",
+   "label": "Days",
+   "hint": "Days to launch; update it every Monday"
+  },
+  {
+   "node": "p6-n11",
+   "kind": "text",
+   "label": "Statement",
+   "hint": "Three short lines"
+  },
+  {
+   "node": "p6-n20",
+   "kind": "text",
+   "label": "Press",
+   "hint": "A launch-day moment"
+  },
+  {
+   "node": "p6-n25",
+   "kind": "text",
+   "label": "Product live",
+   "hint": "A launch-day moment"
+  },
+  {
+   "node": "p6-n30",
+   "kind": "text",
+   "label": "Webinar",
+   "hint": "A launch-day moment"
+  },
+  {
+   "node": "p8-n15",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n17",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n19",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Product Launch",
-  "theme": "bold, urgent, focused",
-  "pages": [
-   {
-    "title": "What we are launching",
-    "points": [
-     "The product in one sentence"
-    ],
-    "visualRole": "cover"
-   },
-   {
-    "title": "Who it is for",
-    "points": [
-     "The primary audience and the moment of need",
-     "The insight competitors missed"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Positioning",
-    "points": [
-     "The category we claim",
-     "The promise we make",
-     "The proof we bring"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Launch timeline",
-    "points": [
-     "Teaser, launch day, and the follow-through weeks"
-    ],
-    "visualRole": "data"
-   },
-   {
-    "title": "Channels and owners",
-    "points": [
-     "Owned, earned, and paid, each with an owner"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Success metrics",
-    "points": [
-     "The numbers we check on day 1, 7, and 30"
-    ],
-    "visualRole": "data"
-   },
-   {
-    "title": "Launch day",
-    "points": [
-     "One page everyone can screenshot"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 36
 }

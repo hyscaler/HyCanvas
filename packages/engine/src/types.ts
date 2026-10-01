@@ -107,6 +107,8 @@ export interface CanvasLike {
   arc?(x: number, y: number, radius: number, start: number, end: number): void;
   fill(fillRule?: "nonzero" | "evenodd"): void;
   stroke(): void;
+  /** Dash pattern for the next strokes (optional; engines without it stroke solid). */
+  setLineDash?(segments: number[]): void;
   clip(fillRule?: "nonzero" | "evenodd"): void;
   fillText(text: string, x: number, y: number): void;
   /** Optional glyph stroke for outlined/hollow text. */

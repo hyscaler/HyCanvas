@@ -3,14 +3,16 @@
  "title": "Aspen Creek Team Offsite",
  "categories": [
   "presentations",
-  "business"
+  "business",
+  "events"
  ],
  "tags": [
   "offsite",
   "agenda",
   "team",
   "retreat",
-  "schedule"
+  "schedule",
+  "kit"
  ],
  "styleTags": [
   "playful",
@@ -31,60 +33,262 @@
    "role": "body",
    "family": "Work Sans",
    "weight": 400
-  }
- ],
- "created": "2026-07-10T00:00:00.000Z",
- "fillable": [
-  {
-   "node": "p0-n3",
-   "kind": "text",
-   "label": "Offsite name",
-   "hint": "Your offsite name and year, split across two short lines"
   },
   {
-   "node": "p0-n4",
-   "kind": "text",
-   "label": "Welcome line",
-   "hint": "One warm sentence about what the trip is for"
+   "role": "accent",
+   "family": "Caveat",
+   "weight": 700
   },
   {
-   "node": "p0-n6-label",
-   "kind": "text",
-   "label": "Location chip",
-   "hint": "Venue name and place, e.g. Aspen Creek Lodge, Colorado"
-  },
-  {
-   "node": "p1-n2",
-   "kind": "text",
-   "label": "Day headline",
-   "hint": "A short, punchy theme for the day, 3-5 words"
+   "role": "label",
+   "family": "JetBrains Mono",
+   "weight": 600
   }
  ],
  "pages": [
   {
-   "name": "Title",
+   "name": "Cover",
    "bg": {
-    "angle": 135,
+    "angle": 150,
     "stops": [
      [
-      "#3d2c5a",
+      "#3D2C5A",
       0
      ],
      [
-      "#2a1e40",
+      "#221838",
       1
      ]
     ]
    },
    "nodes": [
     {
-     "kind": "rect",
-     "x": 1326,
-     "y": 254,
-     "w": 440,
-     "h": 440,
-     "fill": "#fdc858",
-     "radius": 28
+     "kind": "ellipse",
+     "x": -300,
+     "y": 860,
+     "w": 1100,
+     "h": 700,
+     "fill": "#2A1E40",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "ellipse",
+     "x": 500,
+     "y": 900,
+     "w": 1300,
+     "h": 700,
+     "fill": "#34264F",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "ellipse",
+     "x": 1400,
+     "y": 880,
+     "w": 1100,
+     "h": 700,
+     "fill": "#2A1E40",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "ellipse",
+     "x": 221,
+     "y": 150,
+     "w": 7,
+     "h": 7,
+     "fill": "#FDC858",
+     "opacity": 0.57
+    },
+    {
+     "kind": "ellipse",
+     "x": 150,
+     "y": 539,
+     "w": 7,
+     "h": 7,
+     "fill": "#FDC858",
+     "opacity": 0.6399999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 544,
+     "y": 480,
+     "w": 6,
+     "h": 6,
+     "fill": "#FDC858",
+     "opacity": 0.6799999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 955,
+     "y": 145,
+     "w": 4,
+     "h": 4,
+     "fill": "#FDC858",
+     "opacity": 0.69
+    },
+    {
+     "kind": "ellipse",
+     "x": 1073,
+     "y": 300,
+     "w": 5,
+     "h": 5,
+     "fill": "#FDC858",
+     "opacity": 0.43999999999999995
+    },
+    {
+     "kind": "ellipse",
+     "x": 1799,
+     "y": 597,
+     "w": 4,
+     "h": 4,
+     "fill": "#FDC858",
+     "opacity": 0.41
+    },
+    {
+     "kind": "ellipse",
+     "x": 1828,
+     "y": 116,
+     "w": 7,
+     "h": 7,
+     "fill": "#FDC858",
+     "opacity": 0.5599999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1285,
+     "y": 172,
+     "w": 7,
+     "h": 7,
+     "fill": "#FDC858",
+     "opacity": 0.43999999999999995
+    },
+    {
+     "kind": "ellipse",
+     "x": 851,
+     "y": 142,
+     "w": 10,
+     "h": 10,
+     "fill": "#FDC858",
+     "opacity": 0.62
+    },
+    {
+     "kind": "ellipse",
+     "x": 294,
+     "y": 475,
+     "w": 6,
+     "h": 6,
+     "fill": "#FDC858",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 569,
+     "y": 64,
+     "w": 9,
+     "h": 9,
+     "fill": "#FFFFFF",
+     "opacity": 0.45999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 372,
+     "y": 200,
+     "w": 9,
+     "h": 9,
+     "fill": "#FFFFFF",
+     "opacity": 0.75
+    },
+    {
+     "kind": "ellipse",
+     "x": 1184,
+     "y": 518,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFFFFF",
+     "opacity": 0.83
+    },
+    {
+     "kind": "ellipse",
+     "x": 570,
+     "y": 278,
+     "w": 7,
+     "h": 7,
+     "fill": "#FFFFFF",
+     "opacity": 0.57
+    },
+    {
+     "kind": "ellipse",
+     "x": 491,
+     "y": 497,
+     "w": 8,
+     "h": 8,
+     "fill": "#FFFFFF",
+     "opacity": 0.41
+    },
+    {
+     "kind": "ellipse",
+     "x": 74,
+     "y": 193,
+     "w": 9,
+     "h": 9,
+     "fill": "#FFFFFF",
+     "opacity": 0.57
+    },
+    {
+     "kind": "ellipse",
+     "x": 1137,
+     "y": 401,
+     "w": 7,
+     "h": 7,
+     "fill": "#FFFFFF",
+     "opacity": 0.72
+    },
+    {
+     "kind": "ellipse",
+     "x": 1603,
+     "y": 23,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFFFFF",
+     "opacity": 0.38
+    },
+    {
+     "kind": "ellipse",
+     "x": 1500,
+     "y": 80,
+     "w": 120,
+     "h": 120,
+     "fill": "#FDC858",
+     "opacity": 0.9
+    },
+    {
+     "kind": "ellipse",
+     "x": 1470,
+     "y": 60,
+     "w": 120,
+     "h": 120,
+     "fill": "#3D2C5A",
+     "opacity": 0.85
+    },
+    {
+     "kind": "ellipse",
+     "x": 1210,
+     "y": 170,
+     "w": 620,
+     "h": 620,
+     "fill": "#FDC858",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1272,
+     "y": 232,
+     "w": 496,
+     "h": 496,
+     "fill": "#FDC858",
+     "opacity": 0.18
     },
     {
      "kind": "rect",
@@ -92,23 +296,23 @@
      "y": 210,
      "w": 64,
      "h": 10,
-     "fill": "#fdc858",
+     "fill": "#FDC858",
      "radius": 5
     },
     {
      "kind": "text",
      "x": 140,
      "y": 248,
-     "w": 760,
+     "w": 900,
      "h": 30,
+     "text": "Ridgeline Software  ·  All-hands offsite",
      "family": "Work Sans",
-     "size": 22,
+     "size": 21,
      "weight": 700,
-     "color": "#fdc858",
      "letterSpacing": 4,
      "upper": true,
      "lineHeight": 1.2,
-     "text": "Ridgeline Software \u00b7 All-hands offsite"
+     "color": "#FDC858"
     },
     {
      "kind": "text",
@@ -116,12 +320,12 @@
      "y": 306,
      "w": 1060,
      "h": 236,
+     "text": "Aspen Creek\nOffsite 2026",
      "family": "Figtree",
      "size": 108,
      "weight": 800,
-     "color": "#ffffff",
-     "lineHeight": 1.06,
-     "text": "Aspen Creek\nOffsite 2026"
+     "lineHeight": 1.04,
+     "color": "#FFFFFF"
     },
     {
      "kind": "text",
@@ -129,12 +333,12 @@
      "y": 596,
      "w": 900,
      "h": 90,
+     "text": "Three days in the mountains to chart the 2027 course, ship something silly, and eat too many s'mores.",
      "family": "Work Sans",
      "size": 28,
      "weight": 400,
-     "color": "#cfc2e6",
-     "lineHeight": 1.5,
-     "text": "Three days in the mountains to chart the 2027 course, ship something silly, and eat too many s'mores."
+     "lineHeight": 1.4,
+     "color": "#CFC2E6"
     },
     {
      "kind": "button",
@@ -142,13 +346,12 @@
      "y": 756,
      "w": 290,
      "h": 64,
-     "fill": "#4a3868",
      "label": "Sept 16 to 18",
+     "fill": "#4A3868",
+     "color": "#FFFFFF",
      "family": "Work Sans",
      "size": 22,
-     "weight": 600,
-     "color": "#ebd9ff",
-     "radius": 32
+     "weight": 700
     },
     {
      "kind": "button",
@@ -156,13 +359,12 @@
      "y": 756,
      "w": 430,
      "h": 64,
-     "fill": "#4a3868",
      "label": "Aspen Creek Lodge, Colorado",
+     "fill": "#4A3868",
+     "color": "#FFFFFF",
      "family": "Work Sans",
      "size": 22,
-     "weight": 600,
-     "color": "#ebd9ff",
-     "radius": 32
+     "weight": 700
     },
     {
      "kind": "button",
@@ -170,69 +372,69 @@
      "y": 756,
      "w": 290,
      "h": 64,
-     "fill": "#4a3868",
      "label": "All 42 of us",
+     "fill": "#FDC858",
+     "color": "#33254A",
      "family": "Work Sans",
      "size": 22,
-     "weight": 600,
-     "color": "#ebd9ff",
-     "radius": 32
+     "weight": 700
     },
     {
      "kind": "text",
      "x": 1300,
-     "y": 716,
+     "y": 730,
      "w": 440,
      "h": 48,
+     "text": "cabin crew, assemble!",
      "family": "Caveat",
      "size": 38,
      "weight": 700,
-     "color": "#fdc858",
-     "align": "center",
      "lineHeight": 1.2,
-     "text": "cabin crew, assemble!"
+     "color": "#FDC858",
+     "align": "center"
     },
     {
      "kind": "text",
      "x": 140,
      "y": 980,
-     "w": 760,
+     "w": 900,
      "h": 26,
+     "text": "Ridgeline Software  ·  People Ops  ·  #offsite-2026",
      "family": "Work Sans",
      "size": 20,
      "weight": 500,
-     "color": "#9d8cbe",
-     "lineHeight": 1.2,
-     "text": "Ridgeline Software \u00b7 People Ops \u00b7 #offsite-2026"
+     "lineHeight": 1.4,
+     "color": "#CFC2E6"
     },
     {
      "kind": "text",
-     "x": 1600,
+     "x": 1540,
      "y": 980,
-     "w": 180,
+     "w": 240,
      "h": 26,
+     "text": "01 / 12",
      "family": "Work Sans",
      "size": 20,
      "weight": 500,
-     "color": "#9d8cbe",
-     "align": "right",
-     "lineHeight": 1.2,
-     "text": "01 / 03"
+     "lineHeight": 1.4,
+     "color": "#CFC2E6",
+     "align": "right"
     }
    ],
    "illustrations": [
     {
      "asset": "il-day66-travel",
      "x": 1300,
-     "y": 228,
+     "y": 250,
      "w": 440,
-     "h": 440
+     "h": 440,
+     "cleanCard": true
     }
    ]
   },
   {
-   "name": "Day one schedule",
-   "bg": "#f7f3fb",
+   "name": "Why we're here",
+   "bg": "#F7F3FB",
    "nodes": [
     {
      "kind": "rect",
@@ -240,23 +442,340 @@
      "y": 100,
      "w": 64,
      "h": 10,
-     "fill": "#fdc858",
+     "fill": "#FDC858",
      "radius": 5
     },
     {
      "kind": "text",
      "x": 140,
      "y": 136,
-     "w": 800,
+     "w": 1100,
      "h": 28,
+     "text": "Why we're here",
      "family": "Work Sans",
-     "size": 22,
+     "size": 21,
      "weight": 700,
-     "color": "#7549a5",
      "letterSpacing": 4,
      "upper": true,
      "lineHeight": 1.2,
-     "text": "Day one \u00b7 Wednesday, September 16"
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 188,
+     "w": 1100,
+     "h": 80,
+     "text": "Three days, three jobs to do",
+     "family": "Figtree",
+     "size": 60,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 956,
+     "w": 1640,
+     "h": 1,
+     "fill": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 980,
+     "w": 900,
+     "h": 26,
+     "text": "Aspen Creek Offsite  ·  September 16 to 18",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 980,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 12",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D",
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 300,
+     "w": 530.6666666666666,
+     "h": 520,
+     "fill": "#FFFFFF",
+     "radius": 24,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 300,
+     "w": 530.6666666666666,
+     "h": 8,
+     "fill": "#7549A5"
+    },
+    {
+     "kind": "ellipse",
+     "x": 180,
+     "y": 348,
+     "w": 84,
+     "h": 84,
+     "fill": "#EBD9FF"
+    },
+    {
+     "kind": "icon",
+     "icon": "map-pin",
+     "x": 202,
+     "y": 370,
+     "w": 40,
+     "h": 40,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 470,
+     "w": 450.66666666666663,
+     "h": 100,
+     "text": "Set the 2027 course",
+     "family": "Figtree",
+     "size": 34,
+     "weight": 800,
+     "lineHeight": 1.1,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 580,
+     "w": 450.66666666666663,
+     "h": 150,
+     "text": "Leave with one plan we all wrote, three bets we all believe, and owners for each.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 760,
+     "w": 120,
+     "h": 30,
+     "text": "01",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "rect",
+     "x": 694.6666666666666,
+     "y": 300,
+     "w": 530.6666666666666,
+     "h": 520,
+     "fill": "#FFFFFF",
+     "radius": 24,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 694.6666666666666,
+     "y": 300,
+     "w": 530.6666666666666,
+     "h": 8,
+     "fill": "#FF8A5B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 734.6666666666666,
+     "y": 348,
+     "w": 84,
+     "h": 84,
+     "fill": "#FFE3D6"
+    },
+    {
+     "kind": "icon",
+     "icon": "bulb",
+     "x": 756.6666666666666,
+     "y": 370,
+     "w": 40,
+     "h": 40,
+     "color": "#FF8A5B"
+    },
+    {
+     "kind": "text",
+     "x": 734.6666666666666,
+     "y": 470,
+     "w": 450.66666666666663,
+     "h": 100,
+     "text": "Ship something silly",
+     "family": "Figtree",
+     "size": 34,
+     "weight": 800,
+     "lineHeight": 1.1,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 734.6666666666666,
+     "y": 580,
+     "w": 450.66666666666663,
+     "h": 150,
+     "text": "Two-day build, any team, any idea. Demo Friday morning. Prizes are real.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 734.6666666666666,
+     "y": 760,
+     "w": 120,
+     "h": 30,
+     "text": "02",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "rect",
+     "x": 1249.3333333333333,
+     "y": 300,
+     "w": 530.6666666666666,
+     "h": 520,
+     "fill": "#FFFFFF",
+     "radius": 24,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1249.3333333333333,
+     "y": 300,
+     "w": 530.6666666666666,
+     "h": 8,
+     "fill": "#FDC858"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1289.3333333333333,
+     "y": 348,
+     "w": 84,
+     "h": 84,
+     "fill": "#FFF0C2"
+    },
+    {
+     "kind": "icon",
+     "icon": "flame",
+     "x": 1311.3333333333333,
+     "y": 370,
+     "w": 40,
+     "h": 40,
+     "color": "#B58A1C"
+    },
+    {
+     "kind": "text",
+     "x": 1289.3333333333333,
+     "y": 470,
+     "w": 450.66666666666663,
+     "h": 100,
+     "text": "Remember why we like each other",
+     "family": "Figtree",
+     "size": 34,
+     "weight": 800,
+     "lineHeight": 1.1,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 1289.3333333333333,
+     "y": 580,
+     "w": 450.66666666666663,
+     "h": 150,
+     "text": "Forty-two people, one long table, no laptops after dinner.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 1289.3333333333333,
+     "y": 760,
+     "w": 120,
+     "h": 30,
+     "text": "03",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 130,
+     "w": 600,
+     "h": 60,
+     "text": "no slides after 4pm, promise",
+     "family": "Caveat",
+     "size": 34,
+     "weight": 700,
+     "lineHeight": 1.2,
+     "color": "#7549A5",
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Day 1",
+   "bg": "#F7F3FB",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 100,
+     "w": 64,
+     "h": 10,
+     "fill": "#FDC858",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 136,
+     "w": 1000,
+     "h": 28,
+     "text": "Day one  ·  Wednesday, September 16",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 700,
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
     },
     {
      "kind": "text",
@@ -264,12 +783,12 @@
      "y": 188,
      "w": 1000,
      "h": 80,
+     "text": "Maps out, laptops shut.",
      "family": "Figtree",
      "size": 62,
      "weight": 800,
-     "color": "#33254a",
-     "lineHeight": 1.1,
-     "text": "Maps out, laptops shut."
+     "lineHeight": 1.06,
+     "color": "#33254A"
     },
     {
      "kind": "rect",
@@ -277,7 +796,7 @@
      "y": 332,
      "w": 4,
      "h": 520,
-     "fill": "#d9c8ef",
+     "fill": "#D9C8EF",
      "radius": 2
     },
     {
@@ -286,7 +805,7 @@
      "y": 322,
      "w": 20,
      "h": 20,
-     "fill": "#fdc858"
+     "fill": "#FDC858"
     },
     {
      "kind": "text",
@@ -294,12 +813,12 @@
      "y": 320,
      "w": 150,
      "h": 28,
+     "text": "08:30",
      "family": "JetBrains Mono",
      "size": 22,
      "weight": 600,
-     "color": "#7549a5",
      "lineHeight": 1.2,
-     "text": "08:30"
+     "color": "#7549A5"
     },
     {
      "kind": "text",
@@ -307,12 +826,12 @@
      "y": 316,
      "w": 620,
      "h": 32,
+     "text": "Trailhead check-in",
      "family": "Figtree",
      "size": 27,
      "weight": 700,
-     "color": "#33254a",
-     "lineHeight": 1.2,
-     "text": "Trailhead check-in"
+     "lineHeight": 1.06,
+     "color": "#33254A"
     },
     {
      "kind": "text",
@@ -320,12 +839,12 @@
      "y": 354,
      "w": 620,
      "h": 56,
+     "text": "Lodge porch. Badges, trail maps, and the good espresso.",
      "family": "Work Sans",
      "size": 20,
      "weight": 400,
-     "color": "#665a7d",
      "lineHeight": 1.4,
-     "text": "Lodge porch. Badges, trail maps, and the good espresso."
+     "color": "#665A7D"
     },
     {
      "kind": "ellipse",
@@ -333,7 +852,7 @@
      "y": 426,
      "w": 20,
      "h": 20,
-     "fill": "#fdc858"
+     "fill": "#FDC858"
     },
     {
      "kind": "text",
@@ -341,12 +860,12 @@
      "y": 424,
      "w": 150,
      "h": 28,
+     "text": "10:00",
      "family": "JetBrains Mono",
      "size": 22,
      "weight": 600,
-     "color": "#7549a5",
      "lineHeight": 1.2,
-     "text": "10:00"
+     "color": "#7549A5"
     },
     {
      "kind": "text",
@@ -354,12 +873,12 @@
      "y": 420,
      "w": 620,
      "h": 32,
+     "text": "The year ahead, unplugged",
      "family": "Figtree",
      "size": 27,
      "weight": 700,
-     "color": "#33254a",
-     "lineHeight": 1.2,
-     "text": "The year ahead, unplugged"
+     "lineHeight": 1.06,
+     "color": "#33254A"
     },
     {
      "kind": "text",
@@ -367,12 +886,12 @@
      "y": 458,
      "w": 620,
      "h": 56,
+     "text": "Priya and Sam walk the 2027 plan. Ten slides, zero spreadsheets.",
      "family": "Work Sans",
      "size": 20,
      "weight": 400,
-     "color": "#665a7d",
      "lineHeight": 1.4,
-     "text": "Priya and Sam walk the 2027 plan. Ten slides, zero spreadsheets."
+     "color": "#665A7D"
     },
     {
      "kind": "ellipse",
@@ -380,7 +899,7 @@
      "y": 530,
      "w": 20,
      "h": 20,
-     "fill": "#fdc858"
+     "fill": "#FF8A5B"
     },
     {
      "kind": "text",
@@ -388,12 +907,12 @@
      "y": 528,
      "w": 150,
      "h": 28,
+     "text": "12:30",
      "family": "JetBrains Mono",
      "size": 22,
      "weight": 600,
-     "color": "#7549a5",
      "lineHeight": 1.2,
-     "text": "12:30"
+     "color": "#7549A5"
     },
     {
      "kind": "text",
@@ -401,12 +920,12 @@
      "y": 524,
      "w": 620,
      "h": 32,
+     "text": "Long-table lunch",
      "family": "Figtree",
      "size": 27,
      "weight": 700,
-     "color": "#33254a",
-     "lineHeight": 1.2,
-     "text": "Long-table lunch"
+     "lineHeight": 1.06,
+     "color": "#33254A"
     },
     {
      "kind": "text",
@@ -414,12 +933,12 @@
      "y": 562,
      "w": 620,
      "h": 56,
+     "text": "One table, forty-two chairs, everything served family style.",
      "family": "Work Sans",
      "size": 20,
      "weight": 400,
-     "color": "#665a7d",
      "lineHeight": 1.4,
-     "text": "One table, forty-two chairs, everything served family style."
+     "color": "#665A7D"
     },
     {
      "kind": "ellipse",
@@ -427,7 +946,7 @@
      "y": 634,
      "w": 20,
      "h": 20,
-     "fill": "#fdc858"
+     "fill": "#FDC858"
     },
     {
      "kind": "text",
@@ -435,12 +954,12 @@
      "y": 632,
      "w": 150,
      "h": 28,
+     "text": "14:00",
      "family": "JetBrains Mono",
      "size": 22,
      "weight": 600,
-     "color": "#7549a5",
      "lineHeight": 1.2,
-     "text": "14:00"
+     "color": "#7549A5"
     },
     {
      "kind": "text",
@@ -448,12 +967,12 @@
      "y": 628,
      "w": 620,
      "h": 32,
+     "text": "Workshop tracks",
      "family": "Figtree",
      "size": 27,
      "weight": 700,
-     "color": "#33254a",
-     "lineHeight": 1.2,
-     "text": "Workshop tracks"
+     "lineHeight": 1.06,
+     "color": "#33254A"
     },
     {
      "kind": "text",
@@ -461,12 +980,12 @@
      "y": 666,
      "w": 620,
      "h": 56,
+     "text": "Pick one: Product bets, Customer stories, or the AI test kitchen.",
      "family": "Work Sans",
      "size": 20,
      "weight": 400,
-     "color": "#665a7d",
      "lineHeight": 1.4,
-     "text": "Pick one: Product bets, Customer stories, or the AI test kitchen."
+     "color": "#665A7D"
     },
     {
      "kind": "ellipse",
@@ -474,7 +993,7 @@
      "y": 738,
      "w": 20,
      "h": 20,
-     "fill": "#fdc858"
+     "fill": "#FDC858"
     },
     {
      "kind": "text",
@@ -482,12 +1001,12 @@
      "y": 736,
      "w": 150,
      "h": 28,
+     "text": "16:30",
      "family": "JetBrains Mono",
      "size": 22,
      "weight": 600,
-     "color": "#7549a5",
      "lineHeight": 1.2,
-     "text": "16:30"
+     "color": "#7549A5"
     },
     {
      "kind": "text",
@@ -495,12 +1014,12 @@
      "y": 732,
      "w": 620,
      "h": 32,
+     "text": "Ridgeline hike",
      "family": "Figtree",
      "size": 27,
      "weight": 700,
-     "color": "#33254a",
-     "lineHeight": 1.2,
-     "text": "Ridgeline hike"
+     "lineHeight": 1.06,
+     "color": "#33254A"
     },
     {
      "kind": "text",
@@ -508,12 +1027,12 @@
      "y": 770,
      "w": 620,
      "h": 56,
+     "text": "Choose the gentle lake loop or the summit scramble.",
      "family": "Work Sans",
      "size": 20,
      "weight": 400,
-     "color": "#665a7d",
      "lineHeight": 1.4,
-     "text": "Choose the gentle lake loop or the summit scramble."
+     "color": "#665A7D"
     },
     {
      "kind": "ellipse",
@@ -521,7 +1040,7 @@
      "y": 842,
      "w": 20,
      "h": 20,
-     "fill": "#fdc858"
+     "fill": "#FF8A5B"
     },
     {
      "kind": "text",
@@ -529,12 +1048,12 @@
      "y": 840,
      "w": 150,
      "h": 28,
+     "text": "19:00",
      "family": "JetBrains Mono",
      "size": 22,
      "weight": 600,
-     "color": "#7549a5",
      "lineHeight": 1.2,
-     "text": "19:00"
+     "color": "#7549A5"
     },
     {
      "kind": "text",
@@ -542,12 +1061,12 @@
      "y": 836,
      "w": 620,
      "h": 32,
+     "text": "Cookout and campfire",
      "family": "Figtree",
      "size": 27,
      "weight": 700,
-     "color": "#33254a",
-     "lineHeight": 1.2,
-     "text": "Cookout & campfire"
+     "lineHeight": 1.06,
+     "color": "#33254A"
     },
     {
      "kind": "text",
@@ -555,12 +1074,12 @@
      "y": 874,
      "w": 620,
      "h": 56,
+     "text": "Dinner off the grill, stories by the fire, s'mores until late.",
      "family": "Work Sans",
      "size": 20,
      "weight": 400,
-     "color": "#665a7d",
      "lineHeight": 1.4,
-     "text": "Dinner off the grill, stories by the fire, s'mores until late."
+     "color": "#665A7D"
     },
     {
      "kind": "rect",
@@ -568,8 +1087,74 @@
      "y": 268,
      "w": 660,
      "h": 650,
-     "fill": "#ebd9ff",
+     "fill": {
+      "angle": 150,
+      "stops": [
+       [
+        "#3D2C5A",
+        0
+       ],
+       [
+        "#221838",
+        1
+       ]
+      ]
+     },
      "radius": 28
+    },
+    {
+     "kind": "ellipse",
+     "x": 1295,
+     "y": 363,
+     "w": 6,
+     "h": 6,
+     "fill": "#FDC858",
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1438,
+     "y": 567,
+     "w": 6,
+     "h": 6,
+     "fill": "#FDC858",
+     "opacity": 0.77
+    },
+    {
+     "kind": "ellipse",
+     "x": 1420,
+     "y": 582,
+     "w": 5,
+     "h": 5,
+     "fill": "#FDC858",
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1321,
+     "y": 434,
+     "w": 8,
+     "h": 8,
+     "fill": "#FDC858",
+     "opacity": 0.79
+    },
+    {
+     "kind": "ellipse",
+     "x": 1754,
+     "y": 472,
+     "w": 5,
+     "h": 5,
+     "fill": "#FDC858",
+     "opacity": 0.84
+    },
+    {
+     "kind": "ellipse",
+     "x": 1317,
+     "y": 341,
+     "w": 8,
+     "h": 8,
+     "fill": "#FDC858",
+     "opacity": 0.72
     },
     {
      "kind": "text",
@@ -577,14 +1162,14 @@
      "y": 324,
      "w": 540,
      "h": 24,
+     "text": "After hours",
      "family": "Work Sans",
      "size": 19,
      "weight": 700,
-     "color": "#7549a5",
      "letterSpacing": 3,
      "upper": true,
      "lineHeight": 1.2,
-     "text": "After hours"
+     "color": "#FDC858"
     },
     {
      "kind": "text",
@@ -592,69 +1177,2255 @@
      "y": 360,
      "w": 540,
      "h": 84,
+     "text": "Night one ends\naround the fire.",
      "family": "Figtree",
      "size": 34,
      "weight": 800,
-     "color": "#33254a",
-     "lineHeight": 1.2,
-     "text": "Night one ends\naround the fire."
+     "lineHeight": 1.06,
+     "color": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1270,
+     "y": 528,
+     "w": 360,
+     "h": 360,
+     "fill": "#FDC858",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1306,
+     "y": 564,
+     "w": 288,
+     "h": 288,
+     "fill": "#FDC858",
+     "opacity": 0.18
     },
     {
      "kind": "text",
      "x": 1180,
-     "y": 812,
+     "y": 828,
      "w": 540,
      "h": 44,
+     "text": "bring a hoodie, trust us",
      "family": "Caveat",
      "size": 34,
      "weight": 700,
-     "color": "#7549a5",
-     "align": "center",
      "lineHeight": 1.2,
-     "text": "bring a hoodie, trust us"
+     "color": "#FDC858",
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 956,
+     "w": 1640,
+     "h": 1,
+     "fill": "#D9C8EF"
     },
     {
      "kind": "text",
      "x": 140,
      "y": 980,
-     "w": 700,
+     "w": 900,
      "h": 26,
+     "text": "Aspen Creek Offsite  ·  Day one of three",
      "family": "Work Sans",
      "size": 20,
      "weight": 500,
-     "color": "#6f5f8f",
-     "lineHeight": 1.2,
-     "text": "Aspen Creek Offsite \u00b7 Day one of three"
+     "lineHeight": 1.4,
+     "color": "#665A7D"
     },
     {
      "kind": "text",
-     "x": 1600,
+     "x": 1540,
      "y": 980,
-     "w": 180,
+     "w": 240,
      "h": 26,
+     "text": "03 / 12",
      "family": "Work Sans",
      "size": 20,
      "weight": 500,
-     "color": "#6f5f8f",
-     "align": "right",
-     "lineHeight": 1.2,
-     "text": "02 / 03"
+     "lineHeight": 1.4,
+     "color": "#665A7D",
+     "align": "right"
     }
    ],
    "illustrations": [
     {
      "asset": "il-day96-camping",
-     "x": 1240,
-     "y": 478,
-     "w": 420,
+     "x": 1270,
+     "y": 548,
+     "w": 360,
      "h": 300,
      "cleanCard": true
     }
    ]
   },
   {
+   "name": "Day 2",
+   "bg": "#F7F3FB",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 100,
+     "w": 64,
+     "h": 10,
+     "fill": "#FDC858",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 136,
+     "w": 1000,
+     "h": 28,
+     "text": "Day two  ·  Thursday, September 17",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 700,
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 188,
+     "w": 1000,
+     "h": 80,
+     "text": "Build day. Anything goes.",
+     "family": "Figtree",
+     "size": 62,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "rect",
+     "x": 150,
+     "y": 332,
+     "w": 4,
+     "h": 520,
+     "fill": "#D9C8EF",
+     "radius": 2
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 322,
+     "w": 20,
+     "h": 20,
+     "fill": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 320,
+     "w": 150,
+     "h": 28,
+     "text": "08:00",
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 316,
+     "w": 620,
+     "h": 32,
+     "text": "Pancakes and pitches",
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 354,
+     "w": 620,
+     "h": 56,
+     "text": "Two minutes per team. Say what you are building and who it is for.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 426,
+     "w": 20,
+     "h": 20,
+     "fill": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 424,
+     "w": 150,
+     "h": 28,
+     "text": "09:00",
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 420,
+     "w": 620,
+     "h": 32,
+     "text": "Build block one",
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 458,
+     "w": 620,
+     "h": 56,
+     "text": "Teams of three to five. Any stack, any idea, no tickets.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 530,
+     "w": 20,
+     "h": 20,
+     "fill": "#FF8A5B"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 528,
+     "w": 150,
+     "h": 28,
+     "text": "12:30",
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 524,
+     "w": 620,
+     "h": 32,
+     "text": "Lakeside lunch",
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 562,
+     "w": 620,
+     "h": 56,
+     "text": "Tacos on the dock. Swimming is allowed, strongly encouraged.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 634,
+     "w": 20,
+     "h": 20,
+     "fill": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 632,
+     "w": 150,
+     "h": 28,
+     "text": "13:30",
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 628,
+     "w": 620,
+     "h": 32,
+     "text": "Build block two",
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 666,
+     "w": 620,
+     "h": 56,
+     "text": "The lodge library is the quiet room. Mentors roam with coffee.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 738,
+     "w": 20,
+     "h": 20,
+     "fill": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 736,
+     "w": 150,
+     "h": 28,
+     "text": "17:00",
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 732,
+     "w": 620,
+     "h": 32,
+     "text": "Pens down",
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 770,
+     "w": 620,
+     "h": 56,
+     "text": "Commit, screenshot, breathe. Demos are tomorrow at nine.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 842,
+     "w": 20,
+     "h": 20,
+     "fill": "#FF8A5B"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 840,
+     "w": 150,
+     "h": 28,
+     "text": "19:30",
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 836,
+     "w": 620,
+     "h": 32,
+     "text": "Trivia night",
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 874,
+     "w": 620,
+     "h": 56,
+     "text": "Six rounds, one of them entirely about Ridgeline lore.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "rect",
+     "x": 1120,
+     "y": 268,
+     "w": 660,
+     "h": 650,
+     "fill": {
+      "angle": 150,
+      "stops": [
+       [
+        "#3D2C5A",
+        0
+       ],
+       [
+        "#221838",
+        1
+       ]
+      ]
+     },
+     "radius": 28
+    },
+    {
+     "kind": "ellipse",
+     "x": 1170,
+     "y": 426,
+     "w": 5,
+     "h": 5,
+     "fill": "#FDC858",
+     "opacity": 0.6699999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1149,
+     "y": 526,
+     "w": 7,
+     "h": 7,
+     "fill": "#FDC858",
+     "opacity": 0.6699999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1164,
+     "y": 292,
+     "w": 5,
+     "h": 5,
+     "fill": "#FDC858",
+     "opacity": 0.48
+    },
+    {
+     "kind": "ellipse",
+     "x": 1750,
+     "y": 522,
+     "w": 8,
+     "h": 8,
+     "fill": "#FDC858",
+     "opacity": 0.51
+    },
+    {
+     "kind": "ellipse",
+     "x": 1246,
+     "y": 349,
+     "w": 4,
+     "h": 4,
+     "fill": "#FDC858",
+     "opacity": 0.58
+    },
+    {
+     "kind": "ellipse",
+     "x": 1637,
+     "y": 511,
+     "w": 9,
+     "h": 9,
+     "fill": "#FDC858",
+     "opacity": 0.38999999999999996
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 324,
+     "w": 540,
+     "h": 24,
+     "text": "After hours",
+     "family": "Work Sans",
+     "size": 19,
+     "weight": 700,
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 360,
+     "w": 540,
+     "h": 84,
+     "text": "Night two is\ntrivia and hot cocoa.",
+     "family": "Figtree",
+     "size": 34,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1270,
+     "y": 528,
+     "w": 360,
+     "h": 360,
+     "fill": "#FDC858",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1306,
+     "y": 564,
+     "w": 288,
+     "h": 288,
+     "fill": "#FDC858",
+     "opacity": 0.18
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 828,
+     "w": 540,
+     "h": 44,
+     "text": "team names must be puns",
+     "family": "Caveat",
+     "size": 34,
+     "weight": 700,
+     "lineHeight": 1.2,
+     "color": "#FDC858",
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 956,
+     "w": 1640,
+     "h": 1,
+     "fill": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 980,
+     "w": 900,
+     "h": 26,
+     "text": "Aspen Creek Offsite  ·  Day two of three",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 980,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 12",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D",
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day21-lantern",
+     "x": 1270,
+     "y": 548,
+     "w": 360,
+     "h": 300,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Day 3",
+   "bg": "#F7F3FB",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 100,
+     "w": 64,
+     "h": 10,
+     "fill": "#FDC858",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 136,
+     "w": 1000,
+     "h": 28,
+     "text": "Day three  ·  Friday, September 18",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 700,
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 188,
+     "w": 1000,
+     "h": 80,
+     "text": "Show and tell, then home.",
+     "family": "Figtree",
+     "size": 62,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "rect",
+     "x": 150,
+     "y": 332,
+     "w": 4,
+     "h": 520,
+     "fill": "#D9C8EF",
+     "radius": 2
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 322,
+     "w": 20,
+     "h": 20,
+     "fill": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 320,
+     "w": 150,
+     "h": 28,
+     "text": "09:00",
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 316,
+     "w": 620,
+     "h": 32,
+     "text": "Demo hour",
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 354,
+     "w": 620,
+     "h": 56,
+     "text": "Every team, five minutes, live. Applause mandatory, questions kind.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 426,
+     "w": 20,
+     "h": 20,
+     "fill": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 424,
+     "w": 150,
+     "h": 28,
+     "text": "10:30",
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 420,
+     "w": 620,
+     "h": 32,
+     "text": "Vote and prizes",
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 458,
+     "w": 620,
+     "h": 56,
+     "text": "Best build, best pitch, best name. Dana has the trophies.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 530,
+     "w": 20,
+     "h": 20,
+     "fill": "#FF8A5B"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 528,
+     "w": 150,
+     "h": 28,
+     "text": "11:30",
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 524,
+     "w": 620,
+     "h": 32,
+     "text": "The plan, signed",
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 562,
+     "w": 620,
+     "h": 56,
+     "text": "We read the 2027 course back to ourselves and each owner says yes.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 634,
+     "w": 20,
+     "h": 20,
+     "fill": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 632,
+     "w": 150,
+     "h": 28,
+     "text": "12:30",
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 628,
+     "w": 620,
+     "h": 32,
+     "text": "Farewell lunch",
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 666,
+     "w": 620,
+     "h": 56,
+     "text": "Boxed lunches for the road, group photo on the porch.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 738,
+     "w": 20,
+     "h": 20,
+     "fill": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 736,
+     "w": 150,
+     "h": 28,
+     "text": "13:30",
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 732,
+     "w": 620,
+     "h": 32,
+     "text": "Pack up",
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 770,
+     "w": 620,
+     "h": 56,
+     "text": "Cabin keys to the front desk. Lost hoodies go to the lodge box.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 842,
+     "w": 20,
+     "h": 20,
+     "fill": "#FF8A5B"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 840,
+     "w": 150,
+     "h": 28,
+     "text": "14:00",
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 836,
+     "w": 620,
+     "h": 32,
+     "text": "Shuttles home",
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 874,
+     "w": 620,
+     "h": 56,
+     "text": "Wheels roll at 14:00 sharp. Back at HQ by 16:00.",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "rect",
+     "x": 1120,
+     "y": 268,
+     "w": 660,
+     "h": 650,
+     "fill": {
+      "angle": 150,
+      "stops": [
+       [
+        "#3D2C5A",
+        0
+       ],
+       [
+        "#221838",
+        1
+       ]
+      ]
+     },
+     "radius": 28
+    },
+    {
+     "kind": "ellipse",
+     "x": 1655,
+     "y": 486,
+     "w": 10,
+     "h": 10,
+     "fill": "#FDC858",
+     "opacity": 0.6399999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1473,
+     "y": 485,
+     "w": 7,
+     "h": 7,
+     "fill": "#FDC858",
+     "opacity": 0.57
+    },
+    {
+     "kind": "ellipse",
+     "x": 1523,
+     "y": 296,
+     "w": 5,
+     "h": 5,
+     "fill": "#FDC858",
+     "opacity": 0.77
+    },
+    {
+     "kind": "ellipse",
+     "x": 1565,
+     "y": 319,
+     "w": 9,
+     "h": 9,
+     "fill": "#FDC858",
+     "opacity": 0.73
+    },
+    {
+     "kind": "ellipse",
+     "x": 1352,
+     "y": 517,
+     "w": 9,
+     "h": 9,
+     "fill": "#FDC858",
+     "opacity": 0.82
+    },
+    {
+     "kind": "ellipse",
+     "x": 1346,
+     "y": 390,
+     "w": 10,
+     "h": 10,
+     "fill": "#FDC858",
+     "opacity": 0.55
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 324,
+     "w": 540,
+     "h": 24,
+     "text": "After hours",
+     "family": "Work Sans",
+     "size": 19,
+     "weight": 700,
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 360,
+     "w": 540,
+     "h": 84,
+     "text": "Go home tired,\nin the good way.",
+     "family": "Figtree",
+     "size": 34,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1270,
+     "y": 528,
+     "w": 360,
+     "h": 360,
+     "fill": "#FDC858",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1306,
+     "y": 564,
+     "w": 288,
+     "h": 288,
+     "fill": "#FDC858",
+     "opacity": 0.18
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 828,
+     "w": 540,
+     "h": 44,
+     "text": "group photo, everyone, no excuses",
+     "family": "Caveat",
+     "size": 34,
+     "weight": 700,
+     "lineHeight": 1.2,
+     "color": "#FDC858",
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 956,
+     "w": 1640,
+     "h": 1,
+     "fill": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 980,
+     "w": 900,
+     "h": 26,
+     "text": "Aspen Creek Offsite  ·  Day three of three",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 980,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 12",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D",
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day35-firework",
+     "x": 1270,
+     "y": 548,
+     "w": 360,
+     "h": 300,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "The lodge",
+   "bg": "#F7F3FB",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 100,
+     "w": 64,
+     "h": 10,
+     "fill": "#FDC858",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 136,
+     "w": 1100,
+     "h": 28,
+     "text": "Where we're staying",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 700,
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 188,
+     "w": 1100,
+     "h": 80,
+     "text": "Aspen Creek Lodge",
+     "family": "Figtree",
+     "size": 60,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 956,
+     "w": 1640,
+     "h": 1,
+     "fill": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 980,
+     "w": 900,
+     "h": 26,
+     "text": "Aspen Creek Offsite  ·  September 16 to 18",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 980,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 12",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D",
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 280,
+     "w": 820,
+     "h": 90,
+     "text": "A timber lodge at 2,600 metres with a lake, a library, a long porch and no reason to check Slack.",
+     "family": "Work Sans",
+     "size": 26,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "ellipse",
+     "x": 140,
+     "y": 400,
+     "w": 56,
+     "h": 56,
+     "fill": "#EBD9FF"
+    },
+    {
+     "kind": "icon",
+     "icon": "map-pin",
+     "x": 154,
+     "y": 414,
+     "w": 28,
+     "h": 28,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 220,
+     "y": 398,
+     "w": 740,
+     "h": 34,
+     "text": "Aspen Creek Road 14, Colorado",
+     "family": "Figtree",
+     "size": 26,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 220,
+     "y": 434,
+     "w": 740,
+     "h": 30,
+     "text": "Two hours and twenty minutes from HQ by shuttle",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "ellipse",
+     "x": 140,
+     "y": 518,
+     "w": 56,
+     "h": 56,
+     "fill": "#EBD9FF"
+    },
+    {
+     "kind": "icon",
+     "icon": "bed",
+     "x": 154,
+     "y": 532,
+     "w": 28,
+     "h": 28,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 220,
+     "y": 516,
+     "w": 740,
+     "h": 34,
+     "text": "Sixteen cabins, two to four beds",
+     "family": "Figtree",
+     "size": 26,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 220,
+     "y": 552,
+     "w": 740,
+     "h": 30,
+     "text": "Assignments land in your inbox Friday before",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "ellipse",
+     "x": 140,
+     "y": 636,
+     "w": 56,
+     "h": 56,
+     "fill": "#EBD9FF"
+    },
+    {
+     "kind": "icon",
+     "icon": "home",
+     "x": 154,
+     "y": 650,
+     "w": 28,
+     "h": 28,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 220,
+     "y": 634,
+     "w": 740,
+     "h": 34,
+     "text": "Main hall seats sixty",
+     "family": "Figtree",
+     "size": 26,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 220,
+     "y": 670,
+     "w": 740,
+     "h": 30,
+     "text": "Sessions, meals and the demo hour all happen here",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "ellipse",
+     "x": 140,
+     "y": 754,
+     "w": 56,
+     "h": 56,
+     "fill": "#EBD9FF"
+    },
+    {
+     "kind": "icon",
+     "icon": "sun",
+     "x": 154,
+     "y": 768,
+     "w": 28,
+     "h": 28,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 220,
+     "y": 752,
+     "w": 740,
+     "h": 34,
+     "text": "Highs of 18, lows of 4",
+     "family": "Figtree",
+     "size": 26,
+     "weight": 700,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 220,
+     "y": 788,
+     "w": 740,
+     "h": 30,
+     "text": "Layers. Really. The porch gets cold after sunset",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "rect",
+     "x": 1080,
+     "y": 268,
+     "w": 700,
+     "h": 650,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#EBD9FF",
+        0
+       ],
+       [
+        "#F7F3FB",
+        1
+       ]
+      ]
+     },
+     "radius": 28,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5,
+     "name": "Photo"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1170,
+     "y": 300,
+     "w": 520,
+     "h": 520,
+     "fill": "#FDC858",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1222,
+     "y": 352,
+     "w": 416,
+     "h": 416,
+     "fill": "#FDC858",
+     "opacity": 0.18
+    },
+    {
+     "kind": "text",
+     "x": 1120,
+     "y": 830,
+     "w": 620,
+     "h": 44,
+     "text": "the porch is the best seat in the house",
+     "family": "Caveat",
+     "size": 32,
+     "weight": 700,
+     "lineHeight": 1.2,
+     "color": "#7549A5",
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day31-sweet-home",
+     "x": 1180,
+     "y": 320,
+     "w": 500,
+     "h": 440,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Workshop tracks",
+   "bg": "#F7F3FB",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 100,
+     "w": 64,
+     "h": 10,
+     "fill": "#FDC858",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 136,
+     "w": 1100,
+     "h": 28,
+     "text": "Wednesday, 14:00",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 700,
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 188,
+     "w": 1100,
+     "h": 80,
+     "text": "Pick your workshop track",
+     "family": "Figtree",
+     "size": 60,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 956,
+     "w": 1640,
+     "h": 1,
+     "fill": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 980,
+     "w": 900,
+     "h": 26,
+     "text": "Aspen Creek Offsite  ·  September 16 to 18",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 980,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 12",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D",
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 300,
+     "w": 530.6666666666666,
+     "h": 540,
+     "fill": "#FFFFFF",
+     "radius": 24,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 300,
+     "w": 530.6666666666666,
+     "h": 8,
+     "fill": "#7549A5"
+    },
+    {
+     "kind": "ellipse",
+     "x": 180,
+     "y": 348,
+     "w": 84,
+     "h": 84,
+     "fill": "#EBD9FF"
+    },
+    {
+     "kind": "icon",
+     "icon": "compass",
+     "x": 202,
+     "y": 370,
+     "w": 40,
+     "h": 40,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 470,
+     "w": 450.66666666666663,
+     "h": 50,
+     "text": "Product bets",
+     "family": "Figtree",
+     "size": 34,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 530,
+     "w": 450.66666666666663,
+     "h": 150,
+     "text": "Three bets for 2027, argued and ranked. Bring an opinion and a customer story.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "rect",
+     "x": 180,
+     "y": 720,
+     "w": 450.66666666666663,
+     "h": 1,
+     "fill": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 744,
+     "w": 200,
+     "h": 28,
+     "text": "Host",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 700,
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 770,
+     "w": 220,
+     "h": 32,
+     "text": "Priya",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 700,
+     "lineHeight": 1.3,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 410,
+     "y": 744,
+     "w": 200,
+     "h": 28,
+     "text": "Room",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 700,
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 410,
+     "y": 770,
+     "w": 220,
+     "h": 32,
+     "text": "Main hall",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 700,
+     "lineHeight": 1.3,
+     "color": "#33254A"
+    },
+    {
+     "kind": "rect",
+     "x": 694.6666666666666,
+     "y": 300,
+     "w": 530.6666666666666,
+     "h": 540,
+     "fill": "#FFFFFF",
+     "radius": 24,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 694.6666666666666,
+     "y": 300,
+     "w": 530.6666666666666,
+     "h": 8,
+     "fill": "#FF8A5B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 734.6666666666666,
+     "y": 348,
+     "w": 84,
+     "h": 84,
+     "fill": "#FFE3D6"
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 756.6666666666666,
+     "y": 370,
+     "w": 40,
+     "h": 40,
+     "color": "#FF8A5B"
+    },
+    {
+     "kind": "text",
+     "x": 734.6666666666666,
+     "y": 470,
+     "w": 450.66666666666663,
+     "h": 50,
+     "text": "Customer stories",
+     "family": "Figtree",
+     "size": 34,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 734.6666666666666,
+     "y": 530,
+     "w": 450.66666666666663,
+     "h": 150,
+     "text": "Twelve calls, twelve lessons. We read them together and pick the pattern.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "rect",
+     "x": 734.6666666666666,
+     "y": 720,
+     "w": 450.66666666666663,
+     "h": 1,
+     "fill": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 734.6666666666666,
+     "y": 744,
+     "w": 200,
+     "h": 28,
+     "text": "Host",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 700,
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 734.6666666666666,
+     "y": 770,
+     "w": 220,
+     "h": 32,
+     "text": "Sam",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 700,
+     "lineHeight": 1.3,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 964.6666666666666,
+     "y": 744,
+     "w": 200,
+     "h": 28,
+     "text": "Room",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 700,
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 964.6666666666666,
+     "y": 770,
+     "w": 220,
+     "h": 32,
+     "text": "Library",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 700,
+     "lineHeight": 1.3,
+     "color": "#33254A"
+    },
+    {
+     "kind": "rect",
+     "x": 1249.3333333333333,
+     "y": 300,
+     "w": 530.6666666666666,
+     "h": 540,
+     "fill": "#FFFFFF",
+     "radius": 24,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1249.3333333333333,
+     "y": 300,
+     "w": 530.6666666666666,
+     "h": 8,
+     "fill": "#2BA37A"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1289.3333333333333,
+     "y": 348,
+     "w": 84,
+     "h": 84,
+     "fill": "#D6F5E8"
+    },
+    {
+     "kind": "icon",
+     "icon": "flask",
+     "x": 1311.3333333333333,
+     "y": 370,
+     "w": 40,
+     "h": 40,
+     "color": "#2BA37A"
+    },
+    {
+     "kind": "text",
+     "x": 1289.3333333333333,
+     "y": 470,
+     "w": 450.66666666666663,
+     "h": 50,
+     "text": "AI test kitchen",
+     "family": "Figtree",
+     "size": 34,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 1289.3333333333333,
+     "y": 530,
+     "w": 450.66666666666663,
+     "h": 150,
+     "text": "Hands on with the new tooling. Break it, then tell us how.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "rect",
+     "x": 1289.3333333333333,
+     "y": 720,
+     "w": 450.66666666666663,
+     "h": 1,
+     "fill": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 1289.3333333333333,
+     "y": 744,
+     "w": 200,
+     "h": 28,
+     "text": "Host",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 700,
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 1289.3333333333333,
+     "y": 770,
+     "w": 220,
+     "h": 32,
+     "text": "Marcus",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 700,
+     "lineHeight": 1.3,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 1519.3333333333333,
+     "y": 744,
+     "w": 200,
+     "h": 28,
+     "text": "Room",
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 700,
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 1519.3333333333333,
+     "y": 770,
+     "w": 220,
+     "h": 32,
+     "text": "Boathouse",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 700,
+     "lineHeight": 1.3,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 130,
+     "w": 600,
+     "h": 60,
+     "text": "sign up on the porch board",
+     "family": "Caveat",
+     "size": 34,
+     "weight": 700,
+     "lineHeight": 1.2,
+     "color": "#7549A5",
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Your hosts",
+   "bg": "#F7F3FB",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 100,
+     "w": 64,
+     "h": 10,
+     "fill": "#FDC858",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 136,
+     "w": 1100,
+     "h": 28,
+     "text": "Who to find",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 700,
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 188,
+     "w": 1100,
+     "h": 80,
+     "text": "Your hosts for the week",
+     "family": "Figtree",
+     "size": 60,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 956,
+     "w": 1640,
+     "h": 1,
+     "fill": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 980,
+     "w": 900,
+     "h": 26,
+     "text": "Aspen Creek Offsite  ·  September 16 to 18",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 980,
+     "w": 240,
+     "h": 26,
+     "text": "08 / 12",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D",
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 226,
+     "y": 300,
+     "w": 220,
+     "h": 220,
+     "fill": "#FFF0C2"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 552,
+     "w": 392,
+     "h": 40,
+     "text": "Dana Okafor",
+     "family": "Figtree",
+     "size": 30,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A",
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 598,
+     "w": 392,
+     "h": 28,
+     "text": "People Ops, trip lead",
+     "family": "Work Sans",
+     "size": 16,
+     "weight": 700,
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#B58A1C",
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 164,
+     "y": 644,
+     "w": 344,
+     "h": 96,
+     "text": "Keys, cabins, trophies and anything urgent.",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D",
+     "align": "center"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 642,
+     "y": 300,
+     "w": 220,
+     "h": 220,
+     "fill": "#EBD9FF"
+    },
+    {
+     "kind": "text",
+     "x": 556,
+     "y": 552,
+     "w": 392,
+     "h": 40,
+     "text": "Priya Raman",
+     "family": "Figtree",
+     "size": 30,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A",
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 556,
+     "y": 598,
+     "w": 392,
+     "h": 28,
+     "text": "Product",
+     "family": "Work Sans",
+     "size": 16,
+     "weight": 700,
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#7549A5",
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 580,
+     "y": 644,
+     "w": 344,
+     "h": 96,
+     "text": "Runs the 2027 plan sessions and the product bets track.",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D",
+     "align": "center"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 1058,
+     "y": 300,
+     "w": 220,
+     "h": 220,
+     "fill": "#FFE3D6"
+    },
+    {
+     "kind": "text",
+     "x": 972,
+     "y": 552,
+     "w": 392,
+     "h": 40,
+     "text": "Sam Whitfield",
+     "family": "Figtree",
+     "size": 30,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A",
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 972,
+     "y": 598,
+     "w": 392,
+     "h": 28,
+     "text": "Engineering",
+     "family": "Work Sans",
+     "size": 16,
+     "weight": 700,
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#FF8A5B",
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 996,
+     "y": 644,
+     "w": 344,
+     "h": 96,
+     "text": "Build day mentor. Knows where the good coffee is.",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D",
+     "align": "center"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 1474,
+     "y": 300,
+     "w": 220,
+     "h": 220,
+     "fill": "#D6F5E8"
+    },
+    {
+     "kind": "text",
+     "x": 1388,
+     "y": 552,
+     "w": 392,
+     "h": 40,
+     "text": "Marcus Obi",
+     "family": "Figtree",
+     "size": 30,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A",
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1388,
+     "y": 598,
+     "w": 392,
+     "h": 28,
+     "text": "Platform",
+     "family": "Work Sans",
+     "size": 16,
+     "weight": 700,
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#2BA37A",
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1412,
+     "y": 644,
+     "w": 344,
+     "h": 96,
+     "text": "AI test kitchen host and trivia quizmaster.",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D",
+     "align": "center"
+    },
+    {
+     "kind": "button",
+     "x": 140,
+     "y": 820,
+     "w": 460,
+     "h": 60,
+     "label": "Post in #offsite-2026 for anything else",
+     "fill": "#EBD9FF",
+     "color": "#7549A5",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 700
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "op-peep-84",
+     "x": 256,
+     "y": 322,
+     "w": 160,
+     "h": 176
+    },
+    {
+     "asset": "op-peep-105",
+     "x": 672,
+     "y": 322,
+     "w": 160,
+     "h": 176
+    },
+    {
+     "asset": "op-peep-53",
+     "x": 1088,
+     "y": 322,
+     "w": 160,
+     "h": 176
+    },
+    {
+     "asset": "op-peep-86",
+     "x": 1504,
+     "y": 322,
+     "w": 160,
+     "h": 176
+    }
+   ]
+  },
+  {
    "name": "Logistics",
-   "bg": "#f7f3fb",
+   "bg": "#F7F3FB",
    "nodes": [
     {
      "kind": "rect",
@@ -662,7 +3433,83 @@
      "y": 0,
      "w": 640,
      "h": 1080,
-     "fill": "#33254a"
+     "fill": {
+      "angle": 150,
+      "stops": [
+       [
+        "#3D2C5A",
+        0
+       ],
+       [
+        "#221838",
+        1
+       ]
+      ]
+     },
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 155,
+     "y": 191,
+     "w": 8,
+     "h": 8,
+     "fill": "#FDC858",
+     "opacity": 0.43
+    },
+    {
+     "kind": "ellipse",
+     "x": 472,
+     "y": 254,
+     "w": 4,
+     "h": 4,
+     "fill": "#FDC858",
+     "opacity": 0.78
+    },
+    {
+     "kind": "ellipse",
+     "x": 200,
+     "y": 96,
+     "w": 10,
+     "h": 10,
+     "fill": "#FDC858",
+     "opacity": 0.5599999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 203,
+     "y": 242,
+     "w": 8,
+     "h": 8,
+     "fill": "#FDC858",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 448,
+     "y": 203,
+     "w": 8,
+     "h": 8,
+     "fill": "#FDC858",
+     "opacity": 0.76
+    },
+    {
+     "kind": "ellipse",
+     "x": 338,
+     "y": 56,
+     "w": 7,
+     "h": 7,
+     "fill": "#FDC858",
+     "opacity": 0.37
+    },
+    {
+     "kind": "ellipse",
+     "x": 479,
+     "y": 408,
+     "w": 4,
+     "h": 4,
+     "fill": "#FDC858",
+     "opacity": 0.51
     },
     {
      "kind": "rect",
@@ -670,7 +3517,7 @@
      "y": 150,
      "w": 64,
      "h": 10,
-     "fill": "#fdc858",
+     "fill": "#FDC858",
      "radius": 5
     },
     {
@@ -679,14 +3526,14 @@
      "y": 186,
      "w": 440,
      "h": 28,
+     "text": "The fine print",
      "family": "Work Sans",
      "size": 21,
      "weight": 700,
-     "color": "#fdc858",
      "letterSpacing": 4,
      "upper": true,
      "lineHeight": 1.2,
-     "text": "The fine print"
+     "color": "#FDC858"
     },
     {
      "kind": "text",
@@ -694,12 +3541,30 @@
      "y": 240,
      "w": 480,
      "h": 130,
+     "text": "Getting there\nand settling in.",
      "family": "Figtree",
      "size": 52,
      "weight": 800,
-     "color": "#ffffff",
-     "lineHeight": 1.15,
-     "text": "Getting there\n& settling in."
+     "lineHeight": 1.06,
+     "color": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 90,
+     "y": 410,
+     "w": 460,
+     "h": 460,
+     "fill": "#FDC858",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 456,
+     "w": 368,
+     "h": 368,
+     "fill": "#FDC858",
+     "opacity": 0.18
     },
     {
      "kind": "text",
@@ -707,13 +3572,13 @@
      "y": 880,
      "w": 400,
      "h": 44,
+     "text": "pack light, dream big",
      "family": "Caveat",
      "size": 34,
      "weight": 700,
-     "color": "#fdc858",
-     "align": "center",
      "lineHeight": 1.2,
-     "text": "pack light, dream big"
+     "color": "#FDC858",
+     "align": "center"
     },
     {
      "kind": "rect",
@@ -721,45 +3586,53 @@
      "y": 150,
      "w": 490,
      "h": 300,
-     "fill": "#ffffff",
-     "radius": 24
+     "fill": "#FFFFFF",
+     "radius": 24,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5
     },
     {
-     "kind": "rect",
-     "x": 800,
-     "y": 192,
-     "w": 14,
-     "h": 14,
-     "fill": "#fdc858",
-     "radius": 4
+     "kind": "ellipse",
+     "x": 796,
+     "y": 184,
+     "w": 48,
+     "h": 48,
+     "fill": "#EBD9FF"
     },
     {
-     "kind": "text",
-     "x": 828,
-     "y": 188,
-     "w": 380,
+     "kind": "icon",
+     "icon": "truck",
+     "x": 808,
+     "y": 196,
+     "w": 24,
      "h": 24,
-     "family": "Work Sans",
-     "size": 19,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 860,
+     "y": 194,
+     "w": 360,
+     "h": 28,
+     "text": "Getting there",
+     "family": "Figtree",
+     "size": 22,
      "weight": 700,
-     "color": "#7549a5",
-     "letterSpacing": 3,
-     "upper": true,
-     "lineHeight": 1.2,
-     "text": "Getting there"
+     "lineHeight": 1.06,
+     "color": "#33254A"
     },
     {
      "kind": "text",
      "x": 800,
-     "y": 236,
+     "y": 254,
      "w": 410,
-     "h": 180,
+     "h": 170,
+     "text": "Shuttles leave HQ at 7:15 sharp and roll back Friday at 16:00. Driving yourself? Park behind the lodge and snap your spot.",
      "family": "Work Sans",
      "size": 20,
      "weight": 400,
-     "color": "#4c4160",
-     "lineHeight": 1.55,
-     "text": "Shuttles leave HQ at 7:15 sharp and roll back Friday at 16:00. Driving yourself? Park behind the lodge and snap your spot."
+     "lineHeight": 1.4,
+     "color": "#665A7D"
     },
     {
      "kind": "rect",
@@ -767,45 +3640,53 @@
      "y": 150,
      "w": 490,
      "h": 300,
-     "fill": "#ffffff",
-     "radius": 24
+     "fill": "#FFFFFF",
+     "radius": 24,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5
     },
     {
-     "kind": "rect",
-     "x": 1330,
-     "y": 192,
-     "w": 14,
-     "h": 14,
-     "fill": "#fdc858",
-     "radius": 4
+     "kind": "ellipse",
+     "x": 1326,
+     "y": 184,
+     "w": 48,
+     "h": 48,
+     "fill": "#EBD9FF"
     },
     {
-     "kind": "text",
-     "x": 1358,
-     "y": 188,
-     "w": 380,
+     "kind": "icon",
+     "icon": "key",
+     "x": 1338,
+     "y": 196,
+     "w": 24,
      "h": 24,
-     "family": "Work Sans",
-     "size": 19,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 1390,
+     "y": 194,
+     "w": 360,
+     "h": 28,
+     "text": "Cabins and keys",
+     "family": "Figtree",
+     "size": 22,
      "weight": 700,
-     "color": "#7549a5",
-     "letterSpacing": 3,
-     "upper": true,
-     "lineHeight": 1.2,
-     "text": "Cabins & keys"
+     "lineHeight": 1.06,
+     "color": "#33254A"
     },
     {
      "kind": "text",
      "x": 1330,
-     "y": 236,
+     "y": 254,
      "w": 410,
-     "h": 180,
+     "h": 170,
+     "text": "Cabin assignments land in your inbox Friday. Check-in opens at 15:00; the front desk will happily hold bags before then.",
      "family": "Work Sans",
      "size": 20,
      "weight": 400,
-     "color": "#4c4160",
-     "lineHeight": 1.55,
-     "text": "Cabin assignments land in your inbox Friday. Check-in opens at 15:00; the front desk will happily hold bags before then."
+     "lineHeight": 1.4,
+     "color": "#665A7D"
     },
     {
      "kind": "rect",
@@ -813,45 +3694,53 @@
      "y": 490,
      "w": 490,
      "h": 300,
-     "fill": "#ffffff",
-     "radius": 24
+     "fill": "#FFFFFF",
+     "radius": 24,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5
     },
     {
-     "kind": "rect",
-     "x": 800,
-     "y": 532,
-     "w": 14,
-     "h": 14,
-     "fill": "#fdc858",
-     "radius": 4
+     "kind": "ellipse",
+     "x": 796,
+     "y": 524,
+     "w": 48,
+     "h": 48,
+     "fill": "#EBD9FF"
     },
     {
-     "kind": "text",
-     "x": 828,
-     "y": 528,
-     "w": 380,
+     "kind": "icon",
+     "icon": "briefcase",
+     "x": 808,
+     "y": 536,
+     "w": 24,
      "h": 24,
-     "family": "Work Sans",
-     "size": 19,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 860,
+     "y": 534,
+     "w": 360,
+     "h": 28,
+     "text": "What to pack",
+     "family": "Figtree",
+     "size": 22,
      "weight": 700,
-     "color": "#7549a5",
-     "letterSpacing": 3,
-     "upper": true,
-     "lineHeight": 1.2,
-     "text": "What to pack"
+     "lineHeight": 1.06,
+     "color": "#33254A"
     },
     {
      "kind": "text",
      "x": 800,
-     "y": 576,
+     "y": 594,
      "w": 410,
-     "h": 180,
+     "h": 170,
+     "text": "Layers, trail shoes, a water bottle, and a swimsuit for the brave. Laptops stay home unless you are on call.",
      "family": "Work Sans",
      "size": 20,
      "weight": 400,
-     "color": "#4c4160",
-     "lineHeight": 1.55,
-     "text": "Layers, trail shoes, a water bottle, and a swimsuit for the brave. Laptops stay home unless you are on call."
+     "lineHeight": 1.4,
+     "color": "#665A7D"
     },
     {
      "kind": "rect",
@@ -859,45 +3748,53 @@
      "y": 490,
      "w": 490,
      "h": 300,
-     "fill": "#ffffff",
-     "radius": 24
+     "fill": "#FFFFFF",
+     "radius": 24,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5
     },
     {
-     "kind": "rect",
-     "x": 1330,
-     "y": 532,
-     "w": 14,
-     "h": 14,
-     "fill": "#fdc858",
-     "radius": 4
+     "kind": "ellipse",
+     "x": 1326,
+     "y": 524,
+     "w": 48,
+     "h": 48,
+     "fill": "#EBD9FF"
     },
     {
-     "kind": "text",
-     "x": 1358,
-     "y": 528,
-     "w": 380,
+     "kind": "icon",
+     "icon": "world",
+     "x": 1338,
+     "y": 536,
+     "w": 24,
      "h": 24,
-     "family": "Work Sans",
-     "size": 19,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 1390,
+     "y": 534,
+     "w": 360,
+     "h": 28,
+     "text": "Stay connected",
+     "family": "Figtree",
+     "size": 22,
      "weight": 700,
-     "color": "#7549a5",
-     "letterSpacing": 3,
-     "upper": true,
-     "lineHeight": 1.2,
-     "text": "Stay connected"
+     "lineHeight": 1.06,
+     "color": "#33254A"
     },
     {
      "kind": "text",
      "x": 1330,
-     "y": 576,
+     "y": 594,
      "w": 410,
-     "h": 180,
+     "h": 170,
+     "text": "Wi-Fi is RIDGE-GUEST, password campfire26. For anything urgent, Dana holds the front desk and room 12.",
      "family": "Work Sans",
      "size": 20,
      "weight": 400,
-     "color": "#4c4160",
-     "lineHeight": 1.55,
-     "text": "Wi-Fi is RIDGE-GUEST, password campfire26. For anything urgent, Dana holds the front desk and room 12."
+     "lineHeight": 1.4,
+     "color": "#665A7D"
     },
     {
      "kind": "rect",
@@ -905,36 +3802,45 @@
      "y": 830,
      "w": 1020,
      "h": 130,
-     "fill": "#fdc858",
+     "fill": "#FDC858",
      "radius": 24
     },
     {
-     "kind": "text",
-     "x": 808,
-     "y": 862,
-     "w": 300,
-     "h": 24,
-     "family": "Figtree",
-     "size": 19,
-     "weight": 800,
-     "color": "#33254a",
-     "letterSpacing": 3,
-     "upper": true,
-     "lineHeight": 1.2,
-     "text": "House rule"
+     "kind": "icon",
+     "icon": "flame",
+     "x": 800,
+     "y": 872,
+     "w": 40,
+     "h": 40,
+     "color": "#33254A"
     },
     {
      "kind": "text",
-     "x": 808,
-     "y": 896,
-     "w": 930,
-     "h": 34,
+     "x": 856,
+     "y": 862,
+     "w": 300,
+     "h": 24,
+     "text": "House rule",
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 700,
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 856,
+     "y": 894,
+     "w": 880,
+     "h": 36,
+     "text": "No work Slack after dinner. The roadmap will keep; the campfire will not.",
      "family": "Work Sans",
      "size": 24,
      "weight": 600,
-     "color": "#33254a",
      "lineHeight": 1.3,
-     "text": "No work Slack after dinner. The roadmap will keep; the campfire will not."
+     "color": "#33254A"
     },
     {
      "kind": "text",
@@ -942,38 +3848,1139 @@
      "y": 984,
      "w": 700,
      "h": 26,
+     "text": "Questions? Post in #offsite-2026 or find Dana at the front desk.",
      "family": "Work Sans",
      "size": 20,
      "weight": 500,
-     "color": "#6f5f8f",
-     "lineHeight": 1.2,
-     "text": "Questions? Post in #offsite-2026 or find Dana at the front desk."
+     "lineHeight": 1.4,
+     "color": "#665A7D"
     },
     {
      "kind": "text",
-     "x": 1600,
+     "x": 1540,
      "y": 984,
-     "w": 180,
+     "w": 240,
      "h": 26,
+     "text": "09 / 12",
      "family": "Work Sans",
      "size": 20,
      "weight": 500,
-     "color": "#6f5f8f",
-     "align": "right",
-     "lineHeight": 1.2,
-     "text": "03 / 03"
+     "lineHeight": 1.4,
+     "color": "#665A7D",
+     "align": "right"
     }
    ],
    "illustrations": [
     {
      "asset": "il-day61-travel-bag",
      "x": 120,
-     "y": 436,
+     "y": 440,
      "w": 400,
-     "h": 400
+     "h": 400,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Pack list",
+   "bg": "#F7F3FB",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 100,
+     "w": 64,
+     "h": 10,
+     "fill": "#FDC858",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 136,
+     "w": 1100,
+     "h": 28,
+     "text": "Before you leave",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 700,
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 188,
+     "w": 800,
+     "h": 80,
+     "text": "The pack list",
+     "family": "Figtree",
+     "size": 60,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 956,
+     "w": 1640,
+     "h": 1,
+     "fill": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 980,
+     "w": 900,
+     "h": 26,
+     "text": "Aspen Creek Offsite  ·  September 16 to 18",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 980,
+     "w": 240,
+     "h": 26,
+     "text": "10 / 12",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D",
+     "align": "right"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 140,
+     "y": 302,
+     "w": 34,
+     "h": 34,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 194,
+     "y": 300,
+     "w": 480,
+     "h": 40,
+     "text": "Layers for 4 to 18 degrees",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "lineHeight": 1.3,
+     "color": "#33254A"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 700,
+     "y": 302,
+     "w": 34,
+     "h": 34,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 754,
+     "y": 300,
+     "w": 480,
+     "h": 40,
+     "text": "Trail shoes that can get muddy",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "lineHeight": 1.3,
+     "color": "#33254A"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 140,
+     "y": 394,
+     "w": 34,
+     "h": 34,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 194,
+     "y": 392,
+     "w": 480,
+     "h": 40,
+     "text": "A refillable water bottle",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "lineHeight": 1.3,
+     "color": "#33254A"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle",
+     "x": 700,
+     "y": 394,
+     "w": 34,
+     "h": 34,
+     "color": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 754,
+     "y": 392,
+     "w": 480,
+     "h": 40,
+     "text": "Swimsuit, for the brave",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "lineHeight": 1.3,
+     "color": "#33254A"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 140,
+     "y": 486,
+     "w": 34,
+     "h": 34,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 194,
+     "y": 484,
+     "w": 480,
+     "h": 40,
+     "text": "Hoodie for the campfire",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "lineHeight": 1.3,
+     "color": "#33254A"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle",
+     "x": 700,
+     "y": 486,
+     "w": 34,
+     "h": 34,
+     "color": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 754,
+     "y": 484,
+     "w": 480,
+     "h": 40,
+     "text": "Headlamp or a phone torch",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "lineHeight": 1.3,
+     "color": "#33254A"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 140,
+     "y": 578,
+     "w": 34,
+     "h": 34,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 194,
+     "y": 576,
+     "w": 480,
+     "h": 40,
+     "text": "Chargers and a power bank",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "lineHeight": 1.3,
+     "color": "#33254A"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle",
+     "x": 700,
+     "y": 578,
+     "w": 34,
+     "h": 34,
+     "color": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 754,
+     "y": 576,
+     "w": 480,
+     "h": 40,
+     "text": "A book, a deck of cards, a ukulele",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "lineHeight": 1.3,
+     "color": "#33254A"
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 690,
+     "w": 1080,
+     "h": 1,
+     "fill": "#D9C8EF"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 140,
+     "y": 716,
+     "w": 22,
+     "h": 22,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 174,
+     "y": 712,
+     "w": 300,
+     "h": 28,
+     "text": "must bring",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "icon",
+     "icon": "circle",
+     "x": 400,
+     "y": 716,
+     "w": 22,
+     "h": 22,
+     "color": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 434,
+     "y": 712,
+     "w": 300,
+     "h": 28,
+     "text": "nice to have",
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "rect",
+     "x": 1300,
+     "y": 268,
+     "w": 480,
+     "h": 600,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#EBD9FF",
+        0
+       ],
+       [
+        "#F7F3FB",
+        1
+       ]
+      ]
+     },
+     "radius": 28,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5,
+     "name": "Photo"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1340,
+     "y": 340,
+     "w": 400,
+     "h": 400,
+     "fill": "#FDC858",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1380,
+     "y": 380,
+     "w": 320,
+     "h": 320,
+     "fill": "#FDC858",
+     "opacity": 0.18
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 800,
+     "w": 440,
+     "h": 44,
+     "text": "leave the laptop, bring the ukulele",
+     "family": "Caveat",
+     "size": 30,
+     "weight": 700,
+     "lineHeight": 1.2,
+     "color": "#7549A5",
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "od-strolling",
+     "x": 1360,
+     "y": 320,
+     "w": 360,
+     "h": 420
+    }
+   ]
+  },
+  {
+   "name": "Agreements",
+   "bg": "#F7F3FB",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 100,
+     "w": 64,
+     "h": 10,
+     "fill": "#FDC858",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 136,
+     "w": 1100,
+     "h": 28,
+     "text": "How we do this",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 700,
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 188,
+     "w": 1100,
+     "h": 80,
+     "text": "Four agreements for the week",
+     "family": "Figtree",
+     "size": 60,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 956,
+     "w": 1640,
+     "h": 1,
+     "fill": "#D9C8EF"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 980,
+     "w": 900,
+     "h": 26,
+     "text": "Aspen Creek Offsite  ·  September 16 to 18",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 980,
+     "w": 240,
+     "h": 26,
+     "text": "11 / 12",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#665A7D",
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 300,
+     "w": 780,
+     "h": 260,
+     "fill": "#FFFFFF",
+     "radius": 24,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 180,
+     "y": 340,
+     "w": 72,
+     "h": 72,
+     "fill": "#EBD9FF"
+    },
+    {
+     "kind": "icon",
+     "icon": "clock",
+     "x": 198,
+     "y": 358,
+     "w": 36,
+     "h": 36,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 280,
+     "y": 344,
+     "w": 600,
+     "h": 40,
+     "text": "Be on the shuttle",
+     "family": "Figtree",
+     "size": 30,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 280,
+     "y": 396,
+     "w": 600,
+     "h": 120,
+     "text": "Wheels roll at 7:15 and 14:00. The lodge is two hours out; nobody waits well.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "rect",
+     "x": 1000,
+     "y": 300,
+     "w": 780,
+     "h": 260,
+     "fill": "#FFFFFF",
+     "radius": 24,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1040,
+     "y": 340,
+     "w": 72,
+     "h": 72,
+     "fill": "#FFE3D6"
+    },
+    {
+     "kind": "icon",
+     "icon": "microphone",
+     "x": 1058,
+     "y": 358,
+     "w": 36,
+     "h": 36,
+     "color": "#FF8A5B"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 344,
+     "w": 600,
+     "h": 40,
+     "text": "Everyone speaks",
+     "family": "Figtree",
+     "size": 30,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 396,
+     "w": 600,
+     "h": 120,
+     "text": "Each session ends with a round. If you have not talked yet, you are next.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 600,
+     "w": 780,
+     "h": 260,
+     "fill": "#FFFFFF",
+     "radius": 24,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 180,
+     "y": 640,
+     "w": 72,
+     "h": 72,
+     "fill": "#EBD9FF"
+    },
+    {
+     "kind": "icon",
+     "icon": "device-mobile",
+     "x": 198,
+     "y": 658,
+     "w": 36,
+     "h": 36,
+     "color": "#7549A5"
+    },
+    {
+     "kind": "text",
+     "x": 280,
+     "y": 644,
+     "w": 600,
+     "h": 40,
+     "text": "Phones down in sessions",
+     "family": "Figtree",
+     "size": 30,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 280,
+     "y": 696,
+     "w": 600,
+     "h": 120,
+     "text": "Notes on paper. Photos of the whiteboard are allowed at the end.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    },
+    {
+     "kind": "rect",
+     "x": 1000,
+     "y": 600,
+     "w": 780,
+     "h": 260,
+     "fill": "#FFFFFF",
+     "radius": 24,
+     "stroke": "#D9C8EF",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1040,
+     "y": 640,
+     "w": 72,
+     "h": 72,
+     "fill": "#FFE3D6"
+    },
+    {
+     "kind": "icon",
+     "icon": "heart",
+     "x": 1058,
+     "y": 658,
+     "w": 36,
+     "h": 36,
+     "color": "#FF8A5B"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 644,
+     "w": 600,
+     "h": 40,
+     "text": "Kind by default",
+     "family": "Figtree",
+     "size": 30,
+     "weight": 800,
+     "lineHeight": 1.06,
+     "color": "#33254A"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 696,
+     "w": 600,
+     "h": 120,
+     "text": "Demos are brave. Questions are curious. Nobody keeps score.",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#665A7D"
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 150,
+    "stops": [
+     [
+      "#3D2C5A",
+      0
+     ],
+     [
+      "#221838",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": -300,
+     "y": 860,
+     "w": 1100,
+     "h": 700,
+     "fill": "#2A1E40",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "ellipse",
+     "x": 500,
+     "y": 900,
+     "w": 1300,
+     "h": 700,
+     "fill": "#34264F",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "ellipse",
+     "x": 1400,
+     "y": 880,
+     "w": 1100,
+     "h": 700,
+     "fill": "#2A1E40",
+     "bleed": true,
+     "opacity": 0.9
+    },
+    {
+     "kind": "ellipse",
+     "x": 312,
+     "y": 338,
+     "w": 10,
+     "h": 10,
+     "fill": "#FDC858",
+     "opacity": 0.6599999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 128,
+     "y": 117,
+     "w": 8,
+     "h": 8,
+     "fill": "#FDC858",
+     "opacity": 0.8
+    },
+    {
+     "kind": "ellipse",
+     "x": 242,
+     "y": 187,
+     "w": 9,
+     "h": 9,
+     "fill": "#FDC858",
+     "opacity": 0.43
+    },
+    {
+     "kind": "ellipse",
+     "x": 561,
+     "y": 360,
+     "w": 9,
+     "h": 9,
+     "fill": "#FDC858",
+     "opacity": 0.72
+    },
+    {
+     "kind": "ellipse",
+     "x": 920,
+     "y": 154,
+     "w": 6,
+     "h": 6,
+     "fill": "#FDC858",
+     "opacity": 0.69
+    },
+    {
+     "kind": "ellipse",
+     "x": 1507,
+     "y": 558,
+     "w": 6,
+     "h": 6,
+     "fill": "#FDC858",
+     "opacity": 0.52
+    },
+    {
+     "kind": "ellipse",
+     "x": 738,
+     "y": 87,
+     "w": 9,
+     "h": 9,
+     "fill": "#FDC858",
+     "opacity": 0.6499999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 153,
+     "y": 440,
+     "w": 7,
+     "h": 7,
+     "fill": "#FDC858",
+     "opacity": 0.73
+    },
+    {
+     "kind": "ellipse",
+     "x": 999,
+     "y": 290,
+     "w": 7,
+     "h": 7,
+     "fill": "#FDC858",
+     "opacity": 0.37
+    },
+    {
+     "kind": "ellipse",
+     "x": 208,
+     "y": 539,
+     "w": 7,
+     "h": 7,
+     "fill": "#FDC858",
+     "opacity": 0.79
+    },
+    {
+     "kind": "ellipse",
+     "x": 1443,
+     "y": 603,
+     "w": 8,
+     "h": 8,
+     "fill": "#FFFFFF",
+     "opacity": 0.6
+    },
+    {
+     "kind": "ellipse",
+     "x": 239,
+     "y": 560,
+     "w": 9,
+     "h": 9,
+     "fill": "#FFFFFF",
+     "opacity": 0.6
+    },
+    {
+     "kind": "ellipse",
+     "x": 562,
+     "y": 206,
+     "w": 9,
+     "h": 9,
+     "fill": "#FFFFFF",
+     "opacity": 0.51
+    },
+    {
+     "kind": "ellipse",
+     "x": 1328,
+     "y": 122,
+     "w": 4,
+     "h": 4,
+     "fill": "#FFFFFF",
+     "opacity": 0.6599999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 252,
+     "w": 10,
+     "h": 10,
+     "fill": "#FFFFFF",
+     "opacity": 0.6699999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1601,
+     "y": 50,
+     "w": 8,
+     "h": 8,
+     "fill": "#FFFFFF",
+     "opacity": 0.35
+    },
+    {
+     "kind": "ellipse",
+     "x": 1351,
+     "y": 230,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFFFFF",
+     "opacity": 0.48
+    },
+    {
+     "kind": "ellipse",
+     "x": 311,
+     "y": 58,
+     "w": 10,
+     "h": 10,
+     "fill": "#FFFFFF",
+     "opacity": 0.44999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1180,
+     "y": 180,
+     "w": 640,
+     "h": 640,
+     "fill": "#FDC858",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1244,
+     "y": 244,
+     "w": 512,
+     "h": 512,
+     "fill": "#FDC858",
+     "opacity": 0.18
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 210,
+     "w": 64,
+     "h": 10,
+     "fill": "#FDC858",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 248,
+     "w": 900,
+     "h": 30,
+     "text": "Ridgeline Software  ·  All-hands offsite",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 700,
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "color": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 296,
+     "w": 900,
+     "h": 56,
+     "text": "see you at the trailhead",
+     "family": "Caveat",
+     "size": 44,
+     "weight": 700,
+     "lineHeight": 1.2,
+     "color": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 360,
+     "w": 1000,
+     "h": 240,
+     "text": "Bring a hoodie.\nBring an idea.",
+     "family": "Figtree",
+     "size": 96,
+     "weight": 800,
+     "lineHeight": 1.04,
+     "color": "#FFFFFF"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 630,
+     "w": 900,
+     "h": 90,
+     "text": "RSVP by September 2 so the lodge knows how many beds to make and how many s'mores to buy.",
+     "family": "Work Sans",
+     "size": 26,
+     "weight": 400,
+     "lineHeight": 1.4,
+     "color": "#CFC2E6"
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 140,
+     "y": 762,
+     "w": 26,
+     "h": 26,
+     "color": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 184,
+     "y": 760,
+     "w": 460,
+     "h": 32,
+     "text": "#offsite-2026 on Slack",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 500,
+     "lineHeight": 1.3,
+     "color": "#FFFFFF"
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 140,
+     "y": 816,
+     "w": 26,
+     "h": 26,
+     "color": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 184,
+     "y": 814,
+     "w": 460,
+     "h": 32,
+     "text": "dana@ridgeline.example",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 500,
+     "lineHeight": 1.3,
+     "color": "#FFFFFF"
+    },
+    {
+     "kind": "icon",
+     "icon": "map-pin",
+     "x": 140,
+     "y": 870,
+     "w": 26,
+     "h": 26,
+     "color": "#FDC858"
+    },
+    {
+     "kind": "text",
+     "x": 184,
+     "y": 868,
+     "w": 460,
+     "h": 32,
+     "text": "Aspen Creek Road 14, Colorado",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 500,
+     "lineHeight": 1.3,
+     "color": "#FFFFFF"
+    },
+    {
+     "kind": "button",
+     "x": 700,
+     "y": 764,
+     "w": 300,
+     "h": 64,
+     "label": "RSVP now",
+     "fill": "#FDC858",
+     "color": "#33254A",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 980,
+     "w": 900,
+     "h": 26,
+     "text": "Ridgeline Software  ·  People Ops  ·  #offsite-2026",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#CFC2E6"
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 980,
+     "w": 240,
+     "h": 26,
+     "text": "12 / 12",
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "lineHeight": 1.4,
+     "color": "#CFC2E6",
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "od-jumping",
+     "x": 1250,
+     "y": 240,
+     "w": 520,
+     "h": 520
     }
    ]
   }
  ],
- "rank": 20
+ "fillable": [
+  {
+   "node": "p0-n27",
+   "kind": "text",
+   "label": "Offsite name",
+   "hint": "Your offsite name and year, split across two short lines"
+  },
+  {
+   "node": "p0-n28",
+   "kind": "text",
+   "label": "Welcome line",
+   "hint": "One warm sentence about what the trip is for"
+  },
+  {
+   "node": "p0-n30-label",
+   "kind": "text",
+   "label": "Location chip",
+   "hint": "Venue name and place"
+  },
+  {
+   "node": "p2-n3",
+   "kind": "text",
+   "label": "Day headline",
+   "hint": "A short, punchy theme for the day, 3 to 5 words"
+  }
+ ],
+ "version": 2,
+ "created": "2026-07-10T00:00:00.000Z",
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 16
 }

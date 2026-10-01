@@ -260,5 +260,6 @@ func (s *Service) createUserWithWorkspace(ctx context.Context, email, name strin
 	if err := tx.Commit(ctx); err != nil {
 		return "", err
 	}
+	s.workspaceCreated(ctx, wsID, userID)
 	return userID, nil
 }

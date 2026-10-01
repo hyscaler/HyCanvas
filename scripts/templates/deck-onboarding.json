@@ -1,5 +1,4 @@
 {
- "kind": "deck-outline",
  "id": "deck-onboarding",
  "title": "Employee Onboarding",
  "categories": [
@@ -13,62 +12,4817 @@
   "welcome"
  ],
  "styleTags": [
-  "bold",
-  "friendly"
+  "warm",
+  "friendly",
+  "organic"
  ],
- "themeId": "theme-lavender",
  "size": [
   1920,
   1080
  ],
- "rank": 82,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Fredoka",
+   "weight": 600
+  },
+  {
+   "role": "body",
+   "family": "Karla",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Patrick Hand",
+   "weight": 400
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#146362",
+      0
+     ],
+     [
+      "#0B3F3E",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1500,
+     "y": 120,
+     "w": 260,
+     "h": 260,
+     "fill": "#FFC53D",
+     "opacity": 0.9
+    },
+    {
+     "kind": "ellipse",
+     "x": 1700,
+     "y": 420,
+     "w": 140,
+     "h": 140,
+     "fill": "#9FE1D8",
+     "opacity": 0.9
+    },
+    {
+     "kind": "ellipse",
+     "x": 1380,
+     "y": 760,
+     "w": 90,
+     "h": 90,
+     "fill": "#9FE1D8",
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1040,
+     "y": 40,
+     "w": 110,
+     "h": 110,
+     "fill": "#FFC53D",
+     "opacity": 0.35
+    },
+    {
+     "kind": "ellipse",
+     "x": 1665,
+     "y": 786,
+     "w": 7,
+     "h": 7,
+     "fill": "#FFF8E8",
+     "opacity": 0.71
+    },
+    {
+     "kind": "ellipse",
+     "x": 1494,
+     "y": 214,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFF8E8",
+     "opacity": 0.44999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1391,
+     "y": 923,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFF8E8",
+     "opacity": 0.59
+    },
+    {
+     "kind": "ellipse",
+     "x": 1838,
+     "y": 849,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFF8E8",
+     "opacity": 0.8
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 441,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFF8E8",
+     "opacity": 0.35
+    },
+    {
+     "kind": "ellipse",
+     "x": 1355,
+     "y": 7,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFF8E8",
+     "opacity": 0.38999999999999996
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#FFC53D",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Fernwood",
+     "family": "Karla",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFF8E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 52,
+     "text": "We are glad you are here",
+     "family": "Patrick Hand",
+     "size": 40,
+     "weight": 400,
+     "color": "#FFD970",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 254,
+     "text": "Welcome to\nFernwood",
+     "family": "Fredoka",
+     "size": 116,
+     "weight": 600,
+     "color": "#FFF8E8",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 730,
+     "w": 900,
+     "h": 80,
+     "text": "Who we are, how we work, your first thirty days, the people to meet, and where to ask anything.",
+     "family": "Karla",
+     "size": 28,
+     "weight": 400,
+     "color": "#C6E4DF",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Your first week, with the People team  ·  November 2026",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#C6E4DF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 9",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#C6E4DF",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 170,
+     "w": 700,
+     "h": 700,
+     "fill": "#FFC53D",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1220,
+     "y": 240,
+     "w": 560,
+     "h": 560,
+     "fill": "#FFC53D",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 881,
+     "w": 720,
+     "h": 43,
+     "text": "no homework before day one",
+     "family": "Patrick Hand",
+     "size": 34,
+     "weight": 400,
+     "color": "#FFD970",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day31-sweet-home",
+     "x": 1210,
+     "y": 230,
+     "w": 580,
+     "h": 580,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#FFF8E8",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": -80,
+     "w": 200,
+     "h": 200,
+     "fill": "#F4B41A",
+     "opacity": 0.85,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1660,
+     "y": 140,
+     "w": 60,
+     "h": 60,
+     "fill": "#1F8A87",
+     "opacity": 0.8
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Who we are",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "The mission, and the money",
+     "family": "Fredoka",
+     "size": 60,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#EAD9BC"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Fernwood  ·  Welcome aboard",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 9",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#F4B41A",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#fde5b0"
+    },
+    {
+     "kind": "icon",
+     "icon": "heart",
+     "x": 156,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#85580A"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "The mission",
+     "family": "Fredoka",
+     "size": 34,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "Every community organisation should run on tools as good as any company's. We build them, and we keep them affordable.",
+     "family": "Karla",
+     "size": 22,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#EAD9BC"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#1F8A87",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#d2dcc6"
+    },
+    {
+     "kind": "icon",
+     "icon": "coin",
+     "x": 740,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#16706E"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "How we make money",
+     "family": "Fredoka",
+     "size": 34,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "Subscriptions from organisations over fifty people. Everything under that is free, and always will be.",
+     "family": "Karla",
+     "size": 22,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#EAD9BC"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#F4B41A",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#fde5b0"
+    },
+    {
+     "kind": "icon",
+     "icon": "world",
+     "x": 1324,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#85580A"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "Where we are",
+     "family": "Fredoka",
+     "size": 34,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "One hundred and twelve people in three offices and eleven countries. Most of us work from home two days a week.",
+     "family": "Karla",
+     "size": 22,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#EAD9BC"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 876,
+     "w": 760,
+     "h": 80,
+     "text": "the free tier is the point, not the funnel",
+     "family": "Patrick Hand",
+     "size": 32,
+     "weight": 400,
+     "color": "#85580A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Roadmap",
+   "bg": "#FFF8E8",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": -80,
+     "w": 200,
+     "h": 200,
+     "fill": "#F4B41A",
+     "opacity": 0.85,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1660,
+     "y": 140,
+     "w": 60,
+     "h": 60,
+     "fill": "#1F8A87",
+     "opacity": 0.8
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "How we work",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1000,
+     "h": 74,
+     "text": "Rituals, tools, rules",
+     "family": "Fredoka",
+     "size": 60,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#EAD9BC"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Fernwood  ·  Welcome aboard",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 9",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1136,
+     "y": 130,
+     "w": 688,
+     "h": 80,
+     "text": "Three rituals, three tools, three rules.",
+     "family": "Karla",
+     "size": 21,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 560,
+     "h": 640,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#146362",
+        0
+       ],
+       [
+        "#0B3F3E",
+        1
+       ]
+      ]
+     },
+     "radius": 20
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 278,
+     "w": 488,
+     "h": 44,
+     "text": "Rituals",
+     "family": "Fredoka",
+     "size": 34,
+     "weight": 600,
+     "color": "#FFF8E8",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 326,
+     "w": 488,
+     "h": 26,
+     "text": "The shape of a week",
+     "family": "Karla",
+     "size": 15,
+     "weight": 600,
+     "color": "#FFD970",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 132,
+     "y": 370,
+     "w": 488,
+     "h": 1,
+     "fill": "#2A7E7C"
+    },
+    {
+     "kind": "ellipse",
+     "x": 132,
+     "y": 406,
+     "w": 12,
+     "h": 12,
+     "fill": "#FFC53D"
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 398,
+     "w": 460,
+     "h": 34,
+     "text": "Monday plan",
+     "family": "Karla",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFF8E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 438,
+     "w": 460,
+     "h": 80,
+     "text": "Thirty minutes, the whole team, what matters this week.",
+     "family": "Karla",
+     "size": 19,
+     "weight": 400,
+     "color": "#C6E4DF",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 132,
+     "y": 562,
+     "w": 12,
+     "h": 12,
+     "fill": "#FFC53D"
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 554,
+     "w": 460,
+     "h": 34,
+     "text": "Wednesday demo",
+     "family": "Karla",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFF8E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 594,
+     "w": 460,
+     "h": 80,
+     "text": "Anyone shows anything that shipped. Fifteen minutes, no slides.",
+     "family": "Karla",
+     "size": 19,
+     "weight": 400,
+     "color": "#C6E4DF",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 132,
+     "y": 718,
+     "w": 12,
+     "h": 12,
+     "fill": "#FFC53D"
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 710,
+     "w": 460,
+     "h": 34,
+     "text": "Friday retro",
+     "family": "Karla",
+     "size": 24,
+     "weight": 600,
+     "color": "#FFF8E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 750,
+     "w": 460,
+     "h": 80,
+     "text": "What went well, what did not, one thing to change.",
+     "family": "Karla",
+     "size": 19,
+     "weight": 400,
+     "color": "#C6E4DF",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 242,
+     "w": 560,
+     "h": 640,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 278,
+     "w": 488,
+     "h": 44,
+     "text": "Tools",
+     "family": "Fredoka",
+     "size": 34,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 326,
+     "w": 488,
+     "h": 26,
+     "text": "Three, and only three",
+     "family": "Karla",
+     "size": 15,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 716,
+     "y": 370,
+     "w": 488,
+     "h": 1,
+     "fill": "#EAD9BC"
+    },
+    {
+     "kind": "ellipse",
+     "x": 716,
+     "y": 406,
+     "w": 12,
+     "h": 12,
+     "fill": "#F4B41A"
+    },
+    {
+     "kind": "text",
+     "x": 744,
+     "y": 398,
+     "w": 460,
+     "h": 34,
+     "text": "Slack for talk",
+     "family": "Karla",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 744,
+     "y": 438,
+     "w": 460,
+     "h": 80,
+     "text": "Public channels by default. DMs for the personal stuff.",
+     "family": "Karla",
+     "size": 19,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 716,
+     "y": 562,
+     "w": 12,
+     "h": 12,
+     "fill": "#F4B41A"
+    },
+    {
+     "kind": "text",
+     "x": 744,
+     "y": 554,
+     "w": 460,
+     "h": 34,
+     "text": "The wiki for decisions",
+     "family": "Karla",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 744,
+     "y": 594,
+     "w": 460,
+     "h": 80,
+     "text": "If it is not written down there, it was not decided.",
+     "family": "Karla",
+     "size": 19,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 716,
+     "y": 718,
+     "w": 12,
+     "h": 12,
+     "fill": "#F4B41A"
+    },
+    {
+     "kind": "text",
+     "x": 744,
+     "y": 710,
+     "w": 460,
+     "h": 34,
+     "text": "The tracker for work",
+     "family": "Karla",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 744,
+     "y": 750,
+     "w": 460,
+     "h": 80,
+     "text": "Every task has an owner and a week. Nothing lives in a chat.",
+     "family": "Karla",
+     "size": 19,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 242,
+     "w": 560,
+     "h": 640,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 1300,
+     "y": 278,
+     "w": 488,
+     "h": 44,
+     "text": "Unwritten rules",
+     "family": "Fredoka",
+     "size": 34,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1300,
+     "y": 326,
+     "w": 488,
+     "h": 26,
+     "text": "Now written down",
+     "family": "Karla",
+     "size": 15,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 1300,
+     "y": 370,
+     "w": 488,
+     "h": 1,
+     "fill": "#EAD9BC"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1300,
+     "y": 406,
+     "w": 12,
+     "h": 12,
+     "fill": "#F4B41A"
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 398,
+     "w": 460,
+     "h": 34,
+     "text": "Ask in public",
+     "family": "Karla",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 438,
+     "w": 460,
+     "h": 80,
+     "text": "Someone else has the same question. Channels, not DMs.",
+     "family": "Karla",
+     "size": 19,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1300,
+     "y": 562,
+     "w": 12,
+     "h": 12,
+     "fill": "#F4B41A"
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 554,
+     "w": 460,
+     "h": 34,
+     "text": "Disagree in the doc",
+     "family": "Karla",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 594,
+     "w": 460,
+     "h": 80,
+     "text": "Comments first, then the meeting decides, then we commit.",
+     "family": "Karla",
+     "size": 19,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1300,
+     "y": 718,
+     "w": 12,
+     "h": 12,
+     "fill": "#F4B41A"
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 710,
+     "w": 460,
+     "h": 34,
+     "text": "Thank people by name",
+     "family": "Karla",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 750,
+     "w": 460,
+     "h": 80,
+     "text": "In the channel, in the retro, in the all-hands.",
+     "family": "Karla",
+     "size": 19,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 876,
+     "w": 760,
+     "h": 80,
+     "text": "not written down? ask, then write it down",
+     "family": "Patrick Hand",
+     "size": 32,
+     "weight": 400,
+     "color": "#85580A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Section",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#146362",
+      0
+     ],
+     [
+      "#0B3F3E",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1500,
+     "y": 120,
+     "w": 260,
+     "h": 260,
+     "fill": "#FFC53D",
+     "opacity": 0.9
+    },
+    {
+     "kind": "ellipse",
+     "x": 1700,
+     "y": 420,
+     "w": 140,
+     "h": 140,
+     "fill": "#9FE1D8",
+     "opacity": 0.9
+    },
+    {
+     "kind": "ellipse",
+     "x": 1380,
+     "y": 760,
+     "w": 90,
+     "h": 90,
+     "fill": "#9FE1D8",
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1040,
+     "y": 40,
+     "w": 110,
+     "h": 110,
+     "fill": "#FFC53D",
+     "opacity": 0.35
+    },
+    {
+     "kind": "ellipse",
+     "x": 1665,
+     "y": 786,
+     "w": 7,
+     "h": 7,
+     "fill": "#FFF8E8",
+     "opacity": 0.71
+    },
+    {
+     "kind": "ellipse",
+     "x": 1494,
+     "y": 214,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFF8E8",
+     "opacity": 0.44999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1391,
+     "y": 923,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFF8E8",
+     "opacity": 0.59
+    },
+    {
+     "kind": "ellipse",
+     "x": 1838,
+     "y": 849,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFF8E8",
+     "opacity": 0.8
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 441,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFF8E8",
+     "opacity": 0.35
+    },
+    {
+     "kind": "ellipse",
+     "x": 1355,
+     "y": 7,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFF8E8",
+     "opacity": 0.38999999999999996
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 330,
+     "w": 120,
+     "h": 4,
+     "fill": "#FFC53D"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 358,
+     "w": 1100,
+     "h": 212,
+     "text": "Your first\nthirty days",
+     "family": "Fredoka",
+     "size": 96,
+     "weight": 600,
+     "color": "#FFF8E8",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 590,
+     "w": 900,
+     "h": 90,
+     "text": "A week to look around, a week to shadow, a week to own something small, and a chat about what comes next.",
+     "family": "Karla",
+     "size": 28,
+     "weight": 400,
+     "color": "#C6E4DF",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1240,
+     "y": 280,
+     "w": 560,
+     "h": 560,
+     "fill": "#FFC53D",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1296,
+     "y": 336,
+     "w": 448,
+     "h": 448,
+     "fill": "#FFC53D",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 1000,
+     "h": 50,
+     "text": "No deliverables in week one",
+     "family": "Patrick Hand",
+     "size": 40,
+     "weight": 400,
+     "color": "#FFD970",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#2A7E7C"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Fernwood  ·  Welcome aboard",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#C6E4DF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 9",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#C6E4DF",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 881,
+     "w": 720,
+     "h": 43,
+     "text": "a guide, not a test",
+     "family": "Patrick Hand",
+     "size": 34,
+     "weight": 400,
+     "color": "#FFD970",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-109-map-location",
+     "x": 1300,
+     "y": 340,
+     "w": 440,
+     "h": 440,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Facts",
+   "bg": "#FFF8E8",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": -80,
+     "w": 200,
+     "h": 200,
+     "fill": "#F4B41A",
+     "opacity": 0.85,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1660,
+     "y": 140,
+     "w": 60,
+     "h": 60,
+     "fill": "#1F8A87",
+     "opacity": 0.8
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Day one",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 900,
+     "h": 74,
+     "text": "Monday, in practice",
+     "family": "Fredoka",
+     "size": 60,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#EAD9BC"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Fernwood  ·  Welcome aboard",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 9",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 222,
+     "w": 820,
+     "h": 90,
+     "text": "Nothing to prepare. Turn up at nine with your ID, and we take it from there.",
+     "family": "Karla",
+     "size": 26,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 342,
+     "w": 56,
+     "h": 56,
+     "fill": "#fde6b4"
+    },
+    {
+     "kind": "icon",
+     "icon": "map-pin",
+     "x": 110,
+     "y": 356,
+     "w": 28,
+     "h": 28,
+     "color": "#85580A"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 340,
+     "w": 740,
+     "h": 34,
+     "text": "Reception, level 1, at nine",
+     "family": "Fredoka",
+     "size": 26,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 376,
+     "w": 740,
+     "h": 30,
+     "text": "Your badge and your buddy are waiting",
+     "family": "Karla",
+     "size": 20,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 460,
+     "w": 56,
+     "h": 56,
+     "fill": "#fde6b4"
+    },
+    {
+     "kind": "icon",
+     "icon": "device-desktop",
+     "x": 110,
+     "y": 474,
+     "w": 28,
+     "h": 28,
+     "color": "#85580A"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 458,
+     "w": 740,
+     "h": 34,
+     "text": "A laptop, already set up",
+     "family": "Fredoka",
+     "size": 26,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 494,
+     "w": 740,
+     "h": 30,
+     "text": "Sign in with the email we sent last week",
+     "family": "Karla",
+     "size": 20,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 578,
+     "w": 56,
+     "h": 56,
+     "fill": "#fde6b4"
+    },
+    {
+     "kind": "icon",
+     "icon": "home",
+     "x": 110,
+     "y": 592,
+     "w": 28,
+     "h": 28,
+     "color": "#85580A"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 576,
+     "w": 740,
+     "h": 34,
+     "text": "Your desk is on level 2",
+     "family": "Fredoka",
+     "size": 26,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 612,
+     "w": 740,
+     "h": 30,
+     "text": "By the window, with your team",
+     "family": "Karla",
+     "size": 20,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 696,
+     "w": 56,
+     "h": 56,
+     "fill": "#fde6b4"
+    },
+    {
+     "kind": "icon",
+     "icon": "chef-hat",
+     "x": 110,
+     "y": 710,
+     "w": 28,
+     "h": 28,
+     "color": "#85580A"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 694,
+     "w": 740,
+     "h": 34,
+     "text": "Lunch at half twelve, all of us",
+     "family": "Fredoka",
+     "size": 26,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 730,
+     "w": 740,
+     "h": 30,
+     "text": "The long table by the kitchen",
+     "family": "Karla",
+     "size": 20,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1080,
+     "y": 268,
+     "w": 700,
+     "h": 610,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#cedac5",
+        0
+       ],
+       [
+        "#FFF1D6",
+        1
+       ]
+      ]
+     },
+     "radius": 20
+    },
+    {
+     "kind": "ellipse",
+     "x": 1180,
+     "y": 295,
+     "w": 500,
+     "h": 500,
+     "fill": "#F4B41A",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1230,
+     "y": 345,
+     "w": 400,
+     "h": 400,
+     "fill": "#F4B41A",
+     "opacity": 0.16,
+     "bleed": true
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day62-office-bag",
+     "x": 1190,
+     "y": 320,
+     "w": 480,
+     "h": 420,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "First week",
+   "bg": "#FFF8E8",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": -80,
+     "w": 200,
+     "h": 200,
+     "fill": "#F4B41A",
+     "opacity": 0.85,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1660,
+     "y": 140,
+     "w": 60,
+     "h": 60,
+     "fill": "#1F8A87",
+     "opacity": 0.8
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Your first week",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "Five days, thirteen stops",
+     "family": "Fredoka",
+     "size": 60,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#EAD9BC"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Fernwood  ·  Welcome aboard",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 9",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 147,
+     "y": 317,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 165,
+     "y": 316,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 183,
+     "y": 313,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 201,
+     "y": 309,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 218,
+     "y": 305,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 236,
+     "y": 302,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 254,
+     "y": 301,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 272,
+     "y": 301,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 290,
+     "y": 302,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 308,
+     "y": 303,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 326,
+     "y": 304,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 344,
+     "y": 305,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 362,
+     "y": 307,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 380,
+     "y": 309,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 398,
+     "y": 312,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 416,
+     "y": 314,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 434,
+     "y": 316,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 452,
+     "y": 319,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 470,
+     "y": 321,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 488,
+     "y": 323,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 506,
+     "y": 325,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 524,
+     "y": 327,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 542,
+     "y": 329,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 560,
+     "y": 330,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 578,
+     "y": 331,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 596,
+     "y": 331,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 614,
+     "y": 331,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 632,
+     "y": 331,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 650,
+     "y": 330,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 668,
+     "y": 328,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 686,
+     "y": 327,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 704,
+     "y": 325,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 722,
+     "y": 323,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 740,
+     "y": 320,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 758,
+     "y": 317,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 776,
+     "y": 315,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 794,
+     "y": 312,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 812,
+     "y": 309,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 830,
+     "y": 307,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 848,
+     "y": 304,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 866,
+     "y": 302,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 884,
+     "y": 300,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 902,
+     "y": 299,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 920,
+     "y": 298,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 938,
+     "y": 297,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 956,
+     "y": 297,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 974,
+     "y": 297,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 992,
+     "y": 298,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1010,
+     "y": 299,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1028,
+     "y": 301,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1046,
+     "y": 303,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1064,
+     "y": 305,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1082,
+     "y": 308,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1100,
+     "y": 311,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1118,
+     "y": 314,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1136,
+     "y": 317,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1154,
+     "y": 320,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1172,
+     "y": 323,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1190,
+     "y": 326,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1208,
+     "y": 328,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1226,
+     "y": 330,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1244,
+     "y": 332,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1262,
+     "y": 334,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1280,
+     "y": 334,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1298,
+     "y": 335,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1316,
+     "y": 335,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1334,
+     "y": 335,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1352,
+     "y": 334,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1370,
+     "y": 333,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1388,
+     "y": 331,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1406,
+     "y": 329,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1424,
+     "y": 327,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1442,
+     "y": 325,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1460,
+     "y": 323,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1478,
+     "y": 320,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 318,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1514,
+     "y": 316,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1532,
+     "y": 313,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1550,
+     "y": 311,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1568,
+     "y": 309,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1586,
+     "y": 308,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1604,
+     "y": 307,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1622,
+     "y": 306,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1640,
+     "y": 305,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1658,
+     "y": 305,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1676,
+     "y": 306,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1694,
+     "y": 308,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1712,
+     "y": 311,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1729,
+     "y": 314,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1747,
+     "y": 316,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "ellipse",
+     "x": 1765,
+     "y": 317,
+     "w": 6,
+     "h": 6,
+     "fill": "#1F8A87",
+     "opacity": 0.55
+    },
+    {
+     "kind": "icon",
+     "icon": "flag",
+     "x": 96,
+     "y": 302,
+     "w": 36,
+     "h": 36,
+     "color": "#85580A"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 346,
+     "w": 200,
+     "h": 30,
+     "text": "start here",
+     "family": "Patrick Hand",
+     "size": 22,
+     "weight": 400,
+     "color": "#85580A",
+     "lineHeight": 1.2,
+     "align": "left"
+    },
+    {
+     "kind": "icon",
+     "icon": "confetti",
+     "x": 1788,
+     "y": 302,
+     "w": 36,
+     "h": 36,
+     "color": "#85580A"
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 346,
+     "w": 240,
+     "h": 30,
+     "text": "week one, done",
+     "family": "Patrick Hand",
+     "size": 22,
+     "weight": 400,
+     "color": "#85580A",
+     "lineHeight": 1.2,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 233,
+     "y": 278,
+     "w": 52,
+     "h": 52,
+     "fill": "#F4B41A"
+    },
+    {
+     "kind": "text",
+     "x": 233,
+     "y": 278,
+     "w": 52,
+     "h": 52,
+     "text": "1",
+     "family": "Fredoka",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E2E33",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 376,
+     "w": 326,
+     "h": 36,
+     "text": "Monday",
+     "family": "Fredoka",
+     "size": 28,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 428,
+     "w": 326,
+     "h": 118,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 112,
+     "y": 450,
+     "w": 44,
+     "h": 44,
+     "fill": "#e9dec6"
+    },
+    {
+     "kind": "icon",
+     "icon": "map-pin",
+     "x": 123,
+     "y": 461,
+     "w": 22,
+     "h": 22,
+     "color": "#1E2E33"
+    },
+    {
+     "kind": "text",
+     "x": 170,
+     "y": 448,
+     "w": 236,
+     "h": 22,
+     "text": "Task  ·  09:00",
+     "family": "Karla",
+     "size": 13,
+     "weight": 600,
+     "color": "#1E2E33",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 170,
+     "y": 474,
+     "w": 236,
+     "h": 56,
+     "text": "Badge, laptop, desk",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 562,
+     "w": 326,
+     "h": 118,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 112,
+     "y": 584,
+     "w": 44,
+     "h": 44,
+     "fill": "#d2dcc6"
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 123,
+     "y": 595,
+     "w": 22,
+     "h": 22,
+     "color": "#16706E"
+    },
+    {
+     "kind": "text",
+     "x": 170,
+     "y": 582,
+     "w": 236,
+     "h": 22,
+     "text": "Meeting  ·  10:30",
+     "family": "Karla",
+     "size": 13,
+     "weight": 600,
+     "color": "#16706E",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 170,
+     "y": 608,
+     "w": 236,
+     "h": 56,
+     "text": "Coffee with your buddy",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 696,
+     "w": 326,
+     "h": 118,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 112,
+     "y": 718,
+     "w": 44,
+     "h": 44,
+     "fill": "#fce2a9"
+    },
+    {
+     "kind": "icon",
+     "icon": "book",
+     "x": 123,
+     "y": 729,
+     "w": 22,
+     "h": 22,
+     "color": "#85580A"
+    },
+    {
+     "kind": "text",
+     "x": 170,
+     "y": 716,
+     "w": 236,
+     "h": 22,
+     "text": "Reading  ·  after lunch",
+     "family": "Karla",
+     "size": 13,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 170,
+     "y": 742,
+     "w": 236,
+     "h": 56,
+     "text": "The whole welcome page",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 583,
+     "y": 308,
+     "w": 52,
+     "h": 52,
+     "fill": "#F4B41A"
+    },
+    {
+     "kind": "text",
+     "x": 583,
+     "y": 308,
+     "w": 52,
+     "h": 52,
+     "text": "2",
+     "family": "Fredoka",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E2E33",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 446,
+     "y": 376,
+     "w": 326,
+     "h": 36,
+     "text": "Tuesday",
+     "family": "Fredoka",
+     "size": 28,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 446,
+     "y": 428,
+     "w": 326,
+     "h": 118,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 462,
+     "y": 450,
+     "w": 44,
+     "h": 44,
+     "fill": "#d2dcc6"
+    },
+    {
+     "kind": "icon",
+     "icon": "user",
+     "x": 473,
+     "y": 461,
+     "w": 22,
+     "h": 22,
+     "color": "#16706E"
+    },
+    {
+     "kind": "text",
+     "x": 520,
+     "y": 448,
+     "w": 236,
+     "h": 22,
+     "text": "Meeting  ·  09:30",
+     "family": "Karla",
+     "size": 13,
+     "weight": 600,
+     "color": "#16706E",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 520,
+     "y": 474,
+     "w": 236,
+     "h": 56,
+     "text": "Team standup, every day",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 446,
+     "y": 562,
+     "w": 326,
+     "h": 118,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 462,
+     "y": 584,
+     "w": 44,
+     "h": 44,
+     "fill": "#fce2a9"
+    },
+    {
+     "kind": "icon",
+     "icon": "book",
+     "x": 473,
+     "y": 595,
+     "w": 22,
+     "h": 22,
+     "color": "#85580A"
+    },
+    {
+     "kind": "text",
+     "x": 520,
+     "y": 582,
+     "w": 236,
+     "h": 22,
+     "text": "Reading  ·  20 min",
+     "family": "Karla",
+     "size": 13,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 520,
+     "y": 608,
+     "w": 236,
+     "h": 56,
+     "text": "How we make money",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 446,
+     "y": 696,
+     "w": 326,
+     "h": 118,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 462,
+     "y": 718,
+     "w": 44,
+     "h": 44,
+     "fill": "#e9dec6"
+    },
+    {
+     "kind": "icon",
+     "icon": "settings",
+     "x": 473,
+     "y": 729,
+     "w": 22,
+     "h": 22,
+     "color": "#1E2E33"
+    },
+    {
+     "kind": "text",
+     "x": 520,
+     "y": 716,
+     "w": 236,
+     "h": 22,
+     "text": "Task  ·  an hour",
+     "family": "Karla",
+     "size": 13,
+     "weight": 600,
+     "color": "#1E2E33",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 520,
+     "y": 742,
+     "w": 236,
+     "h": 56,
+     "text": "Slack, the wiki, the tracker",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 933,
+     "y": 274,
+     "w": 52,
+     "h": 52,
+     "fill": "#F4B41A"
+    },
+    {
+     "kind": "text",
+     "x": 933,
+     "y": 274,
+     "w": 52,
+     "h": 52,
+     "text": "3",
+     "family": "Fredoka",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E2E33",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 796,
+     "y": 376,
+     "w": 326,
+     "h": 36,
+     "text": "Wednesday",
+     "family": "Fredoka",
+     "size": 28,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 796,
+     "y": 428,
+     "w": 326,
+     "h": 118,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 812,
+     "y": 450,
+     "w": 44,
+     "h": 44,
+     "fill": "#d2dcc6"
+    },
+    {
+     "kind": "icon",
+     "icon": "presentation",
+     "x": 823,
+     "y": 461,
+     "w": 22,
+     "h": 22,
+     "color": "#16706E"
+    },
+    {
+     "kind": "text",
+     "x": 870,
+     "y": 448,
+     "w": 236,
+     "h": 22,
+     "text": "Meeting  ·  15:00",
+     "family": "Karla",
+     "size": 13,
+     "weight": 600,
+     "color": "#16706E",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 870,
+     "y": 474,
+     "w": 236,
+     "h": 56,
+     "text": "The Wednesday demo",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 796,
+     "y": 562,
+     "w": 326,
+     "h": 118,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 812,
+     "y": 584,
+     "w": 44,
+     "h": 44,
+     "fill": "#fce2a9"
+    },
+    {
+     "kind": "icon",
+     "icon": "book",
+     "x": 823,
+     "y": 595,
+     "w": 22,
+     "h": 22,
+     "color": "#85580A"
+    },
+    {
+     "kind": "text",
+     "x": 870,
+     "y": 582,
+     "w": 236,
+     "h": 22,
+     "text": "Reading  ·  30 min",
+     "family": "Karla",
+     "size": 13,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 870,
+     "y": 608,
+     "w": 236,
+     "h": 56,
+     "text": "Last quarter's retro notes",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 808,
+     "y": 726,
+     "w": 302,
+     "h": 64,
+     "text": "free afternoon, go wander",
+     "family": "Patrick Hand",
+     "size": 24,
+     "weight": 400,
+     "color": "#85580A",
+     "lineHeight": 1.15,
+     "align": "center"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1283,
+     "y": 312,
+     "w": 52,
+     "h": 52,
+     "fill": "#F4B41A"
+    },
+    {
+     "kind": "text",
+     "x": 1283,
+     "y": 312,
+     "w": 52,
+     "h": 52,
+     "text": "4",
+     "family": "Fredoka",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E2E33",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1146,
+     "y": 376,
+     "w": 326,
+     "h": 36,
+     "text": "Thursday",
+     "family": "Fredoka",
+     "size": 28,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 1146,
+     "y": 428,
+     "w": 326,
+     "h": 118,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1162,
+     "y": 450,
+     "w": 44,
+     "h": 44,
+     "fill": "#d2dcc6"
+    },
+    {
+     "kind": "icon",
+     "icon": "user",
+     "x": 1173,
+     "y": 461,
+     "w": 22,
+     "h": 22,
+     "color": "#16706E"
+    },
+    {
+     "kind": "text",
+     "x": 1220,
+     "y": 448,
+     "w": 236,
+     "h": 22,
+     "text": "Meeting  ·  11:00",
+     "family": "Karla",
+     "size": 13,
+     "weight": 600,
+     "color": "#16706E",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1220,
+     "y": 474,
+     "w": 236,
+     "h": 56,
+     "text": "Your manager, one to one",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1146,
+     "y": 562,
+     "w": 326,
+     "h": 118,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1162,
+     "y": 584,
+     "w": 44,
+     "h": 44,
+     "fill": "#fce2a9"
+    },
+    {
+     "kind": "icon",
+     "icon": "search",
+     "x": 1173,
+     "y": 595,
+     "w": 22,
+     "h": 22,
+     "color": "#85580A"
+    },
+    {
+     "kind": "text",
+     "x": 1220,
+     "y": 582,
+     "w": 236,
+     "h": 22,
+     "text": "Reading  ·  an hour",
+     "family": "Karla",
+     "size": 13,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1220,
+     "y": 608,
+     "w": 236,
+     "h": 56,
+     "text": "The product, end to end",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1146,
+     "y": 696,
+     "w": 326,
+     "h": 118,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1162,
+     "y": 718,
+     "w": 44,
+     "h": 44,
+     "fill": "#e9dec6"
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 1173,
+     "y": 729,
+     "w": 22,
+     "h": 22,
+     "color": "#1E2E33"
+    },
+    {
+     "kind": "text",
+     "x": 1220,
+     "y": 716,
+     "w": 236,
+     "h": 22,
+     "text": "Task  ·  2 min",
+     "family": "Karla",
+     "size": 13,
+     "weight": 600,
+     "color": "#1E2E33",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1220,
+     "y": 742,
+     "w": 236,
+     "h": 56,
+     "text": "Say hello in #welcome",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1633,
+     "y": 282,
+     "w": 52,
+     "h": 52,
+     "fill": "#F4B41A"
+    },
+    {
+     "kind": "text",
+     "x": 1633,
+     "y": 282,
+     "w": 52,
+     "h": 52,
+     "text": "5",
+     "family": "Fredoka",
+     "size": 24,
+     "weight": 600,
+     "color": "#1E2E33",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1496,
+     "y": 376,
+     "w": 326,
+     "h": 36,
+     "text": "Friday",
+     "family": "Fredoka",
+     "size": 28,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 1496,
+     "y": 428,
+     "w": 326,
+     "h": 118,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1512,
+     "y": 450,
+     "w": 44,
+     "h": 44,
+     "fill": "#d2dcc6"
+    },
+    {
+     "kind": "icon",
+     "icon": "user",
+     "x": 1523,
+     "y": 461,
+     "w": 22,
+     "h": 22,
+     "color": "#16706E"
+    },
+    {
+     "kind": "text",
+     "x": 1570,
+     "y": 448,
+     "w": 236,
+     "h": 22,
+     "text": "Meeting  ·  16:00",
+     "family": "Karla",
+     "size": 13,
+     "weight": 600,
+     "color": "#16706E",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1570,
+     "y": 474,
+     "w": 236,
+     "h": 56,
+     "text": "Friday retro, just listen",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1496,
+     "y": 562,
+     "w": 326,
+     "h": 118,
+     "fill": "#FFF1D6",
+     "radius": 20,
+     "stroke": "#EAD9BC",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1512,
+     "y": 584,
+     "w": 44,
+     "h": 44,
+     "fill": "#e9dec6"
+    },
+    {
+     "kind": "icon",
+     "icon": "pencil",
+     "x": 1523,
+     "y": 595,
+     "w": 22,
+     "h": 22,
+     "color": "#1E2E33"
+    },
+    {
+     "kind": "text",
+     "x": 1570,
+     "y": 582,
+     "w": 236,
+     "h": 22,
+     "text": "Task  ·  15 min",
+     "family": "Karla",
+     "size": 13,
+     "weight": 600,
+     "color": "#1E2E33",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1570,
+     "y": 608,
+     "w": 236,
+     "h": 56,
+     "text": "Write down three questions",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1508,
+     "y": 726,
+     "w": 302,
+     "h": 64,
+     "text": "leave at four, we mean it",
+     "family": "Patrick Hand",
+     "size": 24,
+     "weight": 400,
+     "color": "#85580A",
+     "lineHeight": 1.15,
+     "align": "center"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 862,
+     "w": 14,
+     "h": 14,
+     "fill": "#1F8A87"
+    },
+    {
+     "kind": "text",
+     "x": 122,
+     "y": 856,
+     "w": 140,
+     "h": 26,
+     "text": "Meeting",
+     "family": "Karla",
+     "size": 17,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 266,
+     "y": 862,
+     "w": 14,
+     "h": 14,
+     "fill": "#F4B41A"
+    },
+    {
+     "kind": "text",
+     "x": 292,
+     "y": 856,
+     "w": 140,
+     "h": 26,
+     "text": "Reading",
+     "family": "Karla",
+     "size": 17,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 436,
+     "y": 862,
+     "w": 14,
+     "h": 14,
+     "fill": "#1E2E33"
+    },
+    {
+     "kind": "text",
+     "x": 462,
+     "y": 856,
+     "w": 140,
+     "h": 26,
+     "text": "Task",
+     "family": "Karla",
+     "size": 17,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 876,
+     "w": 760,
+     "h": 80,
+     "text": "thirteen stops, no deliverables, lots of questions",
+     "family": "Patrick Hand",
+     "size": 32,
+     "weight": 400,
+     "color": "#85580A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Timeline",
+   "bg": "#FFF8E8",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": -80,
+     "w": 200,
+     "h": 200,
+     "fill": "#F4B41A",
+     "opacity": 0.85,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1660,
+     "y": 140,
+     "w": 60,
+     "h": 60,
+     "fill": "#1F8A87",
+     "opacity": 0.8
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Week by week",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "Look, shadow, own, reflect",
+     "family": "Fredoka",
+     "size": 60,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#EAD9BC"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Fernwood  ·  Welcome aboard",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 9",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 425,
+     "w": 1728,
+     "h": 3,
+     "fill": "#EAD9BC"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 412,
+     "w": 30,
+     "h": 30,
+     "fill": "#FFF8E8",
+     "stroke": "#F4B41A",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 352,
+     "w": 300,
+     "h": 28,
+     "text": "Week 1",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 476,
+     "w": 384,
+     "h": 44,
+     "text": "Meet and read",
+     "family": "Fredoka",
+     "size": 32,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 528,
+     "w": 384,
+     "h": 120,
+     "text": "Your buddy, your team, your manager. The wiki's welcome page, end to end. No deliverables.",
+     "family": "Karla",
+     "size": 21,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 528,
+     "y": 412,
+     "w": 30,
+     "h": 30,
+     "fill": "#FFF8E8",
+     "stroke": "#F4B41A",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 352,
+     "w": 300,
+     "h": 28,
+     "text": "Week 2",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 476,
+     "w": 384,
+     "h": 44,
+     "text": "Shadow",
+     "family": "Fredoka",
+     "size": 32,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 528,
+     "w": 384,
+     "h": 120,
+     "text": "Sit with support for a day and with a customer call. Ship one small change, with help.",
+     "family": "Karla",
+     "size": 21,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 960,
+     "y": 412,
+     "w": 30,
+     "h": 30,
+     "fill": "#FFF8E8",
+     "stroke": "#F4B41A",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 352,
+     "w": 300,
+     "h": 28,
+     "text": "Week 3",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 476,
+     "w": 384,
+     "h": 44,
+     "text": "Own something small",
+     "family": "Fredoka",
+     "size": 32,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 528,
+     "w": 384,
+     "h": 120,
+     "text": "A ticket, a doc, a customer question. Yours start to finish.",
+     "family": "Karla",
+     "size": 21,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1392,
+     "y": 412,
+     "w": 30,
+     "h": 30,
+     "fill": "#FFF8E8",
+     "stroke": "#F4B41A",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 352,
+     "w": 300,
+     "h": 28,
+     "text": "Week 4",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 476,
+     "w": 384,
+     "h": 44,
+     "text": "Reflect",
+     "family": "Fredoka",
+     "size": 32,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 528,
+     "w": 384,
+     "h": 120,
+     "text": "A thirty-minute chat with your manager: what surprised you, what is unclear, what you want next.",
+     "family": "Karla",
+     "size": 21,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 916,
+     "w": 760,
+     "h": 40,
+     "text": "week four is a chat, not a review",
+     "family": "Patrick Hand",
+     "size": 32,
+     "weight": 400,
+     "color": "#85580A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Team",
+   "bg": "#FFF8E8",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": -80,
+     "w": 200,
+     "h": 200,
+     "fill": "#F4B41A",
+     "opacity": 0.85,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1660,
+     "y": 140,
+     "w": 60,
+     "h": 60,
+     "fill": "#1F8A87",
+     "opacity": 0.8
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The people to meet",
+     "family": "Karla",
+     "size": 20,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "Your map of the org",
+     "family": "Fredoka",
+     "size": 60,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#EAD9BC"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Fernwood  ·  Welcome aboard",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "08 / 9",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#5A6A6F",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 193,
+     "y": 371,
+     "w": 220,
+     "h": 220,
+     "fill": "#fde4ad"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 623,
+     "w": 414,
+     "h": 40,
+     "text": "Elena Sato",
+     "family": "Fredoka",
+     "size": 30,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 669,
+     "w": 414,
+     "h": 28,
+     "text": "Chief Executive",
+     "family": "Karla",
+     "size": 17,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 715,
+     "w": 366,
+     "h": 96,
+     "text": "Books a coffee with every new hire in the first month. Take her up on it.",
+     "family": "Karla",
+     "size": 21,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4,
+     "align": "center"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 631,
+     "y": 371,
+     "w": 220,
+     "h": 220,
+     "fill": "#cedac5"
+    },
+    {
+     "kind": "text",
+     "x": 534,
+     "y": 623,
+     "w": 414,
+     "h": 40,
+     "text": "Dana Whitfield",
+     "family": "Fredoka",
+     "size": 30,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 534,
+     "y": 669,
+     "w": 414,
+     "h": 28,
+     "text": "People",
+     "family": "Karla",
+     "size": 17,
+     "weight": 600,
+     "color": "#16706E",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 558,
+     "y": 715,
+     "w": 366,
+     "h": 96,
+     "text": "Your first stop for anything about pay, leave, equipment or how things work.",
+     "family": "Karla",
+     "size": 21,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4,
+     "align": "center"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 1069,
+     "y": 371,
+     "w": 220,
+     "h": 220,
+     "fill": "#fde4ad"
+    },
+    {
+     "kind": "text",
+     "x": 972,
+     "y": 623,
+     "w": 414,
+     "h": 40,
+     "text": "Tomas Reyes",
+     "family": "Fredoka",
+     "size": 30,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 972,
+     "y": 669,
+     "w": 414,
+     "h": 28,
+     "text": "Engineering",
+     "family": "Karla",
+     "size": 17,
+     "weight": 600,
+     "color": "#85580A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 996,
+     "y": 715,
+     "w": 366,
+     "h": 96,
+     "text": "Runs the Wednesday demo. Ask him for the architecture tour.",
+     "family": "Karla",
+     "size": 21,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4,
+     "align": "center"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 1507,
+     "y": 371,
+     "w": 220,
+     "h": 220,
+     "fill": "#cedac5"
+    },
+    {
+     "kind": "text",
+     "x": 1410,
+     "y": 623,
+     "w": 414,
+     "h": 40,
+     "text": "Aisha Bello",
+     "family": "Fredoka",
+     "size": 30,
+     "weight": 600,
+     "color": "#1E2E33",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1410,
+     "y": 669,
+     "w": 414,
+     "h": 28,
+     "text": "Support",
+     "family": "Karla",
+     "size": 17,
+     "weight": 600,
+     "color": "#16706E",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1434,
+     "y": 715,
+     "w": 366,
+     "h": 96,
+     "text": "Knows what customers actually ask. Shadow her team in week two.",
+     "family": "Karla",
+     "size": 21,
+     "weight": 400,
+     "color": "#5A6A6F",
+     "lineHeight": 1.4,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 876,
+     "w": 760,
+     "h": 80,
+     "text": "all four have already said yes to a coffee",
+     "family": "Patrick Hand",
+     "size": 32,
+     "weight": 400,
+     "color": "#85580A",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "op-peep-11",
+     "x": 223,
+     "y": 393,
+     "w": 160,
+     "h": 176
+    },
+    {
+     "asset": "op-peep-90",
+     "x": 661,
+     "y": 393,
+     "w": 160,
+     "h": 176
+    },
+    {
+     "asset": "op-peep-46",
+     "x": 1099,
+     "y": 393,
+     "w": 160,
+     "h": 176
+    },
+    {
+     "asset": "op-peep-96",
+     "x": 1537,
+     "y": 393,
+     "w": 160,
+     "h": 176
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#146362",
+      0
+     ],
+     [
+      "#0B3F3E",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1500,
+     "y": 120,
+     "w": 260,
+     "h": 260,
+     "fill": "#FFC53D",
+     "opacity": 0.9
+    },
+    {
+     "kind": "ellipse",
+     "x": 1700,
+     "y": 420,
+     "w": 140,
+     "h": 140,
+     "fill": "#9FE1D8",
+     "opacity": 0.9
+    },
+    {
+     "kind": "ellipse",
+     "x": 1380,
+     "y": 760,
+     "w": 90,
+     "h": 90,
+     "fill": "#9FE1D8",
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1040,
+     "y": 40,
+     "w": 110,
+     "h": 110,
+     "fill": "#FFC53D",
+     "opacity": 0.35
+    },
+    {
+     "kind": "ellipse",
+     "x": 1665,
+     "y": 786,
+     "w": 7,
+     "h": 7,
+     "fill": "#FFF8E8",
+     "opacity": 0.71
+    },
+    {
+     "kind": "ellipse",
+     "x": 1494,
+     "y": 214,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFF8E8",
+     "opacity": 0.44999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1391,
+     "y": 923,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFF8E8",
+     "opacity": 0.59
+    },
+    {
+     "kind": "ellipse",
+     "x": 1838,
+     "y": 849,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFF8E8",
+     "opacity": 0.8
+    },
+    {
+     "kind": "ellipse",
+     "x": 1657,
+     "y": 441,
+     "w": 6,
+     "h": 6,
+     "fill": "#FFF8E8",
+     "opacity": 0.35
+    },
+    {
+     "kind": "ellipse",
+     "x": 1355,
+     "y": 7,
+     "w": 5,
+     "h": 5,
+     "fill": "#FFF8E8",
+     "opacity": 0.38999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#FFC53D",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#FFC53D",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#FFC53D",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Fernwood",
+     "family": "Karla",
+     "size": 22,
+     "weight": 600,
+     "color": "#FFF8E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 52,
+     "text": "That is the tour",
+     "family": "Patrick Hand",
+     "size": 40,
+     "weight": 400,
+     "color": "#FFD970",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 138,
+     "text": "Ask anything",
+     "family": "Fredoka",
+     "size": 116,
+     "weight": 600,
+     "color": "#FFF8E8",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 472,
+     "w": 940,
+     "h": 120,
+     "text": "No silly questions in your first month, and very few after that. Your buddy, the People channel, or anyone in the kitchen.",
+     "family": "Karla",
+     "size": 28,
+     "weight": 400,
+     "color": "#C6E4DF",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#FFC53D"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "#welcome on Slack",
+     "family": "Karla",
+     "size": 24,
+     "weight": 500,
+     "color": "#FFF8E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#FFC53D"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "people@fernwood.example",
+     "family": "Karla",
+     "size": 24,
+     "weight": 500,
+     "color": "#FFF8E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "calendar",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#FFC53D"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "Your week-four chat is already booked",
+     "family": "Karla",
+     "size": 24,
+     "weight": 500,
+     "color": "#FFF8E8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Open the welcome page",
+     "fill": "#FFC53D",
+     "color": "#1E2E33",
+     "family": "Karla",
+     "size": 22,
+     "weight": 700,
+     "radius": 20
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "09 / 9",
+     "family": "Karla",
+     "size": 18,
+     "weight": 500,
+     "color": "#C6E4DF",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 881,
+     "w": 720,
+     "h": 43,
+     "text": "the kitchen counts as a channel",
+     "family": "Patrick Hand",
+     "size": 34,
+     "weight": 400,
+     "color": "#FFD970",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-hero-image-2",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n11",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n13",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n14",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n15",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p5-n109",
+   "kind": "text",
+   "label": "Monday, stop 1",
+   "hint": "One short line: what, or who"
+  },
+  {
+   "node": "p5-n114",
+   "kind": "text",
+   "label": "Monday, stop 2",
+   "hint": "One short line: what, or who"
+  },
+  {
+   "node": "p5-n119",
+   "kind": "text",
+   "label": "Monday, stop 3",
+   "hint": "One short line: what, or who"
+  },
+  {
+   "node": "p5-n127",
+   "kind": "text",
+   "label": "Tuesday, stop 1",
+   "hint": "One short line: what, or who"
+  },
+  {
+   "node": "p5-n132",
+   "kind": "text",
+   "label": "Tuesday, stop 2",
+   "hint": "One short line: what, or who"
+  },
+  {
+   "node": "p5-n137",
+   "kind": "text",
+   "label": "Tuesday, stop 3",
+   "hint": "One short line: what, or who"
+  },
+  {
+   "node": "p5-n145",
+   "kind": "text",
+   "label": "Wednesday, stop 1",
+   "hint": "One short line: what, or who"
+  },
+  {
+   "node": "p5-n150",
+   "kind": "text",
+   "label": "Wednesday, stop 2",
+   "hint": "One short line: what, or who"
+  },
+  {
+   "node": "p5-n159",
+   "kind": "text",
+   "label": "Thursday, stop 1",
+   "hint": "One short line: what, or who"
+  },
+  {
+   "node": "p5-n164",
+   "kind": "text",
+   "label": "Thursday, stop 2",
+   "hint": "One short line: what, or who"
+  },
+  {
+   "node": "p5-n169",
+   "kind": "text",
+   "label": "Thursday, stop 3",
+   "hint": "One short line: what, or who"
+  },
+  {
+   "node": "p5-n177",
+   "kind": "text",
+   "label": "Friday, stop 1",
+   "hint": "One short line: what, or who"
+  },
+  {
+   "node": "p5-n182",
+   "kind": "text",
+   "label": "Friday, stop 2",
+   "hint": "One short line: what, or who"
+  },
+  {
+   "node": "p8-n18",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n20",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n22",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Welcome Aboard",
-  "theme": "warm, orienting",
-  "pages": [
-   {
-    "title": "Welcome",
-    "points": [
-     "We are glad you are here"
-    ],
-    "visualRole": "cover"
-   },
-   {
-    "title": "Who we are",
-    "points": [
-     "The mission and how we make money"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "How we work",
-    "points": [
-     "Rituals, tools, and unwritten rules"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Your first 30 days",
-    "points": [
-     "Week by week, what good looks like"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "The people to meet",
-    "points": [
-     "Your map of the org"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Questions",
-    "points": [
-     "Where to ask anything"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 82
 }

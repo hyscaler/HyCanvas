@@ -47,6 +47,8 @@ import {
   type SlideSection,
   type FontRef,
   moveInReadingOrder,
+  repairCornerRadius,
+  roundedCorners,
 } from "@hc/schema";
 import { contrastRatio, fixToAA, fromHex, nearestPaletteColor, seriesColorAt, toHex } from "@hc/color";
 import {
@@ -566,6 +568,12 @@ interface EditorState {
   /** F39 FR-4: append generated pages (e.g. one page pulled from a different
    *  style option) after the last page, as ONE undo step. Returns new page ids. */
   appendDeckPages(deck: DeckResult, target: { width: number; height: number }): string[];
+
+  /** Replace one page's content in place (background, children, notes and
+   *  data) as ONE undo step; the page keeps its id and every other field,
+   *  and asset refs the new content needs (a logo) are listed when missing.
+   *  Per-slide regeneration of a composed deck lands through this. */
+  replacePageContent(pageIndex: number, next: { background?: Fill; children: Node[]; notes?: string; data?: Record<string, unknown>; assets?: AssetRef[] }): boolean;
 
   /** F39 Phase 3: run `fn` (which calls other store mutators) and collapse every
    *  undo entry it pushes into ONE undo turn, so an assistant turn reverts with a
@@ -1108,7 +1116,9 @@ interface EditorState {
   group(): void;
   ungroupSelection(): void;
   orderSelection(op: "front" | "back" | "forward" | "backward"): void;
-  alignSelection(edge: AlignEdge): void;
+  /** Align the selection: to the page for one node, to the selection's own
+   *  box for many. "center" is both axes at once, as ONE undo step. */
+  alignSelection(edge: AlignEdge | "center"): void;
   distributeSelection(axis: "h" | "v", by: "edge" | "gap"): void;
   /** Mirror the selection horizontally/vertically about its bounding-box center. */
   flipSelection(axis: "h" | "v"): void;
@@ -1502,6 +1512,9 @@ function sampleDesign(): DesignFile {
 // saved before a fix) can arrive without these, which otherwise produces NaN
 // page frames and a broken canvas. Returns the input unchanged when already valid.
 function normalizeLoadedDoc(file: DesignFile): DesignFile {
+  // A radius an earlier writer left as a bare number becomes the per-corner
+  // record on the way in (in place, so the page spread below carries it).
+  repairCornerRadius(file);
   const pages = file.pages ?? [];
   const fin = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n > 0;
   // Prefer an existing valid page size (a deck's pages share one size).
@@ -1594,6 +1607,60 @@ function newEffectOfKind(kind: Effect["kind"]): Effect | null {
       // control, not summoned blank from the stack's add menu.
       return null;
   }
+}
+
+/** The asset refs a composed deck's brand logo needs in the file: the logo
+ *  itself and, when the kit has one, its dark-ground version, which the
+ *  composer places on every deep page. Empty when the deck has no logo. */
+function deckLogoRefs(deck: DeckResult): AssetRef[] {
+  const logo = deck.system?.logo;
+  const refs: AssetRef[] = [];
+  for (const l of [logo, logo?.dark]) {
+    if (l?.assetId && l.url && !refs.some((r) => r.id === l.assetId)) refs.push({ id: l.assetId, kind: "image", url: l.url, mime: "image/*", checksum: "" });
+  }
+  return refs;
+}
+
+/** List a deck's logo assets in the file and start loading them, so the
+ *  pages draw the logo at once rather than after the next reload; returns
+ *  the ids this call added, for undo. */
+function addDeckLogoRefs(doc: DesignFile, refs: AssetRef[]): string[] {
+  const added: string[] = [];
+  for (const ref of refs) {
+    if (addAssetRef(doc, ref)) added.push(ref.id);
+    if (typeof window !== "undefined") imageAssets.register(ref.id, ref.url);
+  }
+  return added;
+}
+
+/** Add an asset ref unless the file already lists that id; true when added.
+ *  An older file may carry no asset list at all, so the list is ensured first. */
+function addAssetRef(doc: DesignFile, ref: AssetRef): boolean {
+  ensureDocArrays(doc);
+  if (doc.assets.some((a) => a.id === ref.id)) return false;
+  doc.assets.push(ref);
+  return true;
+}
+
+/** The recipe stamped on a file's meta by a deck generation, if any. */
+function deckRecipeOnDoc(doc: DesignFile): unknown {
+  const meta = (doc as unknown as { meta?: Record<string, unknown> }).meta;
+  return meta && typeof meta === "object" ? meta.aiDeck : undefined;
+}
+
+/** Stamp (or, with undefined, clear) the deck recipe on a file's meta,
+ *  editing the meta record in place so its other keys survive. */
+function stampDeckRecipe(doc: DesignFile, recipe: unknown): void {
+  const d = doc as unknown as { meta?: Record<string, unknown> };
+  if (!d.meta || typeof d.meta !== "object") d.meta = {};
+  if (recipe === undefined) delete d.meta.aiDeck;
+  else d.meta.aiDeck = structuredClone(recipe);
+}
+
+function removeAssetRef(doc: DesignFile, id: string): void {
+  if (!Array.isArray(doc.assets)) return;
+  const i = doc.assets.findIndex((a) => a.id === id);
+  if (i >= 0) doc.assets.splice(i, 1);
 }
 
 export const useEditor = create<EditorState>((set, get) => {
@@ -2228,6 +2295,8 @@ export const useEditor = create<EditorState>((set, get) => {
         background: p.background,
         children: structuredClone(p.nodes),
         ...(p.note ? { notes: p.note } : {}), // speaker notes from the outline
+        // The item the page was set from, for a later per-slide regeneration.
+        ...(p.item ? { data: { aiOutline: structuredClone(p.item) } } : {}),
       }));
       const pageIds = newPages.map((p) => p.id);
       const before = structuredClone(doc.pages);
@@ -2239,9 +2308,16 @@ export const useEditor = create<EditorState>((set, get) => {
         live.splice(0, live.length, ...(structuredClone(pages) as unknown[]));
         set({ activePage: Math.max(0, Math.min(activePage, live.length - 1)), selection });
       };
+      // The brand logo the composer placed (and its dark version) reference
+      // assets the file must list; they ride in the same undo step as the pages.
+      const logoRefs = deckLogoRefs(deck);
+      let addedLogoIds: string[] = [];
+      // How the deck was set rides on the file's meta, so one page can be set
+      // again later; a replaced deck replaces the recipe too.
+      const prevRecipe = deckRecipeOnDoc(get().doc);
       perform(
-        () => replaceAll(after, 0, []),
-        () => replaceAll(before, prevActive, prevSel), // restore the user's prior view on undo
+        () => { replaceAll(after, 0, []); addedLogoIds = addDeckLogoRefs(get().doc, logoRefs); if (deck.recipe) stampDeckRecipe(get().doc, deck.recipe); },
+        () => { replaceAll(before, prevActive, prevSel); for (const id of addedLogoIds) removeAssetRef(get().doc, id); if (deck.recipe) stampDeckRecipe(get().doc, prevRecipe); }, // restore the user's prior view on undo
       );
       return pageIds;
     },
@@ -2259,14 +2335,23 @@ export const useEditor = create<EditorState>((set, get) => {
         background: p.background,
         children: structuredClone(p.nodes),
         ...(p.note ? { notes: p.note } : {}), // speaker notes from the outline
+        ...(p.item ? { data: { aiOutline: structuredClone(p.item) } } : {}),
       }));
       const pageIds = newPages.map((p) => p.id);
       const snapshot = structuredClone(newPages);
       const prevSel = get().selection;
       const prevActive = get().activePage;
+      const logoRefs = deckLogoRefs(deck);
+      // Only an asset ref this step ADDED is removed on undo: a deck appended
+      // to one that already carried the logo leaves the earlier ref alone.
+      let addedLogoIds: string[] = [];
+      // An appended deck never overrides the recipe of the deck it joins.
+      const stampRecipe = !!deck.recipe && !deckRecipeOnDoc(get().doc);
       perform(
         () => {
           (get().doc.pages as unknown as unknown[]).push(...(structuredClone(snapshot) as unknown[]));
+          addedLogoIds = addDeckLogoRefs(get().doc, logoRefs);
+          if (stampRecipe) stampDeckRecipe(get().doc, deck.recipe);
           set({ activePage: get().doc.pages.length - newPages.length, selection: [] });
         },
         () => {
@@ -2275,10 +2360,40 @@ export const useEditor = create<EditorState>((set, get) => {
             const i = live.findIndex((p) => p.id === id);
             if (i >= 0) live.splice(i, 1);
           }
+          for (const id of addedLogoIds) removeAssetRef(get().doc, id);
+          if (stampRecipe) stampDeckRecipe(get().doc, undefined);
           set({ activePage: Math.min(prevActive, get().doc.pages.length - 1), selection: prevSel });
         },
       );
       return pageIds;
+    },
+    replacePageContent: (pageIndex, next) => {
+      const page = get().doc.pages[pageIndex] as unknown as { background?: Fill; children: Node[]; notes?: string; data?: Record<string, unknown> } | undefined;
+      if (!page) return false;
+      type Content = { background?: Fill; children: Node[]; notes?: string; data?: Record<string, unknown> };
+      const before: Content = { background: structuredClone(page.background), children: structuredClone(page.children), notes: page.notes, data: page.data ? structuredClone(page.data) : undefined };
+      const after: Content = {
+        background: next.background ? structuredClone(next.background) : before.background,
+        children: structuredClone(next.children),
+        notes: next.notes !== undefined ? next.notes : before.notes,
+        data: next.data ? { ...(before.data ?? {}), ...structuredClone(next.data) } : before.data,
+      };
+      // The page object and its children array stay the same objects, edited
+      // in place, so every other field the page carries (a transition, a
+      // reading order, a key this client does not know) survives.
+      const assign = (v: Content) => {
+        if (v.background === undefined) delete page.background; else page.background = structuredClone(v.background);
+        page.children.splice(0, page.children.length, ...structuredClone(v.children));
+        if (v.notes === undefined) delete page.notes; else page.notes = v.notes;
+        if (v.data === undefined) delete page.data; else page.data = structuredClone(v.data);
+      };
+      const prevSel = get().selection;
+      let addedAssetIds: string[] = [];
+      perform(
+        () => { assign(after); addedAssetIds = addDeckLogoRefs(get().doc, next.assets ?? []); set({ selection: [] }); },
+        () => { assign(before); for (const id of addedAssetIds) removeAssetRef(get().doc, id); set({ selection: prevSel }); },
+      );
+      return true;
     },
     runWithoutHistory: (fn) => {
       suppressHistory++;
@@ -2627,7 +2742,7 @@ export const useEditor = create<EditorState>((set, get) => {
       ensureDocArrays(doc);
       const page = doc.pages.find((p) => p.id === pageId);
       if (!page) return false; // design changed: a late resolution never lands elsewhere
-      type Tagged = { id: string; type: string; data?: { placeholderId?: string }; transform?: { x: number; y: number }; size?: { width: number; height: number } };
+      type Tagged = { id: string; type: string; data?: { placeholderId?: string }; transform?: { x: number; y: number }; size?: { width: number; height: number }; animation?: unknown };
       const slot = (page.children as unknown as Tagged[]).find((n) => n.data?.placeholderId === placeholderId);
       if (!slot) return false; // slot gone (user deleted it): nothing to fill
       const rect = {
@@ -2645,6 +2760,9 @@ export const useEditor = create<EditorState>((set, get) => {
         size: { width: rect.width, height: rect.height },
       } as Partial<Node>);
       node.data = { placeholderId, aiImagePrompt: prompt };
+      // The stand-in's entrance is the picture's entrance: the composer gave
+      // the region its place in the page's reveal, and the picture takes it.
+      if (slot.animation) (node as unknown as { animation?: unknown }).animation = structuredClone(slot.animation);
       const ref: AssetRef = { id: assetId, kind: "image", url, mime: "image/*", checksum: "" };
       const replacedId = slot.id;
       const replacedSnapshot = structuredClone(slot);
@@ -2755,7 +2873,7 @@ export const useEditor = create<EditorState>((set, get) => {
             transform: { x: r0.x, y: r0.y, scaleX: 1, scaleY: 1, rotation: 0 },
             size: { width: r0.width, height: r0.height },
             fills: [{ type: "solid", color: { srgb: { r: 0.898, g: 0.906, b: 0.922, a: 1 } } }],
-            cornerRadius: Math.round(Math.min(r0.width, r0.height) * 0.02),
+            cornerRadius: roundedCorners(Math.round(Math.min(r0.width, r0.height) * 0.02)),
             data: { placeholderId: ph.id },
           } as Partial<Node>));
           continue;
@@ -2911,7 +3029,7 @@ export const useEditor = create<EditorState>((set, get) => {
         transform: { x: bar.x, y: bar.y, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: bar.width, height: bar.height },
         fills: [{ type: "solid", color }],
-        cornerRadius: Math.round(bar.height / 2),
+        cornerRadius: roundedCorners(Math.round(bar.height / 2)),
         // Tagged so applyLayoutToPage can carry it to the new title slot (or
         // drop it) instead of stranding it on a layout change.
         data: { accentRule: true },
@@ -5343,14 +5461,17 @@ export const useEditor = create<EditorState>((set, get) => {
     },
     reorderLayer: (id, toIndex) => {
       if (editBlocked(id)) return; // a filler may not restack a brand locked region
-      const page = get().doc.pages[curPageIndex()];
-      const from = page.children.findIndex((n) => n.id === id);
-      if (from < 0) return;
-      const to = Math.max(0, Math.min(toIndex, page.children.length - 1));
+      // Among its own siblings: a page's top-level layers, or the children of
+      // the group it sits in, so the panel can restack inside a group too.
+      const loc = locate(get().doc, id);
+      if (!loc) return;
+      const siblings = loc.siblings;
+      const from = loc.index;
+      const to = Math.max(0, Math.min(toIndex, siblings.length - 1));
       if (from === to) return;
       perform(
-        () => { const [n] = page.children.splice(from, 1); page.children.splice(to, 0, n); },
-        () => { const i = page.children.findIndex((x) => x.id === id); if (i >= 0) { const [n] = page.children.splice(i, 1); page.children.splice(from, 0, n); } },
+        () => { const [n] = siblings.splice(from, 1); siblings.splice(to, 0, n); },
+        () => { const i = siblings.findIndex((x) => x.id === id); if (i >= 0) { const [n] = siblings.splice(i, 1); siblings.splice(from, 0, n); } },
       );
     },
     setNodeHidden: (id, hidden) => {
@@ -8037,14 +8158,26 @@ export const useEditor = create<EditorState>((set, get) => {
       // layout mutation a filler may not perform; filter those out.
       const selection = get().selection.filter((id) => !editBlocked(id));
       if (!selection.length) return;
-      const page = doc.pages[curPageIndex()];
-      const before = page.children.map((n) => n.id);
+      // Each node moves among its own siblings: top-level layers on the page,
+      // a group's children inside the group. A selection spanning containers
+      // restacks within each, as ONE undo step.
+      const groups = new Map<Node[], string[]>();
+      for (const id of selection) {
+        const loc = locate(doc, id);
+        if (!loc) continue;
+        const ids = groups.get(loc.siblings) ?? [];
+        ids.push(id);
+        groups.set(loc.siblings, ids);
+      }
+      if (!groups.size) return;
+      const befores = new Map<Node[], string[]>();
+      for (const siblings of groups.keys()) befores.set(siblings, siblings.map((n) => n.id));
       perform(
         () => {
-          page.children = orderOp(page.children, selection, op);
+          for (const [siblings, ids] of groups) siblings.splice(0, siblings.length, ...orderOp(siblings, ids, op));
         },
         () => {
-          page.children.sort((a, b) => before.indexOf(a.id) - before.indexOf(b.id));
+          for (const [siblings, before] of befores) siblings.sort((a, b) => before.indexOf(a.id) - before.indexOf(b.id));
         },
       );
     },
@@ -8058,6 +8191,17 @@ export const useEditor = create<EditorState>((set, get) => {
         selection.length > 1
           ? (unionAABB(doc, selection) ?? { x: 0, y: 0, width: page.width, height: page.height })
           : { x: 0, y: 0, width: page.width, height: page.height };
+      if (edge === "center") {
+        // Both axes in one step: the two delta maps are summed per node so
+        // undo puts the selection back in one move.
+        const merged = alignDeltas(items, "hcenter", target);
+        for (const [id, d] of alignDeltas(items, "vmiddle", target)) {
+          const cur = merged.get(id) ?? { dx: 0, dy: 0 };
+          merged.set(id, { dx: cur.dx + d.dx, dy: cur.dy + d.dy });
+        }
+        applyDeltas(set, get, merged);
+        return;
+      }
       applyDeltas(set, get, alignDeltas(items, edge, target));
     },
     flipSelection: (axis) => {

@@ -269,6 +269,7 @@ All configuration is read from the root `.env` (copy `.env.example`). The most i
 | `S3_*` | optional | S3-compatible object storage (endpoint, bucket, keys) when `STORAGE_DRIVER=s3`. |
 | `ASSET_QUOTA_BYTES` | optional | Per-workspace upload cap in bytes (default 2 GiB). |
 | `USER_STORAGE_QUOTA_BYTES` | optional | Global per-user upload cap across all workspaces; unset/0 = unlimited. For public instances. |
+| `BRAND_STARTER_KIT` | optional | `hycanvas` (default) seeds HyCanvas's own brand kit into workspaces that have none; `off` disables it. See [Branding and theming](#branding-and-theming). |
 | `AI_SECRET` | optional | Encrypts stored per-workspace AI keys; falls back to `JWT_SECRET`. |
 | `OIDC_*` | optional | OIDC single sign-on (issuer, client id/secret). |
 | `AUTH_*_ENABLED` | optional | Enable/disable each sign-in method's login and signup (password, magic link, OIDC). Defaults preserve prior behavior. See [Choosing which sign-in methods are allowed](#choosing-which-sign-in-methods-are-allowed). |
@@ -296,7 +297,7 @@ All configuration is read from the root `.env` (copy `.env.example`). The most i
 
 The starter template catalog lives in `backend/internal/templates/seed.json` and is compiled into the binary (`//go:embed`). There is no seed command or database step: the templates are served directly from the embedded JSON, merged with any templates saved to the database.
 
-To add or edit a built-in template, edit `seed.json`, then rebuild/restart the backend so it re-embeds the file:
+The seed is compiled, never hand-edited: each template is a compact spec in `scripts/templates/*.json` (hex colours, text blocks, buttons, icons, drawings, picture slots, live charts, and bundled illustrations), and `node scripts/build-templates.mjs` validates every spec against the schema and writes the seed. The presentation templates are generated from one library of looks and layouts (`scripts/lib/deck-kit.mjs`): `node scripts/gen-deck-kits.mjs` writes the six kits, `node scripts/gen-topic-decks.mjs` the thirty-one topic decks from the copy in `scripts/topics/`, `node scripts/gen-single-slides.mjs` the single slides, and `node scripts/gen-signature-decks.mjs` the three decks with a look of their own, so a grid change lands on every slide at once. To add or edit a built-in template, edit or add a spec, run the build, then rebuild/restart the backend so it re-embeds the file:
 
 - Development: restart `npm run dev` (it runs the backend via `go run`, which recompiles each start).
 - Production (native): `npm run build:dist` then `npm run start:dist:only` (or `npm run deploy`).
@@ -309,6 +310,12 @@ User-saved templates (Save as template) are stored in the database and need no r
 The app's color identity lives in one file: `frontend/src/theme.config.mjs` (the brand and accent scales, the identity gradient, the editor canvas-overlay colors, and the collaborator presence palette). To rebrand, edit that file and run `npm run gen:theme`. The generator rewrites the Tailwind CSS tokens, the typed canvas-overlay constants, and the Go presence palette, so one change propagates across the UI chrome, the gradient, the logo, the favicon/theme-color, the canvas overlays, and presence colors. `npm run gen:theme:check` (run as part of `npm run lint`) fails if the committed generated files drift from the source.
 
 This product/app accent is intentionally separate from the per-workspace Brand Kit, which themes design content rather than the app shell.
+
+### The starter brand kit
+
+HyCanvas ships its own brand kit the way it ships the template catalog: compiled into the binary (`backend/internal/brand/starter`) and present from the start. A workspace that has no kit receives it as the workspace default when the workspace is created (signup, a first single sign-on login, a new team workspace) and, once, on the first boot after the upgrade for workspaces that predate it. The kit carries the brand palette (plum, magenta, deep plum, blush, ink, paper, plus the gradient ends), Plus Jakarta Sans for headings and body, the logo and the mark in ink with their paper versions for dark grounds, the app tile, the colour lockup the app's own header uses, all stored as assets in the workspace library, and a house voice. A workspace that already has a kit of its own (one with any content, or one the owner named) is never touched; an empty kit still called "Untitled brand kit" is a placeholder, and the starter kit lands beside it as the default. A starter kit the owner deletes or replaces never comes back: the seeding records its visit on the workspace.
+
+The default kit grounds every AI generation in the workspace (voice, palette, faces and the logo on every page), so an instance whose users bring their own brands should set `BRAND_STARTER_KIT="off"`. The spec is `starter/hycanvas.json`; the logo PNGs are rendered from the SVG masters in `starter/src` by `npm run gen:brand-starter` (needs `rsvg-convert`), and a change to either needs a backend rebuild so the binary re-embeds the files.
 
 ## Releases and publishing (maintainers)
 

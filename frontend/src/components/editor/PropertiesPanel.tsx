@@ -28,6 +28,7 @@ import {
   FlipHorizontal2, FlipVertical2, BringToFront, SendToBack, ArrowUp, ArrowDown,
   Group as GroupIcon, Ungroup, Lock, Unlock, Eye, EyeOff, Sparkles,
   AlignLeft, AlignCenter, AlignRight, AlignJustify, ImagePlus,
+  Crosshair,
 } from "lucide-react";
 import { fonts } from "@/lib/fontProvider";
 import { promptText, alertText } from "@/lib/promptDialog";
@@ -930,8 +931,11 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         const multi = selection.length > 1;
         const canDistribute = selection.length > 2;
         return (
-          <Section title={tr("editor.arrange")} order={ORDER.arrange} defaultOpen={false}>
-            {/* Align (to page for one object, to selection for many). */}
+          <Section title={tr("editor.arrange")} order={ORDER.arrange}>
+            {/* Align (to page for one object, to selection for many), said in
+                words: the icons alone left people hunting for a way to centre
+                a picture on the page. */}
+            <span className="text-[11px] text-neutral-400">{multi ? tr("editor.align_to_selection") : tr("editor.align_to_page")}</span>
             <div className="flex gap-1">
               <IconBtn icon={AlignStartVertical} title={tr("editor.align_left")} onClick={() => st.alignSelection("left")} />
               <IconBtn icon={AlignCenterVertical} title={tr("editor.align_center")} onClick={() => st.alignSelection("hcenter")} />
@@ -939,6 +943,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
               <IconBtn icon={AlignStartHorizontal} title={tr("editor.align_top")} onClick={() => st.alignSelection("top")} />
               <IconBtn icon={AlignCenterHorizontal} title={tr("editor.align_middle")} onClick={() => st.alignSelection("vmiddle")} />
               <IconBtn icon={AlignEndHorizontal} title={tr("editor.align_bottom")} onClick={() => st.alignSelection("bottom")} />
+              <IconBtn icon={Crosshair} title={tr("editor.center_on_page")} onClick={() => st.alignSelection("center")} />
             </div>
             {/* Distribute (needs 3+) + tidy. */}
             <div className="flex gap-1">

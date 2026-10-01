@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -26,6 +27,7 @@ func mountAIStudio(api chi.Router, svc *aistudio.Service, acct *accounts.Service
 		r.Post("/ai/assistant", aiStudioAssistantHandler(svc, acct))
 		r.Post("/ai/style-profile", aiStudioStyleHandler(svc, acct))
 		r.Post("/ai/critique", aiStudioCritiqueHandler(svc, acct))
+		r.Post("/ai/review-page", aiStudioReviewPageHandler(svc, acct))
 		r.Post("/ai/generate-design", aiStudioGenerateHandler(svc, acct, reg))
 		r.Post("/ai/variations", aiStudioVariationsHandler(svc, acct, reg))
 		r.Post("/ai/design-svg", aiStudioSvgHandler(svc, acct))
@@ -230,6 +232,42 @@ func aiStudioCritiqueHandler(svc *aistudio.Service, acct *accounts.Service) http
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"suggestions": text})
+	}
+}
+
+// aiStudioReviewPageHandler is the editor door's half of the render-and-review
+// pass: the browser renders a freshly generated page the way the user sees
+// it and a provider that can read images names the visible defects.
+func aiStudioReviewPageHandler(svc *aistudio.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			WorkspaceID string `json:"workspaceId"`
+			ImageBase64 string `json:"imageBase64"`
+			Title       string `json:"title"`
+		}
+		// A review page is one PNG at review size; the cap keeps a stray
+		// full-resolution render from becoming a multi-megabyte request.
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 6<<20)).Decode(&body); err != nil {
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
+			return
+		}
+		if !aiAssert(r, acct, body.WorkspaceID, "member") {
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
+			return
+		}
+		if strings.TrimSpace(body.ImageBase64) == "" {
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
+			return
+		}
+		findings, err := svc.ReviewPage(r.Context(), body.WorkspaceID, body.ImageBase64, body.Title)
+		if err != nil {
+			aiStudioProblem(w, r, err)
+			return
+		}
+		if findings == nil {
+			findings = []aistudio.PageFinding{}
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"findings": findings})
 	}
 }
 

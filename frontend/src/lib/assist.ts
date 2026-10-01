@@ -102,12 +102,18 @@ export function pageBackgroundColor(page: Page): Color {
   return WHITE;
 }
 
-/** First solid fill color of a node, if any (used as the underlying background a
- *  text element sits on when it overlaps a filled shape). */
+/** The color a node's fill paints, if any (used as the underlying background
+ *  a text element sits on when it overlaps a filled shape). A gradient counts
+ *  by its first stop, as the page background does: a composed deck's cards
+ *  are gradient panels, and reading them as unfilled put their white copy on
+ *  the page's paper and flagged every line as unreadable. */
 function solidFillColor(node: Node): Color | null {
   const fills = (node as unknown as { fills?: Fill[] }).fills;
   if (!fills) return null;
-  for (const f of fills) if (f.type === "solid") return f.color;
+  for (const f of fills) {
+    if (f.type === "solid") return f.color;
+    if (f.type === "gradient" && f.stops.length) return f.stops[0].color;
+  }
   return null;
 }
 

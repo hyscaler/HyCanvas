@@ -304,24 +304,36 @@ func (s *Service) VerifyImageCandidate(ctx context.Context, workspaceID string, 
 	if err != nil {
 		return ImageCheck{}, err
 	}
+	cfg, err := s.imageCandidateCallConfig(rc)
+	if err != nil {
+		return ImageCheck{}, err
+	}
+	return s.probeImageCredentials(ctx, cfg)
+}
+
+// imageCandidateCallConfig builds the outbound config for a resolved image
+// candidate: the typed key and secret when given, the stored ones otherwise
+// (never across a provider change), and the registry's defaults for whatever
+// is still empty. The model fills both slots, as imageCallConfig does.
+func (s *Service) imageCandidateCallConfig(rc resolvedImageConfig) (CallConfig, error) {
 	in, ex := rc.in, rc.existing
 	keepStored := ex != nil && !rc.providerChanged
 	key := in.APIKey
 	if key == "" && keepStored && ex.keyCipher != nil && ex.keyIV != nil && ex.keyTag != nil {
 		v, err := secrets.DecryptAISecret(secrets.Encrypted{Cipher: *ex.keyCipher, IV: *ex.keyIV, Tag: *ex.keyTag}, s.secret)
 		if err != nil {
-			return ImageCheck{}, ErrBadRequest
+			return CallConfig{}, ErrBadRequest
 		}
 		key = v
 	}
 	if key == "" {
-		return ImageCheck{}, ErrImageKeyRequired // resolveImageConfig already refuses this; kept as a guard
+		return CallConfig{}, ErrImageKeyRequired // resolveImageConfig already refuses this; kept as a guard
 	}
 	secret := in.APISecret
 	if secret == "" && in.APIKey == "" && keepStored && ex.secretCipher != nil && ex.secretIV != nil && ex.secretTag != nil {
 		v, err := secrets.DecryptAISecret(secrets.Encrypted{Cipher: *ex.secretCipher, IV: *ex.secretIV, Tag: *ex.secretTag}, s.secret)
 		if err != nil {
-			return ImageCheck{}, ErrBadRequest
+			return CallConfig{}, ErrBadRequest
 		}
 		secret = v
 	}
@@ -334,10 +346,10 @@ func (s *Service) VerifyImageCandidate(ctx context.Context, workspaceID string, 
 			model = p.DefaultImageModel
 		}
 	}
-	return s.probeImageCredentials(ctx, CallConfig{
+	return CallConfig{
 		Provider: Provider(in.Provider), APIKey: key, APISecret: secret,
 		BaseURL: baseURL, Model: model, ImageModel: model,
-	})
+	}, nil
 }
 
 // probeImageCredentials lists models on the provider's host with its key: the

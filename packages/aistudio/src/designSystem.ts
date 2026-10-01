@@ -15,7 +15,8 @@
 // Pure and deterministic: the same theme and size always produce the same
 // system, on the client and under goja alike.
 
-import { contrastRatio, fixToAA, fromHex, hslToRgb, rgbToHsl, toHex } from "@hc/color";
+import { contrastRatio, fixToAA, fromHex, hslToRgb, relativeLuminance, rgbToHsl, toHex } from "@hc/color";
+import { LOOKS, lookFor, type DeckLook } from "./look";
 import type { Color, Fill } from "@hc/schema";
 import type { DeckTheme } from "./outline";
 import type { ThemeCatalogEntry } from "./themeCatalog";
@@ -43,6 +44,10 @@ export interface DesignSystemColors {
   mutedOnPaper: Color;
   accentOnPaper: Color;
   accentOnDeep: Color;
+  /** The accent pushed to 4.5:1, for small accent text (eyebrows, badge
+   *  numbers) that the large-text threshold does not cover. */
+  accentInkOnPaper: Color;
+  accentInkOnDeep: Color;
 }
 
 export interface DesignSystem {
@@ -55,12 +60,45 @@ export interface DesignSystem {
   radius: number;
   rule: number;
   colors: DesignSystemColors;
-  fonts: { heading: string; body: string };
+  fonts: { heading: string; body: string; mono?: string };
   impactBackground: Fill;
   paperBackground: Fill;
   /** The deck title, shown small on reading pages so they belong together. */
   kicker?: string;
   dir: "ltr" | "rtl";
+  /** One clause appended to every picture prompt so the deck's pictures read
+   *  as a series: the mood the outline named, the palette's tones, one light,
+   *  and the rules a slide picture always follows. */
+  artDirection: string;
+  /** Entrance motion on the composed pages: "subtle" (the default) gives
+   *  every element one quiet entrance in reading order; "none" leaves the
+   *  deck still. */
+  motion: DeckMotion;
+  /** The brand's logo when the workspace has one. */
+  logo?: DeckLogo;
+  /** The ground of reading pages. Dark and tech themes keep every page on
+   *  the deep ground with a bright accent, the way a tech review deck reads;
+   *  the rest alternate the deep ground for impact pages with paper. */
+  readingGround: "paper" | "deep";
+  /** The deck's house style: what the forms are made of. */
+  look: DeckLook;
+}
+
+export type DeckMotion = "subtle" | "none";
+
+/** The brand's primary logo: the asset the file references and the URL that
+ *  reference carries. `aspect` (width over height) sizes the box the logo is
+ *  fitted into, so a contained picture fills its box and sits on the margin;
+ *  unknown means a wide box the picture is centered in. `minSizePx` is the
+ *  kit's own floor on the logo's width, which the composer never goes under. */
+export interface DeckLogo {
+  assetId: string;
+  url: string;
+  aspect?: number;
+  minSizePx?: number;
+  /** The version drawn on a dark ground (the kit's "dark" variant), when
+   *  the kit has one; the composer picks it on every deep page. */
+  dark?: { assetId: string; url: string; aspect?: number };
 }
 
 /** Type pairings for a deck that arrives with no brand fonts and no catalog
@@ -85,6 +123,25 @@ function mix(a: Color, b: Color, t: number): Color {
 function withLightness(c: Color, l: number, sMin = 0): Color {
   const hsl = rgbToHsl(c);
   return hslToRgb({ h: hsl.h, s: Math.max(hsl.s, sMin), l, a: 1 });
+}
+
+/** A ground at least one ink reads on at AA. A mid grey hosts neither
+ *  black nor white at 4.5:1, so it is darkened until white does; rare, but a
+ *  page on such a ground would have no readable text at all. */
+function groundForInk(g: Color): Color {
+  if (contrastRatio(WHITE, g) >= 4.5 || contrastRatio(BLACK, g) >= 4.5) return g;
+  const hsl = rgbToHsl(g);
+  let out = g;
+  for (let l = hsl.l; l > 0 && contrastRatio(WHITE, out) < 4.5; l -= 0.02) out = hslToRgb({ ...hsl, l: Math.max(0, l) });
+  return out;
+}
+
+/** True when a ground is dark enough to carry a reading page: light ink
+ *  reads on it at AA with room to spare. A saturated mid-tone (a sky blue,
+ *  an orange) is a fine impact ground under black ink and a poor reading
+ *  ground under anything. */
+export function isDarkGround(g: Color): boolean {
+  return relativeLuminance(g) < 0.18;
 }
 
 /** The ink that reads best on a ground, nudged to AA against it. */
@@ -113,6 +170,44 @@ function accentFor(seed: Color, ground: Color, onDark: boolean): Color {
   // Large text threshold: an accent carries rules and numerals, never body.
   if (contrastRatio(out, ground) < 3) out = fixToAA(out, ground);
   return out;
+}
+
+/** A plain name for a color's hue family, for prompts a picture model reads.
+ *  Low saturation is a neutral whatever its hue; very light and very dark
+ *  colors are named by tone. */
+export function hueName(c: Color): string {
+  const { h, s, l } = rgbToHsl(c);
+  if (l >= 0.92) return "off-white";
+  if (l <= 0.12) return "near-black";
+  if (s < 0.12) return l > 0.5 ? "light grey" : "charcoal";
+  const deg = ((h % 360) + 360) % 360;
+  const name =
+    deg < 15 ? "red" : deg < 40 ? "orange" : deg < 60 ? "amber" : deg < 75 ? "yellow" :
+    deg < 100 ? "lime" : deg < 160 ? "green" : deg < 185 ? "teal" : deg < 205 ? "cyan" :
+    deg < 250 ? "blue" : deg < 275 ? "indigo" : deg < 300 ? "violet" : deg < 335 ? "magenta" : deg < 345 ? "pink" : "red";
+  if (l < 0.3) return `deep ${name}`;
+  if (l > 0.72) return `pale ${name}`;
+  return name;
+}
+
+/** The art direction clause for a deck's pictures: the outline's mood, the
+ *  palette's two hue families, one consistent light, and the constraints every
+ *  slide picture obeys. Deterministic, so the two doors write the same clause. */
+export function artDirectionFor(mood: string | undefined, colors: { primary: Color; accent: Color; deep: Color }): string {
+  const moodWords = (mood ?? "")
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter((w) => w.length > 2)
+    .slice(0, 4);
+  const tones = Array.from(new Set([hueName(colors.primary), hueName(colors.accent)])).join(" and ");
+  const parts = [
+    "one consistent series across the deck",
+    moodWords.length ? `${moodWords.join(", ")} mood` : "",
+    `${tones} tones in the palette`,
+    "soft directional light, uncluttered composition, generous negative space for text",
+    "no text, no logos, no watermarks, no borders",
+  ].filter(Boolean);
+  return parts.join(", ");
 }
 
 /** Choose a catalog entry deterministically from a seed. */
@@ -166,8 +261,22 @@ export function catalogEntryForMood(mood: string, seed: number): ThemeCatalogEnt
 }
 
 export interface DeriveOptions {
+  /** An explicit look (a dial, an API field), then the one the outline
+   *  named; the catalog style stands in for both. */
+  look?: unknown;
+  outlineLook?: unknown;
+  /** True when a brand kit or a theme the user chose set the fonts, so a
+   *  look's own pairing must not replace them. */
+  fontsAuthored?: boolean;
   /** A catalog theme: its six slots are used as-is. */
   catalog?: ThemeCatalogEntry | null;
+  /** The outline's own mood phrase ("calm, coastal, restrained"), folded into
+   *  the art direction every picture prompt carries. */
+  mood?: string;
+  /** Entrance motion on the composed pages; defaults to "subtle". */
+  motion?: DeckMotion;
+  /** The brand's logo, placed small on every archetype page. */
+  logo?: DeckLogo | null;
   /** Brand colors: the first is the primary, the second (if any) the accent. */
   brandPalette?: string[];
   dir?: "ltr" | "rtl";
@@ -204,6 +313,9 @@ export function deriveDesignSystem(theme: DeckTheme, size: { width: number; heig
     // Near-black carrying a whisper of the hue: a chosen neutral, not #111.
     ink = mix(withLightness(primary, 0.12, 0.2), BLACK, 0.35);
   }
+  // Every ground can host ink, whatever the source put in the slot.
+  deep = groundForInk(deep);
+  paper = groundForInk(paper);
   // Whatever the source, every ink is fixed against the ground it sits on.
   const inkOnDeep = inkFor(deep);
   const inkOnPaper = contrastRatio(ink, paper) >= 4.5 ? ink : fixToAA(ink, paper);
@@ -215,6 +327,8 @@ export function deriveDesignSystem(theme: DeckTheme, size: { width: number; heig
     mutedOnPaper: mutedFor(inkOnPaper, paper),
     accentOnPaper: accentFor(accent, paper, false),
     accentOnDeep: accentFor(accent, deep, true),
+    accentInkOnPaper: fixToAA(accentFor(accent, paper, false), paper),
+    accentInkOnDeep: fixToAA(accentFor(accent, deep, true), deep),
   };
 
   // Backgrounds -------------------------------------------------------------
@@ -234,9 +348,15 @@ export function deriveDesignSystem(theme: DeckTheme, size: { width: number; heig
 
   // Fonts -------------------------------------------------------------------
   const seeded = PAIRINGS[(((opts.seed ?? 0) % PAIRINGS.length) + PAIRINGS.length) % PAIRINGS.length];
+  // The look's own pairing, unless a brand kit or a chosen theme authored
+  // the fonts; a mono face for labels rides along whenever the look has one.
+  const look = lookFor(opts.look, opts.outlineLook, opts.catalog?.style);
+  const spec = LOOKS[look];
+  const lookFonts = opts.fontsAuthored ? null : spec.fonts;
   const fonts = {
-    heading: theme.fontHeading || opts.catalog?.fontHeading || seeded.heading,
-    body: theme.fontBody || opts.catalog?.fontBody || seeded.body,
+    heading: lookFonts?.heading ?? (theme.fontHeading || opts.catalog?.fontHeading || seeded.heading),
+    body: lookFonts?.body ?? (theme.fontBody || opts.catalog?.fontBody || seeded.body),
+    ...(spec.fonts?.mono ? { mono: spec.fonts.mono } : {}),
   };
 
   // Spacing -----------------------------------------------------------------
@@ -247,7 +367,7 @@ export function deriveDesignSystem(theme: DeckTheme, size: { width: number; heig
     margin: unit * 6,
     gutter: unit * 2,
     columns: 12,
-    radius: Math.round(unit * 0.75),
+    radius: Math.round(unit * 0.75 * spec.radius),
     rule: Math.max(2, Math.round(unit * 0.35)),
     colors,
     fonts,
@@ -255,6 +375,16 @@ export function deriveDesignSystem(theme: DeckTheme, size: { width: number; heig
     paperBackground,
     kicker: theme.kicker,
     dir: opts.dir ?? "ltr",
+    artDirection: artDirectionFor(opts.mood, colors),
+    motion: opts.motion ?? "subtle",
+    ...(opts.logo?.assetId && opts.logo.url ? { logo: { ...opts.logo } } : {}),
+    // A dark or tech style reads on its deep ground only when that ground
+    // is dark. Some entries carry a saturated mid-tone in the deep slot (a
+    // sky blue, an orange, a green) and their near-black paper is the
+    // surface a reading page wants; a mid-tone hosts no light ink at AA and
+    // painted every page of a deck in it.
+    readingGround: (opts.catalog?.style === "dark" || opts.catalog?.style === "tech") && isDarkGround(colors.deep) ? "deep" : "paper",
+    look,
   };
 }
 

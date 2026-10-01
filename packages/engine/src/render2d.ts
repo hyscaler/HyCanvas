@@ -28,6 +28,7 @@ import { buildClipFromPathData } from "./pathclip";
 import { layerContext, makeLayerCanvas, needsIsolation } from "./layer";
 import { maskedCanvas } from "./maskedImage";
 import { autoFitNode, layoutText, isTabRun, tabRunWidth, type MeasureFn } from "@hc/text";
+import { cellLineHeight, wrapCellLines } from "./tablewrap";
 import { colorToCss } from "./color";
 import { applyTextCase, canvasFontString, fontFamilyStack } from "./fonts";
 import { effectsFilter, outlineSpecs, duotoneEffect } from "./effects";
@@ -119,10 +120,16 @@ function placeholderBox(
   ctx.strokeRect(0, 0, w, h);
 }
 
-function setStroke(ctx: CanvasLike, width: number, style: string | CanvasGradientLike): void {
+/** Stroke the current path in a style, dashed when the stroke carries a
+ *  pattern (the file format's `stroke.dash`, in user units); the dash is
+ *  cleared again so it never leaks into the next node. */
+function setStroke(ctx: CanvasLike, width: number, style: string | CanvasGradientLike, dash?: number[]): void {
   ctx.lineWidth = width;
   ctx.strokeStyle = style;
+  const dashed = !!dash && dash.length > 0 && dash.some((d) => d > 0) && !!ctx.setLineDash;
+  if (dashed) ctx.setLineDash!(dash!);
   ctx.stroke();
+  if (dashed) ctx.setLineDash!([]);
 }
 
 /** Trace a shape's outline into the current path (no fill/stroke), so the same
@@ -236,7 +243,7 @@ function drawShape(ctx: CanvasLike, node: ShapeNode, assets?: AssetProvider): vo
         ctx.beginPath();
         ctx.ellipse(w / 2, h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
         if (fillStyle !== null) ctx.fill();
-        if (node.stroke) setStroke(ctx, node.stroke.width, resolveFill(ctx, node.stroke.fill, w, h));
+        if (node.stroke) setStroke(ctx, node.stroke.width, resolveFill(ctx, node.stroke.fill, w, h), node.stroke.dash);
       } else if (fillStyle !== null) {
         ctx.fillRect(0, 0, w, h);
       }
@@ -249,17 +256,17 @@ function drawShape(ctx: CanvasLike, node: ShapeNode, assets?: AssetProvider): vo
         ctx.beginPath();
         ctx.roundRect(0, 0, w, h, [cr.topLeft, cr.topRight, cr.bottomRight, cr.bottomLeft]);
         if (fillStyle !== null) ctx.fill();
-        if (node.stroke) {
-          ctx.lineWidth = node.stroke.width;
-          ctx.strokeStyle = resolveFill(ctx, node.stroke.fill, w, h);
-          ctx.stroke();
-        }
+        if (node.stroke) setStroke(ctx, node.stroke.width, resolveFill(ctx, node.stroke.fill, w, h), node.stroke.dash);
       } else {
         if (fillStyle !== null) ctx.fillRect(0, 0, w, h);
         if (node.stroke) {
-          ctx.lineWidth = node.stroke.width;
-          ctx.strokeStyle = resolveFill(ctx, node.stroke.fill, w, h);
-          ctx.strokeRect(0, 0, w, h);
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(w, 0);
+          ctx.lineTo(w, h);
+          ctx.lineTo(0, h);
+          ctx.closePath();
+          setStroke(ctx, node.stroke.width, resolveFill(ctx, node.stroke.fill, w, h), node.stroke.dash);
         }
       }
       break;
@@ -327,8 +334,13 @@ function drawImageNode(ctx: CanvasLike, node: ImageNode, w: number, h: number, a
   if (status === "ready") {
     let img = assets?.image(assetId);
     if (img && ctx.drawImage) {
-      const natW = node.source.naturalWidth || 1;
-      const natH = node.source.naturalHeight || 1;
+      // The crop and sample math runs in source pixels. A node placed by hand
+      // records the natural size when its picture loads; one written by a
+      // composer or an import may carry zeros, so the loaded picture's own
+      // dimensions stand in, or the sample would be a single stretched pixel.
+      const el = img as { naturalWidth?: number; naturalHeight?: number; width?: number; height?: number };
+      const natW = node.source.naturalWidth || el.naturalWidth || el.width || 1;
+      const natH = node.source.naturalHeight || el.naturalHeight || el.height || 1;
       // Source-pixel basis for the crop/sample math. The duotone buffer may be
       // downscaled (capped longest side), so sampling must use the buffer's own
       // dimensions, not the natural ones.
@@ -1170,7 +1182,7 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
           if (contours.length) ctx.fill("evenodd");
           else ctx.fill();
         }
-        if (node.stroke) setStroke(ctx, node.stroke.width, resolveFill(ctx, node.stroke.fill, w, h));
+        if (node.stroke) setStroke(ctx, node.stroke.width, resolveFill(ctx, node.stroke.fill, w, h), node.stroke.dash);
       }
       break;
     }
@@ -1544,7 +1556,16 @@ function drawTable(ctx: CanvasLike, node: TableNode, w: number, h: number): void
       const align = cell.align ?? "left";
       ctx.textAlign = align;
       const tx = align === "center" ? cx + cw / 2 : align === "right" ? cx + cw - 6 : cx + 6;
-      ctx.fillText(run.text, tx, cy + size + 6);
+      // Wrapped like a paragraph, six in from each edge; a line the row cannot
+      // hold is not drawn rather than drawn over the row beneath.
+      const lh = cellLineHeight(size);
+      // A context without measureText (a bare recorder) estimates by count.
+      const widthOf = (s: string) => (typeof ctx.measureText === "function" ? ctx.measureText(s).width : s.length * size * 0.55);
+      wrapCellLines(run.text, Math.max(1, cw - 12), widthOf).forEach((line, i) => {
+        const baseline = cy + size + 6 + i * lh;
+        if (i > 0 && baseline > cy + ch - 2) return;
+        ctx.fillText(line, tx, baseline);
+      });
     }
   }
 
@@ -1654,8 +1675,31 @@ function tickLabel(v: number): string {
 /** Draw the left Y axis: a vertical line, evenly spaced tick marks, and value
  *  labels from 0 to `maxV`. Stays within the reserved left inset (labels are
  *  right-aligned just left of the axis). For value-based charts only. */
-function drawYAxis(ctx: CanvasLike, x0: number, y0: number, ph: number, maxV: number, k = 1): void {
+/** A raw tick interval rounded up to 1, 2 or 5 times a power of ten, so an
+ *  axis to 1810 reads 0, 500, 1000, 1500, 2000 rather than quarters of the
+ *  series maximum. */
+function niceStep(raw: number): number {
+  if (!(raw > 0)) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / p;
+  if (f <= 1) return p;
+  if (f <= 2) return 2 * p;
+  if (f <= 5) return 5 * p;
+  return 10 * p;
+}
+
+/** The top of the value axis (the series maximum rounded up to a nice tick)
+ *  and the tick step. Shared by the axis and every bar and point so they
+ *  agree; mirrored in the Go raster. */
+export function chartAxisMax(maxV: number, ph: number): { top: number; step: number } {
   const ticks = tickCount(ph);
+  const step = niceStep(maxV / ticks);
+  return { top: Math.ceil(maxV / step) * step, step };
+}
+
+function drawYAxis(ctx: CanvasLike, x0: number, y0: number, ph: number, maxV: number, k = 1): void {
+  const { top, step } = chartAxisMax(maxV, ph);
+  const ticks = Math.round(top / step);
   ctx.strokeStyle = "#d4d4d8";
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -1666,14 +1710,14 @@ function drawYAxis(ctx: CanvasLike, x0: number, y0: number, ph: number, maxV: nu
   ctx.fillStyle = "#52525b";
   ctx.textAlign = "right";
   for (let t = 0; t <= ticks; t++) {
-    const frac = t / ticks;
+    const frac = (t * step) / top;
     const ty = y0 + ph - frac * ph;
     ctx.strokeStyle = "#d4d4d8";
     ctx.beginPath();
     ctx.moveTo(x0 - 3, ty);
     ctx.lineTo(x0, ty);
     ctx.stroke();
-    ctx.fillText(tickLabel(maxV * frac), x0 - 5, ty + 3 * k);
+    ctx.fillText(tickLabel(t * step), x0 - 5, ty + 3 * k);
   }
 }
 
@@ -1701,9 +1745,41 @@ function chartInsets(node: ChartNode, w: number, h: number): { x0: number; y0: n
   }
   if (style?.axes?.yLabel) left += 14 * k;
   if (style?.axes?.xLabel) bottom += 14 * k;
-  // Reserve room for Y tick labels when a value axis is drawn.
+  // Reserve room for Y tick labels when a value axis is drawn, and for the
+  // category labels under the x axis when the chart has categories.
   if (style?.axes?.showY !== false && hasValueAxis(node.chartType)) left += 22 * k;
+  if (style?.axes?.showX !== false && hasCategoryLabels(node)) bottom += 14 * k;
   return { x0: left, y0: top, pw: Math.max(1, w - left - right), ph: Math.max(1, h - top - bottom) };
+}
+
+/** Whether the chart names its categories and is a kind that lays them out
+ *  along the x axis (bars in slots, lines and points at steps). */
+function hasCategoryLabels(node: ChartNode): boolean {
+  return (node.categories?.length ?? 0) > 0 && hasValueAxis(node.chartType);
+}
+
+/** The category names under the x axis, one per slot centre (bars) or step
+ *  (lines, points), each cut to its slot with an ellipsis so neighbours never
+ *  collide. The same text size and ink as the value labels. */
+function drawCategoryLabels(ctx: CanvasLike, node: ChartNode, x0: number, baseline: number, pw: number, n: number, k: number, slots: boolean): void {
+  if (!hasCategoryLabels(node) || n <= 0) return;
+  const cats = node.categories ?? [];
+  const slotW = slots ? pw / n : n > 1 ? pw / (n - 1) : pw;
+  ctx.font = `500 ${Math.round(10 * k)}px ${fontFamilyStack("system")}`;
+  ctx.fillStyle = "#52525b";
+  ctx.textAlign = "center";
+  for (let i = 0; i < n; i++) {
+    const raw = cats[i];
+    if (!raw) continue;
+    let text = String(raw);
+    const room = Math.max(8, slotW - 6 * k);
+    if (textWidth(ctx, text) > room) {
+      while (text.length > 1 && textWidth(ctx, text + "\u2026") > room) text = text.slice(0, -1);
+      text += "\u2026";
+    }
+    const x = slots ? x0 + (i + 0.5) * slotW : x0 + i * slotW;
+    ctx.fillText(text, x, baseline + 12 * k);
+  }
 }
 
 /** Draw the optional chart title and axis labels (rendered as native text). */
@@ -1791,9 +1867,12 @@ function drawChart(ctx: CanvasLike, node: ChartNode, w: number, h: number): void
   }
 
   const stacked = type === "barStacked";
-  const maxV = (stacked ? stackedMax(series, n) : seriesMax(series)) || 1;
+  const rawMax = (stacked ? stackedMax(series, n) : seriesMax(series)) || 1;
+  // Bars and points scale to the axis top, so a value sits on its tick.
+  const maxV = node.style?.axes?.showY !== false ? chartAxisMax(rawMax, ph).top : rawMax;
 
-  // baseline (x axis), drawn unless the x axis is explicitly hidden
+  // baseline (x axis) and the category names under it, drawn unless the x
+  // axis is explicitly hidden
   if (node.style?.axes?.showX !== false) {
     ctx.strokeStyle = "#d4d4d8";
     ctx.lineWidth = 1;
@@ -1801,6 +1880,7 @@ function drawChart(ctx: CanvasLike, node: ChartNode, w: number, h: number): void
     ctx.moveTo(x0, y0 + ph);
     ctx.lineTo(x0 + pw, y0 + ph);
     ctx.stroke();
+    drawCategoryLabels(ctx, node, x0, y0 + ph, pw, n, k, type === "bar" || type === "barGrouped" || type === "barStacked");
   }
   // left value (y) axis with ticks/labels, unless explicitly hidden
   if (node.style?.axes?.showY !== false) drawYAxis(ctx, x0, y0, ph, maxV, k);
@@ -1872,7 +1952,8 @@ function drawChart(ctx: CanvasLike, node: ChartNode, w: number, h: number): void
 /** Scatter: each series' values plotted against their category index. */
 function drawScatter(ctx: CanvasLike, node: ChartNode, x0: number, y0: number, pw: number, ph: number, n: number, showValues: boolean): void {
   const series = node.series ?? [];
-  const maxV = seriesMax(series) || 1;
+  const rawMax = seriesMax(series) || 1;
+  const maxV = node.style?.axes?.showY !== false ? chartAxisMax(rawMax, ph).top : rawMax;
   const k = chartTextScale(node);
   if (node.style?.axes?.showX !== false) {
     ctx.strokeStyle = "#d4d4d8";
@@ -1881,6 +1962,7 @@ function drawScatter(ctx: CanvasLike, node: ChartNode, x0: number, y0: number, p
     ctx.moveTo(x0, y0 + ph);
     ctx.lineTo(x0 + pw, y0 + ph);
     ctx.stroke();
+    drawCategoryLabels(ctx, node, x0, y0 + ph, pw, n, k, false);
   }
   if (node.style?.axes?.showY !== false) drawYAxis(ctx, x0, y0, ph, maxV, k);
   const step = n > 1 ? pw / (n - 1) : 0;

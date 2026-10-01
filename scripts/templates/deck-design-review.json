@@ -1,5 +1,4 @@
 {
- "kind": "deck-outline",
  "id": "deck-design-review",
  "title": "Design Review",
  "categories": [
@@ -13,55 +12,5856 @@
   "ux"
  ],
  "styleTags": [
-  "editorial"
+  "minimal",
+  "modern",
+  "clean"
  ],
- "themeId": "theme-orchid",
  "size": [
   1920,
   1080
  ],
- "rank": 60,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Inter Tight",
+   "weight": 600
+  },
+  {
+   "role": "body",
+   "family": "Public Sans",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Nanum Pen Script",
+   "weight": 400
+  },
+  {
+   "role": "label",
+   "family": "Geist Mono",
+   "weight": 500
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1E1A2B",
+      0
+     ],
+     [
+      "#0F0D18",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1227,
+     "y": 380,
+     "w": 9,
+     "h": 9,
+     "fill": "#A78BFA",
+     "opacity": 0.76
+    },
+    {
+     "kind": "ellipse",
+     "x": 1429,
+     "y": 468,
+     "w": 5,
+     "h": 5,
+     "fill": "#A78BFA",
+     "opacity": 0.63
+    },
+    {
+     "kind": "ellipse",
+     "x": 1261,
+     "y": 823,
+     "w": 5,
+     "h": 5,
+     "fill": "#A78BFA",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1516,
+     "y": 289,
+     "w": 5,
+     "h": 5,
+     "fill": "#A78BFA",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1383,
+     "y": 304,
+     "w": 8,
+     "h": 8,
+     "fill": "#A78BFA",
+     "opacity": 0.36
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#A78BFA",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Form & Function",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#F7F6FA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 55,
+     "text": "design review, onboarding flow",
+     "family": "Nanum Pen Script",
+     "size": 42,
+     "weight": 400,
+     "color": "#C4B5FD",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 231,
+     "text": "The problem\nthis design answers",
+     "family": "Inter Tight",
+     "size": 105,
+     "weight": 600,
+     "color": "#F7F6FA",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 707,
+     "w": 900,
+     "h": 80,
+     "text": "Eleven days to first value today. This flow aims for three. The room's judgment on three open questions.",
+     "family": "Public Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#B5B0C6",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Aisha Bello, Product Design  ·  22 October 2026",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B5B0C6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 8",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B5B0C6",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#29243A",
+     "radius": 12,
+     "stroke": "#363047",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "11 days",
+     "family": "Geist Mono",
+     "size": 26,
+     "weight": 600,
+     "color": "#C4B5FD",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 246,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "today",
+     "family": "Geist Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#B5B0C6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 396,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#29243A",
+     "radius": 12,
+     "stroke": "#363047",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 416,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "3 days",
+     "family": "Geist Mono",
+     "size": 26,
+     "weight": 600,
+     "color": "#C4B5FD",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 546,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "target",
+     "family": "Geist Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#B5B0C6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 696,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#29243A",
+     "radius": 12,
+     "stroke": "#363047",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "3",
+     "family": "Geist Mono",
+     "size": 26,
+     "weight": 600,
+     "color": "#C4B5FD",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 846,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "questions",
+     "family": "Geist Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#B5B0C6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 170,
+     "w": 700,
+     "h": 700,
+     "fill": "#A78BFA",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1220,
+     "y": 240,
+     "w": 560,
+     "h": 560,
+     "fill": "#A78BFA",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 879,
+     "w": 720,
+     "h": 45,
+     "text": "critique the flow, not the pixels",
+     "family": "Nanum Pen Script",
+     "size": 36,
+     "weight": 400,
+     "color": "#C4B5FD",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day94-ui-ux",
+     "x": 1210,
+     "y": 230,
+     "w": 580,
+     "h": 580,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Figures",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The problem",
+     "family": "Geist Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#5B21B6",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "What the numbers say",
+     "family": "Inter Tight",
+     "size": 60,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Design review: onboarding",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 8",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 414,
+     "h": 560,
+     "fill": "#F6F5F9",
+     "radius": 12,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 414,
+     "h": 6,
+     "fill": "#6D28D9",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 298,
+     "w": 342,
+     "h": 120,
+     "text": "11 days",
+     "family": "Inter Tight",
+     "size": 83.2,
+     "weight": 600,
+     "color": "#5B21B6",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 438,
+     "w": 342,
+     "h": 34,
+     "text": "To first value, today",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 132,
+     "y": 492,
+     "w": 190,
+     "h": 40,
+     "label": "Median, Q3",
+     "fill": "#ddd0f3",
+     "color": "#5B21B6",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 562,
+     "w": 342,
+     "h": 140,
+     "text": "From signup to the first report a user opens. Most of it is spent connecting sources nobody asked for yet.",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#5C5968",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 242,
+     "w": 414,
+     "h": 560,
+     "fill": "#F6F5F9",
+     "radius": 12,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 242,
+     "w": 414,
+     "h": 6,
+     "fill": "#6E6A84",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 298,
+     "w": 342,
+     "h": 120,
+     "text": "41%",
+     "family": "Inter Tight",
+     "size": 104,
+     "weight": 600,
+     "color": "#4E4A63",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 438,
+     "w": 342,
+     "h": 34,
+     "text": "Wizard completion",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 570,
+     "y": 492,
+     "w": 190,
+     "h": 40,
+     "label": "12 users tested",
+     "fill": "#dedce4",
+     "color": "#4E4A63",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 562,
+     "w": 342,
+     "h": 140,
+     "text": "Six steps before any value. Users could not say what step three was for, and half of them stopped there.",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#5C5968",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 242,
+     "w": 414,
+     "h": 560,
+     "fill": "#F6F5F9",
+     "radius": 12,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 242,
+     "w": 414,
+     "h": 6,
+     "fill": "#6D28D9",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 298,
+     "w": 342,
+     "h": 120,
+     "text": "78%",
+     "family": "Inter Tight",
+     "size": 104,
+     "weight": 600,
+     "color": "#5B21B6",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 438,
+     "w": 342,
+     "h": 34,
+     "text": "Preview completion",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1008,
+     "y": 492,
+     "w": 190,
+     "h": 40,
+     "label": "12 users tested",
+     "fill": "#ddd0f3",
+     "color": "#5B21B6",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 562,
+     "w": 342,
+     "h": 140,
+     "text": "Value on screen two. Every participant could say what the product does before setup began.",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#5C5968",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 242,
+     "w": 414,
+     "h": 560,
+     "fill": "#F6F5F9",
+     "radius": 12,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 242,
+     "w": 414,
+     "h": 6,
+     "fill": "#6E6A84",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 298,
+     "w": 342,
+     "h": 120,
+     "text": "3 days",
+     "family": "Inter Tight",
+     "size": 83.2,
+     "weight": 600,
+     "color": "#4E4A63",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 438,
+     "w": 342,
+     "h": 34,
+     "text": "Target, first value",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1446,
+     "y": 492,
+     "w": 190,
+     "h": 40,
+     "label": "This flow's bet",
+     "fill": "#dedce4",
+     "color": "#4E4A63",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 562,
+     "w": 342,
+     "h": 140,
+     "text": "One source, one import, one report, one teammate. Everything else waits until the report exists.",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#5C5968",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 913,
+     "w": 760,
+     "h": 43,
+     "text": "twelve users, one script, two rounds",
+     "family": "Nanum Pen Script",
+     "size": 34,
+     "weight": 400,
+     "color": "#5B21B6",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Flow strip",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The flow",
+     "family": "Geist Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#5B21B6",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "The user's path, screen by screen",
+     "family": "Inter Tight",
+     "size": 60,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Design review: onboarding",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 8",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 96,
+     "y": 282,
+     "w": 348,
+     "h": 300,
+     "fill": "#FFFFFF",
+     "radius": 14,
+     "stroke": "#17151F",
+     "strokeWidth": 2
+    },
+    {
+     "kind": "rect",
+     "x": 97,
+     "y": 283,
+     "w": 346,
+     "h": 34,
+     "fill": "#ECEAF1",
+     "radius": 13
+    },
+    {
+     "kind": "rect",
+     "x": 97,
+     "y": 300,
+     "w": 346,
+     "h": 17,
+     "fill": "#ECEAF1"
+    },
+    {
+     "kind": "rect",
+     "x": 97,
+     "y": 316,
+     "w": 346,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "ellipse",
+     "x": 112,
+     "y": 296,
+     "w": 8,
+     "h": 8,
+     "fill": "#d2d0d8"
+    },
+    {
+     "kind": "ellipse",
+     "x": 126,
+     "y": 296,
+     "w": 8,
+     "h": 8,
+     "fill": "#d2d0d8"
+    },
+    {
+     "kind": "ellipse",
+     "x": 140,
+     "y": 296,
+     "w": 8,
+     "h": 8,
+     "fill": "#d2d0d8"
+    },
+    {
+     "kind": "rect",
+     "x": 164,
+     "y": 292,
+     "w": 220,
+     "h": 16,
+     "fill": "#FFFFFF",
+     "radius": 8
+    },
+    {
+     "kind": "text",
+     "x": 390,
+     "y": 290,
+     "w": 40,
+     "h": 20,
+     "text": "01",
+     "family": "Geist Mono",
+     "size": 14,
+     "weight": 600,
+     "color": "#5B21B6",
+     "align": "right",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 124,
+     "y": 340,
+     "w": 150,
+     "h": 12,
+     "fill": "#d2d0d8",
+     "radius": 6
+    },
+    {
+     "kind": "rect",
+     "x": 124,
+     "y": 372,
+     "w": 292,
+     "h": 44,
+     "fill": "#e3d8f5",
+     "radius": 8,
+     "stroke": "#6D28D9",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 140,
+     "y": 385,
+     "w": 18,
+     "h": 18,
+     "fill": "#6D28D9"
+    },
+    {
+     "kind": "rect",
+     "x": 172,
+     "y": 389,
+     "w": 132,
+     "h": 10,
+     "fill": "#9a98a1",
+     "radius": 5
+    },
+    {
+     "kind": "rect",
+     "x": 124,
+     "y": 424,
+     "w": 292,
+     "h": 44,
+     "fill": "#F6F5F9",
+     "radius": 8,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 140,
+     "y": 437,
+     "w": 18,
+     "h": 18,
+     "fill": "#FFFFFF",
+     "stroke": "#d2d0d8",
+     "strokeWidth": 2
+    },
+    {
+     "kind": "rect",
+     "x": 172,
+     "y": 441,
+     "w": 100,
+     "h": 10,
+     "fill": "#ECEAF1",
+     "radius": 5
+    },
+    {
+     "kind": "rect",
+     "x": 124,
+     "y": 476,
+     "w": 292,
+     "h": 44,
+     "fill": "#F6F5F9",
+     "radius": 8,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 140,
+     "y": 489,
+     "w": 18,
+     "h": 18,
+     "fill": "#FFFFFF",
+     "stroke": "#d2d0d8",
+     "strokeWidth": 2
+    },
+    {
+     "kind": "rect",
+     "x": 172,
+     "y": 493,
+     "w": 100,
+     "h": 10,
+     "fill": "#ECEAF1",
+     "radius": 5
+    },
+    {
+     "kind": "button",
+     "x": 124,
+     "y": 536,
+     "w": 124,
+     "h": 26,
+     "label": "Connect",
+     "fill": "#6D28D9",
+     "color": "#F7F6FA",
+     "family": "Public Sans",
+     "size": 13,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 460,
+     "y": 431,
+     "w": 70,
+     "h": 2,
+     "fill": "#17151F"
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       524,
+       423
+      ],
+      [
+       540,
+       432
+      ],
+      [
+       524,
+       441
+      ]
+     ],
+     "fill": "#17151F",
+     "closed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 612,
+     "w": 348,
+     "h": 36,
+     "text": "Connect",
+     "family": "Inter Tight",
+     "size": 28,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 656,
+     "w": 348,
+     "h": 112,
+     "text": "One screen, one source. The other integrations wait until the first import has succeeded.",
+     "family": "Public Sans",
+     "size": 19,
+     "weight": 400,
+     "color": "#5C5968",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 792,
+     "w": 230,
+     "h": 40,
+     "label": "One source at a time",
+     "fill": "#e0d4f4",
+     "color": "#5B21B6",
+     "family": "Geist Mono",
+     "size": 15,
+     "weight": 600
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 556,
+     "y": 282,
+     "w": 348,
+     "h": 300,
+     "fill": "#FFFFFF",
+     "radius": 14,
+     "stroke": "#17151F",
+     "strokeWidth": 2
+    },
+    {
+     "kind": "rect",
+     "x": 557,
+     "y": 283,
+     "w": 346,
+     "h": 34,
+     "fill": "#ECEAF1",
+     "radius": 13
+    },
+    {
+     "kind": "rect",
+     "x": 557,
+     "y": 300,
+     "w": 346,
+     "h": 17,
+     "fill": "#ECEAF1"
+    },
+    {
+     "kind": "rect",
+     "x": 557,
+     "y": 316,
+     "w": 346,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "ellipse",
+     "x": 572,
+     "y": 296,
+     "w": 8,
+     "h": 8,
+     "fill": "#d2d0d8"
+    },
+    {
+     "kind": "ellipse",
+     "x": 586,
+     "y": 296,
+     "w": 8,
+     "h": 8,
+     "fill": "#d2d0d8"
+    },
+    {
+     "kind": "ellipse",
+     "x": 600,
+     "y": 296,
+     "w": 8,
+     "h": 8,
+     "fill": "#d2d0d8"
+    },
+    {
+     "kind": "rect",
+     "x": 624,
+     "y": 292,
+     "w": 220,
+     "h": 16,
+     "fill": "#FFFFFF",
+     "radius": 8
+    },
+    {
+     "kind": "text",
+     "x": 850,
+     "y": 290,
+     "w": 40,
+     "h": 20,
+     "text": "02",
+     "family": "Geist Mono",
+     "size": 14,
+     "weight": 600,
+     "color": "#5B21B6",
+     "align": "right",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 584,
+     "y": 340,
+     "w": 150,
+     "h": 12,
+     "fill": "#d2d0d8",
+     "radius": 6
+    },
+    {
+     "kind": "rect",
+     "x": 584,
+     "y": 372,
+     "w": 292,
+     "h": 64,
+     "fill": "#F6F5F9",
+     "radius": 8,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "icon",
+     "icon": "file-text",
+     "x": 602,
+     "y": 388,
+     "w": 32,
+     "h": 32,
+     "color": "#5C5968"
+    },
+    {
+     "kind": "rect",
+     "x": 652,
+     "y": 386,
+     "w": 150,
+     "h": 10,
+     "fill": "#d2d0d8",
+     "radius": 5
+    },
+    {
+     "kind": "rect",
+     "x": 652,
+     "y": 406,
+     "w": 96,
+     "h": 8,
+     "fill": "#ECEAF1",
+     "radius": 4
+    },
+    {
+     "kind": "rect",
+     "x": 584,
+     "y": 462,
+     "w": 292,
+     "h": 14,
+     "fill": "#ECEAF1",
+     "radius": 7
+    },
+    {
+     "kind": "rect",
+     "x": 584,
+     "y": 462,
+     "w": 181,
+     "h": 14,
+     "fill": "#6D28D9",
+     "radius": 7
+    },
+    {
+     "kind": "text",
+     "x": 584,
+     "y": 488,
+     "w": 292,
+     "h": 22,
+     "text": "62%  ·  about 4 min left",
+     "family": "Geist Mono",
+     "size": 14,
+     "weight": 500,
+     "color": "#5B21B6",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 584,
+     "y": 532,
+     "w": 172,
+     "h": 26,
+     "fill": "#FFFFFF",
+     "radius": 13,
+     "stroke": "#d2d0d8",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 608,
+     "y": 540,
+     "w": 124,
+     "h": 10,
+     "fill": "#ECEAF1",
+     "radius": 5
+    },
+    {
+     "kind": "rect",
+     "x": 920,
+     "y": 431,
+     "w": 70,
+     "h": 2,
+     "fill": "#17151F"
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       984,
+       423
+      ],
+      [
+       1000,
+       432
+      ],
+      [
+       984,
+       441
+      ]
+     ],
+     "fill": "#17151F",
+     "closed": true
+    },
+    {
+     "kind": "text",
+     "x": 556,
+     "y": 612,
+     "w": 348,
+     "h": 36,
+     "text": "Import",
+     "family": "Inter Tight",
+     "size": 28,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 556,
+     "y": 656,
+     "w": 348,
+     "h": 112,
+     "text": "Progress with a real estimate. Large files stream; the user can leave and come back.",
+     "family": "Public Sans",
+     "size": 19,
+     "weight": 400,
+     "color": "#5C5968",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 556,
+     "y": 792,
+     "w": 221,
+     "h": 40,
+     "label": "Leave and come back",
+     "fill": "#e0d4f4",
+     "color": "#5B21B6",
+     "family": "Geist Mono",
+     "size": 15,
+     "weight": 600
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1016,
+     "y": 282,
+     "w": 348,
+     "h": 300,
+     "fill": "#FFFFFF",
+     "radius": 14,
+     "stroke": "#17151F",
+     "strokeWidth": 2
+    },
+    {
+     "kind": "rect",
+     "x": 1017,
+     "y": 283,
+     "w": 346,
+     "h": 34,
+     "fill": "#ECEAF1",
+     "radius": 13
+    },
+    {
+     "kind": "rect",
+     "x": 1017,
+     "y": 300,
+     "w": 346,
+     "h": 17,
+     "fill": "#ECEAF1"
+    },
+    {
+     "kind": "rect",
+     "x": 1017,
+     "y": 316,
+     "w": 346,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1032,
+     "y": 296,
+     "w": 8,
+     "h": 8,
+     "fill": "#d2d0d8"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1046,
+     "y": 296,
+     "w": 8,
+     "h": 8,
+     "fill": "#d2d0d8"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1060,
+     "y": 296,
+     "w": 8,
+     "h": 8,
+     "fill": "#d2d0d8"
+    },
+    {
+     "kind": "rect",
+     "x": 1084,
+     "y": 292,
+     "w": 220,
+     "h": 16,
+     "fill": "#FFFFFF",
+     "radius": 8
+    },
+    {
+     "kind": "text",
+     "x": 1310,
+     "y": 290,
+     "w": 40,
+     "h": 20,
+     "text": "03",
+     "family": "Geist Mono",
+     "size": 14,
+     "weight": 600,
+     "color": "#5B21B6",
+     "align": "right",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 1044,
+     "y": 340,
+     "w": 180,
+     "h": 12,
+     "fill": "#d2d0d8",
+     "radius": 6
+    },
+    {
+     "kind": "rect",
+     "x": 1044,
+     "y": 372,
+     "w": 292,
+     "h": 176,
+     "fill": "#F6F5F9",
+     "radius": 8,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1064,
+     "y": 390,
+     "w": 110,
+     "h": 8,
+     "fill": "#ECEAF1",
+     "radius": 4
+    },
+    {
+     "kind": "rect",
+     "x": 1078,
+     "y": 480,
+     "w": 34,
+     "h": 48,
+     "fill": "#c0a6e9",
+     "radius": 4
+    },
+    {
+     "kind": "rect",
+     "x": 1126,
+     "y": 456,
+     "w": 34,
+     "h": 72,
+     "fill": "#c0a6e9",
+     "radius": 4
+    },
+    {
+     "kind": "rect",
+     "x": 1174,
+     "y": 468,
+     "w": 34,
+     "h": 60,
+     "fill": "#c0a6e9",
+     "radius": 4
+    },
+    {
+     "kind": "rect",
+     "x": 1222,
+     "y": 432,
+     "w": 34,
+     "h": 96,
+     "fill": "#c0a6e9",
+     "radius": 4
+    },
+    {
+     "kind": "rect",
+     "x": 1270,
+     "y": 400,
+     "w": 34,
+     "h": 128,
+     "fill": "#6D28D9",
+     "radius": 4
+    },
+    {
+     "kind": "rect",
+     "x": 1064,
+     "y": 528,
+     "w": 252,
+     "h": 1,
+     "fill": "#d2d0d8"
+    },
+    {
+     "kind": "rect",
+     "x": 1380,
+     "y": 431,
+     "w": 70,
+     "h": 2,
+     "fill": "#17151F"
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       1444,
+       423
+      ],
+      [
+       1460,
+       432
+      ],
+      [
+       1444,
+       441
+      ]
+     ],
+     "fill": "#17151F",
+     "closed": true
+    },
+    {
+     "kind": "text",
+     "x": 1016,
+     "y": 612,
+     "w": 348,
+     "h": 36,
+     "text": "Preview",
+     "family": "Inter Tight",
+     "size": 28,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1016,
+     "y": 656,
+     "w": 348,
+     "h": 112,
+     "text": "The first report drawn from their data, before any setup. This is the moment we are designing for.",
+     "family": "Public Sans",
+     "size": 19,
+     "weight": 400,
+     "color": "#5C5968",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1016,
+     "y": 792,
+     "w": 230,
+     "h": 40,
+     "label": "Preview before setup",
+     "fill": "#e0d4f4",
+     "color": "#5B21B6",
+     "family": "Geist Mono",
+     "size": 15,
+     "weight": 600
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1476,
+     "y": 282,
+     "w": 348,
+     "h": 300,
+     "fill": "#FFFFFF",
+     "radius": 14,
+     "stroke": "#17151F",
+     "strokeWidth": 2
+    },
+    {
+     "kind": "rect",
+     "x": 1477,
+     "y": 283,
+     "w": 346,
+     "h": 34,
+     "fill": "#ECEAF1",
+     "radius": 13
+    },
+    {
+     "kind": "rect",
+     "x": 1477,
+     "y": 300,
+     "w": 346,
+     "h": 17,
+     "fill": "#ECEAF1"
+    },
+    {
+     "kind": "rect",
+     "x": 1477,
+     "y": 316,
+     "w": 346,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1492,
+     "y": 296,
+     "w": 8,
+     "h": 8,
+     "fill": "#d2d0d8"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1506,
+     "y": 296,
+     "w": 8,
+     "h": 8,
+     "fill": "#d2d0d8"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 296,
+     "w": 8,
+     "h": 8,
+     "fill": "#d2d0d8"
+    },
+    {
+     "kind": "rect",
+     "x": 1544,
+     "y": 292,
+     "w": 220,
+     "h": 16,
+     "fill": "#FFFFFF",
+     "radius": 8
+    },
+    {
+     "kind": "text",
+     "x": 1770,
+     "y": 290,
+     "w": 40,
+     "h": 20,
+     "text": "04",
+     "family": "Geist Mono",
+     "size": 14,
+     "weight": 600,
+     "color": "#5B21B6",
+     "align": "right",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 1504,
+     "y": 340,
+     "w": 150,
+     "h": 12,
+     "fill": "#d2d0d8",
+     "radius": 6
+    },
+    {
+     "kind": "ellipse",
+     "x": 1504,
+     "y": 374,
+     "w": 56,
+     "h": 56,
+     "fill": "#dbccf3"
+    },
+    {
+     "kind": "icon",
+     "icon": "user",
+     "x": 1518,
+     "y": 388,
+     "w": 28,
+     "h": 28,
+     "color": "#5B21B6"
+    },
+    {
+     "kind": "rect",
+     "x": 1576,
+     "y": 380,
+     "w": 220,
+     "h": 44,
+     "fill": "#FFFFFF",
+     "radius": 8,
+     "stroke": "#d2d0d8",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1592,
+     "y": 397,
+     "w": 120,
+     "h": 10,
+     "fill": "#ECEAF1",
+     "radius": 5
+    },
+    {
+     "kind": "rect",
+     "x": 1504,
+     "y": 448,
+     "w": 292,
+     "h": 64,
+     "fill": "#F6F5F9",
+     "radius": 8,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1522,
+     "y": 480,
+     "w": 8,
+     "h": 16,
+     "fill": "#c0a6e9",
+     "radius": 2
+    },
+    {
+     "kind": "rect",
+     "x": 1534,
+     "y": 470,
+     "w": 8,
+     "h": 26,
+     "fill": "#c0a6e9",
+     "radius": 2
+    },
+    {
+     "kind": "rect",
+     "x": 1546,
+     "y": 460,
+     "w": 8,
+     "h": 36,
+     "fill": "#6D28D9",
+     "radius": 2
+    },
+    {
+     "kind": "rect",
+     "x": 1572,
+     "y": 464,
+     "w": 150,
+     "h": 10,
+     "fill": "#d2d0d8",
+     "radius": 5
+    },
+    {
+     "kind": "rect",
+     "x": 1572,
+     "y": 484,
+     "w": 90,
+     "h": 8,
+     "fill": "#ECEAF1",
+     "radius": 4
+    },
+    {
+     "kind": "icon",
+     "icon": "link",
+     "x": 1764,
+     "y": 466,
+     "w": 22,
+     "h": 22,
+     "color": "#5B21B6"
+    },
+    {
+     "kind": "button",
+     "x": 1504,
+     "y": 532,
+     "w": 124,
+     "h": 26,
+     "label": "Invite",
+     "fill": "#6D28D9",
+     "color": "#F7F6FA",
+     "family": "Public Sans",
+     "size": 13,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1476,
+     "y": 612,
+     "w": 348,
+     "h": 36,
+     "text": "Invite",
+     "family": "Inter Tight",
+     "size": 28,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1476,
+     "y": 656,
+     "w": 348,
+     "h": 112,
+     "text": "One teammate, one click, and a link that opens on the preview, not on a blank workspace.",
+     "family": "Public Sans",
+     "size": 19,
+     "weight": 400,
+     "color": "#5C5968",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1476,
+     "y": 792,
+     "w": 258,
+     "h": 40,
+     "label": "Invite from the preview",
+     "fill": "#e0d4f4",
+     "color": "#5B21B6",
+     "family": "Geist Mono",
+     "size": 15,
+     "weight": 600
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 912,
+     "w": 118,
+     "h": 30,
+     "label": "decision",
+     "fill": "#e0d4f4",
+     "color": "#5B21B6",
+     "family": "Geist Mono",
+     "size": 13,
+     "weight": 600
+    },
+    {
+     "kind": "text",
+     "x": 230,
+     "y": 915,
+     "w": 420,
+     "h": 24,
+     "text": "one chip per screen: what it commits to",
+     "family": "Geist Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 913,
+     "w": 760,
+     "h": 43,
+     "text": "the prototype walks this exact order",
+     "family": "Nanum Pen Script",
+     "size": 34,
+     "weight": 400,
+     "color": "#5B21B6",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Key decisions",
+     "family": "Geist Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#5B21B6",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "The three choices that shaped it",
+     "family": "Inter Tight",
+     "size": 60,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Design review: onboarding",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 8",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#F6F5F9",
+     "radius": 12,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#6D28D9",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#dbccf3"
+    },
+    {
+     "kind": "icon",
+     "icon": "bolt",
+     "x": 156,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#5B21B6"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "Preview before setup",
+     "family": "Inter Tight",
+     "size": 34,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "The report comes first; configuration comes after the user has seen the value. Rejected: a setup wizard.",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#5C5968",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#F6F5F9",
+     "radius": 12,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#6E6A84",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#dbd9e2"
+    },
+    {
+     "kind": "icon",
+     "icon": "layout-list",
+     "x": 740,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#4E4A63"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "One source at a time",
+     "family": "Inter Tight",
+     "size": 34,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "Connecting five sources on day one is where users quit. Rejected: the integrations grid.",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#5C5968",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#F6F5F9",
+     "radius": 12,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#6D28D9",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#dbccf3"
+    },
+    {
+     "kind": "icon",
+     "icon": "user",
+     "x": 1324,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#5B21B6"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "Invite from the preview",
+     "family": "Inter Tight",
+     "size": 34,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "The invite link lands on the report. Rejected: an invite step in the wizard.",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#5C5968",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 913,
+     "w": 760,
+     "h": 43,
+     "text": "each of these cost us a feature request",
+     "family": "Nanum Pen Script",
+     "size": 34,
+     "weight": 400,
+     "color": "#5B21B6",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Two columns",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Alternatives",
+     "family": "Geist Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#5B21B6",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "What we rejected, and why",
+     "family": "Inter Tight",
+     "size": 60,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Design review: onboarding",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 8",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 848,
+     "h": 600,
+     "fill": "#F6F5F9",
+     "radius": 12,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "icon",
+     "icon": "alert-triangle",
+     "x": 856,
+     "y": 286,
+     "w": 40,
+     "h": 40,
+     "color": "#5B21B6"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 290,
+     "w": 688,
+     "h": 28,
+     "text": "Rejected",
+     "family": "Geist Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#5B21B6",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 334,
+     "w": 752,
+     "h": 112,
+     "text": "The setup wizard",
+     "family": "Inter Tight",
+     "size": 40,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 502,
+     "w": 752,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 526,
+     "w": 752,
+     "h": 40,
+     "text": "Six steps before any value",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 602,
+     "w": 752,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 626,
+     "w": 752,
+     "h": 40,
+     "text": "Tested at 41% completion",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 702,
+     "w": 752,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 726,
+     "w": 752,
+     "h": 40,
+     "text": "Users could not tell what step three was for",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 976,
+     "y": 242,
+     "w": 848,
+     "h": 600,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#1E1A2B",
+        0
+       ],
+       [
+        "#0F0D18",
+        1
+       ]
+      ]
+     },
+     "radius": 12
+    },
+    {
+     "kind": "icon",
+     "icon": "circle-check",
+     "x": 1736,
+     "y": 286,
+     "w": 40,
+     "h": 40,
+     "color": "#C4B5FD"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 290,
+     "w": 688,
+     "h": 28,
+     "text": "Chosen",
+     "family": "Geist Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#C4B5FD",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 334,
+     "w": 752,
+     "h": 112,
+     "text": "Preview first",
+     "family": "Inter Tight",
+     "size": 40,
+     "weight": 600,
+     "color": "#F7F6FA",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 502,
+     "w": 752,
+     "h": 1,
+     "fill": "#363047"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 526,
+     "w": 752,
+     "h": 40,
+     "text": "Value on screen two",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#F7F6FA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 602,
+     "w": 752,
+     "h": 1,
+     "fill": "#363047"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 626,
+     "w": 752,
+     "h": 40,
+     "text": "Tested at 78% completion",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#F7F6FA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1024,
+     "y": 702,
+     "w": 752,
+     "h": 1,
+     "fill": "#363047"
+    },
+    {
+     "kind": "text",
+     "x": 1024,
+     "y": 726,
+     "w": 752,
+     "h": 40,
+     "text": "Every participant understood what the product does",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#F7F6FA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 913,
+     "w": 760,
+     "h": 43,
+     "text": "same tasks, same users, six weeks apart",
+     "family": "Nanum Pen Script",
+     "size": 34,
+     "weight": 400,
+     "color": "#5B21B6",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Section",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1E1A2B",
+      0
+     ],
+     [
+      "#0F0D18",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1227,
+     "y": 380,
+     "w": 9,
+     "h": 9,
+     "fill": "#A78BFA",
+     "opacity": 0.76
+    },
+    {
+     "kind": "ellipse",
+     "x": 1429,
+     "y": 468,
+     "w": 5,
+     "h": 5,
+     "fill": "#A78BFA",
+     "opacity": 0.63
+    },
+    {
+     "kind": "ellipse",
+     "x": 1261,
+     "y": 823,
+     "w": 5,
+     "h": 5,
+     "fill": "#A78BFA",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1516,
+     "y": 289,
+     "w": 5,
+     "h": 5,
+     "fill": "#A78BFA",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1383,
+     "y": 304,
+     "w": 8,
+     "h": 8,
+     "fill": "#A78BFA",
+     "opacity": 0.36
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 330,
+     "w": 120,
+     "h": 4,
+     "fill": "#A78BFA"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 358,
+     "w": 1100,
+     "h": 112,
+     "text": "Three open questions",
+     "family": "Inter Tight",
+     "size": 96,
+     "weight": 600,
+     "color": "#F7F6FA",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 490,
+     "w": 900,
+     "h": 90,
+     "text": "Decided on three things, open on three. The flow does not go to build until the room has answered these.",
+     "family": "Public Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#B5B0C6",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1240,
+     "y": 280,
+     "w": 560,
+     "h": 560,
+     "fill": "#A78BFA",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1296,
+     "y": 336,
+     "w": 448,
+     "h": 448,
+     "fill": "#A78BFA",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 1000,
+     "h": 50,
+     "text": "the part we cannot decide alone",
+     "family": "Nanum Pen Script",
+     "size": 42,
+     "weight": 400,
+     "color": "#C4B5FD",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#363047"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Design review: onboarding",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B5B0C6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 8",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B5B0C6",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 879,
+     "w": 720,
+     "h": 45,
+     "text": "each one has a default; argue with it",
+     "family": "Nanum Pen Script",
+     "size": 36,
+     "weight": 400,
+     "color": "#C4B5FD",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-conversation-illustration",
+     "x": 1300,
+     "y": 340,
+     "w": 440,
+     "h": 440
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#FFFFFF",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#17151F",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Open questions",
+     "family": "Geist Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#5B21B6",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 74,
+     "text": "Where we want the room's judgment",
+     "family": "Inter Tight",
+     "size": 60,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Form & Function  ·  Design review: onboarding",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 8",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#F6F5F9",
+     "radius": 12,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#6D28D9",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#dbccf3"
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 156,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#5B21B6"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "What if the import fails?",
+     "family": "Inter Tight",
+     "size": 34,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "The preview needs data. Do we show a sample report, or hold the user on the import screen with help?",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#5C5968",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#F6F5F9",
+     "radius": 12,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#6E6A84",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#dbd9e2"
+    },
+    {
+     "kind": "icon",
+     "icon": "clock",
+     "x": 740,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#4E4A63"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "How long is too long?",
+     "family": "Inter Tight",
+     "size": 34,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "Streaming imports can take an hour. Do we let the user leave, and what brings them back?",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#5C5968",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 242,
+     "w": 560,
+     "h": 580,
+     "fill": "#F6F5F9",
+     "radius": 12,
+     "stroke": "#E4E2EA",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 242,
+     "w": 560,
+     "h": 6,
+     "fill": "#6D28D9",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 290,
+     "w": 80,
+     "h": 80,
+     "fill": "#dbccf3"
+    },
+    {
+     "kind": "icon",
+     "icon": "user",
+     "x": 1324,
+     "y": 310,
+     "w": 40,
+     "h": 40,
+     "color": "#5B21B6"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 406,
+     "w": 480,
+     "h": 100,
+     "text": "Invite before value?",
+     "family": "Inter Tight",
+     "size": 34,
+     "weight": 600,
+     "color": "#17151F",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 518,
+     "w": 480,
+     "h": 160,
+     "text": "Some teams want to invite first. Do we allow it, and does it dilute the preview moment?",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#5C5968",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 738,
+     "w": 480,
+     "h": 1,
+     "fill": "#E4E2EA"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 762,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#5C5968",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 913,
+     "w": 760,
+     "h": 43,
+     "text": "tell us which, and why we are wrong",
+     "family": "Nanum Pen Script",
+     "size": 34,
+     "weight": 400,
+     "color": "#5B21B6",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#1E1A2B",
+      0
+     ],
+     [
+      "#0F0D18",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F7F6FA",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1227,
+     "y": 380,
+     "w": 9,
+     "h": 9,
+     "fill": "#A78BFA",
+     "opacity": 0.76
+    },
+    {
+     "kind": "ellipse",
+     "x": 1429,
+     "y": 468,
+     "w": 5,
+     "h": 5,
+     "fill": "#A78BFA",
+     "opacity": 0.63
+    },
+    {
+     "kind": "ellipse",
+     "x": 1261,
+     "y": 823,
+     "w": 5,
+     "h": 5,
+     "fill": "#A78BFA",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1516,
+     "y": 289,
+     "w": 5,
+     "h": 5,
+     "fill": "#A78BFA",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1383,
+     "y": 304,
+     "w": 8,
+     "h": 8,
+     "fill": "#A78BFA",
+     "opacity": 0.36
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#A78BFA",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#A78BFA",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#A78BFA",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Form & Function",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#F7F6FA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 55,
+     "text": "see you at the next round",
+     "family": "Nanum Pen Script",
+     "size": 42,
+     "weight": 400,
+     "color": "#C4B5FD",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 133,
+     "text": "Next iteration",
+     "family": "Inter Tight",
+     "size": 112,
+     "weight": 600,
+     "color": "#F7F6FA",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 467,
+     "w": 940,
+     "h": 120,
+     "text": "Decisions from this room by Friday; the flow goes to build on Monday. Prototype and research notes are in the design folder.",
+     "family": "Public Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#B5B0C6",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#A78BFA"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "aisha@formfunction.example",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#F7F6FA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "world",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#A78BFA"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "design.formfunction.example/onboarding",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#F7F6FA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "calendar",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#A78BFA"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "Build starts: 27 October",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#F7F6FA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Open the prototype",
+     "fill": "#A78BFA",
+     "color": "#17151F",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 700,
+     "radius": 12
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "08 / 8",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#B5B0C6",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 879,
+     "w": 720,
+     "h": 45,
+     "text": "silence by Friday ships the default",
+     "family": "Nanum Pen Script",
+     "size": 36,
+     "weight": 400,
+     "color": "#C4B5FD",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-waitng-illustration",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n69",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n71",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n72",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n73",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p2-n19",
+   "kind": "text",
+   "label": "Title",
+   "hint": "What the strip walks through"
+  },
+  {
+   "node": "p2-n45",
+   "kind": "text",
+   "label": "Screen 1",
+   "hint": "The screen's name"
+  },
+  {
+   "node": "p2-n47-label",
+   "kind": "text",
+   "label": "Decision 1",
+   "hint": "The one decision this screen embodies"
+  },
+  {
+   "node": "p2-n69",
+   "kind": "text",
+   "label": "Screen 2",
+   "hint": "The screen's name"
+  },
+  {
+   "node": "p2-n71-label",
+   "kind": "text",
+   "label": "Decision 2",
+   "hint": "The one decision this screen embodies"
+  },
+  {
+   "node": "p2-n92",
+   "kind": "text",
+   "label": "Screen 3",
+   "hint": "The screen's name"
+  },
+  {
+   "node": "p2-n94-label",
+   "kind": "text",
+   "label": "Decision 3",
+   "hint": "The one decision this screen embodies"
+  },
+  {
+   "node": "p2-n117",
+   "kind": "text",
+   "label": "Screen 4",
+   "hint": "The screen's name"
+  },
+  {
+   "node": "p2-n119-label",
+   "kind": "text",
+   "label": "Decision 4",
+   "hint": "The one decision this screen embodies"
+  },
+  {
+   "node": "p7-n76",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p7-n78",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p7-n80",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Design Review",
-  "theme": "visual, focused critique",
-  "pages": [
-   {
-    "title": "The brief",
-    "points": [
-     "The problem this design answers"
-    ],
-    "visualRole": "cover"
-   },
-   {
-    "title": "The flow",
-    "points": [
-     "The user's path, screen by screen"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Key decisions",
-    "points": [
-     "The three choices that shaped it",
-     "The alternatives we rejected"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Open questions",
-    "points": [
-     "Where we want the room's judgment"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Next iteration",
-    "points": [
-     "What changes before build"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 60
 }

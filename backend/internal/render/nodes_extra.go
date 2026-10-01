@@ -15,6 +15,7 @@ import (
 	"image/color"
 	"math"
 	"strconv"
+	"strings"
 
 	xdraw "golang.org/x/image/draw"
 	"golang.org/x/image/font"
@@ -368,6 +369,28 @@ func (rc *rctx) stampThumb(m mat, cx, cy, r float64, flip bool) {
 
 // --- table ------------------------------------------------------------------
 
+// wrapCellLines breaks a cell's text into lines no wider than maxW, greedily
+// by words; a word wider than the cell stands alone and runs past it, as a
+// paragraph's would. Mirrors wrapCellLines in @hc/engine (tablewrap.ts).
+func wrapCellLines(text string, maxW float64, width func(string) float64) []string {
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return nil
+	}
+	var lines []string
+	cur := words[0]
+	for _, w := range words[1:] {
+		next := cur + " " + w
+		if width(next) <= maxW {
+			cur = next
+		} else {
+			lines = append(lines, cur)
+			cur = w
+		}
+	}
+	return append(lines, cur)
+}
+
 // rasterTable lays out cells from the explicit colWidths/rowHeights arrays,
 // paints header/cell fills and single-run cell text, and strokes the gridlines
 // (mirrors render2d drawTable). Conditional formatting rules are not yet applied.
@@ -479,17 +502,27 @@ func (rc *rctx) rasterTable(m mat, node map[string]any) {
 				txtCol = rc.colorFrom(tc, pdfColor{ok: true})
 			}
 		}
-		tw := measureFace(face, text) / scale
-		tx := cx + 6
-		switch asStr(cell["align"]) {
-		case "center":
-			tx = cx + (cw-tw)/2
-		case "right":
-			tx = cx + cw - tw - 6
+		// Wrapped like a paragraph, six in from each edge (mirrors drawTable);
+		// a line the row cannot hold is not drawn rather than drawn over the
+		// row beneath.
+		lines := wrapCellLines(text, math.Max(1, cw-12), func(s string) float64 { return measureFace(face, s) / scale })
+		lh := size * 1.25
+		for i, line := range lines {
+			ty := cy + size + 6 + float64(i)*lh
+			if i > 0 && ty > cy+ch-2 {
+				break
+			}
+			tw := measureFace(face, line) / scale
+			tx := cx + 6
+			switch asStr(cell["align"]) {
+			case "center":
+				tx = cx + (cw-tw)/2
+			case "right":
+				tx = cx + cw - tw - 6
+			}
+			dx, dy := m.apply(tx, ty)
+			rc.drawStringDevice(face, txtCol, dx, dy, line)
 		}
-		ty := cy + size + 6
-		dx, dy := m.apply(tx, ty)
-		rc.drawStringDevice(face, txtCol, dx, dy, text)
 		face.Close()
 	}
 
@@ -614,7 +647,53 @@ func chartInsets(node map[string]any, w, h float64) (x0, y0, pw, ph float64) {
 	if hasValueAxis(asStr(node["chartType"])) && chartAxisShown(style, "showY") {
 		left += 22 * k
 	}
+	if chartAxisShown(style, "showX") && hasCategoryLabels(node) {
+		bottom += 14 * k
+	}
 	return left, top, math.Max(1, w-left-right), math.Max(1, h-top-bottom)
+}
+
+// hasCategoryLabels reports whether the chart names its categories and is a
+// kind that lays them out along the x axis. Mirrors the browser engine.
+func hasCategoryLabels(node map[string]any) bool {
+	return len(asArr(node["categories"])) > 0 && hasValueAxis(asStr(node["chartType"]))
+}
+
+// drawCategoryLabels sets the category names under the x axis, one per slot
+// centre (bars) or step (lines, points), each cut to its slot with an
+// ellipsis so neighbours never collide. Mirrors drawCategoryLabels in the
+// browser engine: same size, ink and baseline.
+func (rc *rctx) drawCategoryLabels(m mat, node map[string]any, x0, baseline, pw float64, n int, k float64, slots bool) {
+	if !hasCategoryLabels(node) || n <= 0 {
+		return
+	}
+	cats := asArr(node["categories"])
+	slotW := pw
+	if slots {
+		slotW = pw / float64(n)
+	} else if n > 1 {
+		slotW = pw / float64(n-1)
+	}
+	ink := rc.solid(0x52, 0x52, 0x5b)
+	room := math.Max(8, slotW-6*k)
+	for i := 0; i < n && i < len(cats); i++ {
+		text := asStr(cats[i])
+		if text == "" {
+			continue
+		}
+		if rc.chartTextWidth(10*k, 500, text, m) > room {
+			r := []rune(text)
+			for len(r) > 1 && rc.chartTextWidth(10*k, 500, string(r)+"\u2026", m) > room {
+				r = r[:len(r)-1]
+			}
+			text = string(r) + "\u2026"
+		}
+		x := x0 + float64(i)*slotW
+		if slots {
+			x = x0 + (float64(i)+0.5)*slotW
+		}
+		rc.chartText(m, text, x, baseline+12*k, 10*k, 500, "center", ink)
+	}
 }
 
 func chartCategoryCount(categories, series []any) int {
@@ -840,8 +919,13 @@ func (rc *rctx) rasterChart(m mat, node map[string]any) {
 	if stacked {
 		maxV = math.Max(1, chartStackedMax(series, n))
 	}
+	// Bars and points scale to the axis top, so a value sits on its tick.
+	if chartAxisShown(style, "showY") {
+		maxV, _ = chartAxisMax(maxV, ph)
+	}
 	if chartAxisShown(style, "showX") {
 		rc.chartStroke(m, x0, y0+ph, x0+pw, y0+ph, 1, rc.solid(0xd4, 0xd4, 0xd8))
+		rc.drawCategoryLabels(m, node, x0, y0+ph, pw, n, k, typ == "bar" || typ == "barGrouped" || typ == "barStacked")
 	}
 	if chartAxisShown(style, "showY") {
 		rc.drawYAxis(m, x0, y0, ph, maxV, k)
@@ -1002,25 +1086,59 @@ func (rc *rctx) drawChartLegend(m mat, node map[string]any, w, h float64, positi
 	}
 }
 
+// niceStep rounds a raw tick interval up to 1, 2 or 5 times a power of ten,
+// so an axis to 1810 reads 0, 500, 1000, 1500, 2000 rather than quarters
+// of the series maximum.
+func niceStep(raw float64) float64 {
+	if raw <= 0 {
+		return 1
+	}
+	p := math.Pow(10, math.Floor(math.Log10(raw)))
+	f := raw / p
+	switch {
+	case f <= 1:
+		return p
+	case f <= 2:
+		return 2 * p
+	case f <= 5:
+		return 5 * p
+	}
+	return 10 * p
+}
+
+// chartAxisMax is the top of the value axis: the series maximum rounded up
+// to a nice tick, and the tick step. Shared by the axis and every bar and
+// point so they agree.
+func chartAxisMax(maxV, ph float64) (float64, float64) {
+	ticks := math.Max(2, math.Min(8, math.Round(ph/48)))
+	step := niceStep(maxV / ticks)
+	return math.Ceil(maxV/step) * step, step
+}
+
 func (rc *rctx) drawYAxis(m mat, x0, y0, ph, maxV, k float64) {
-	ticks := int(math.Max(2, math.Min(8, math.Round(ph/48))))
+	top, step := chartAxisMax(maxV, ph)
+	ticks := int(math.Round(top / step))
 	axisCol := rc.solid(0xd4, 0xd4, 0xd8)
 	rc.chartStroke(m, x0, y0, x0, y0+ph, 1, axisCol)
 	for t := 0; t <= ticks; t++ {
-		frac := float64(t) / float64(ticks)
+		frac := float64(t) * step / top
 		ty := y0 + ph - frac*ph
 		rc.chartStroke(m, x0-3, ty, x0, ty, 1, axisCol)
-		rc.chartText(m, numStr(math.Round(maxV*frac*100)/100), x0-5, ty+3*k, 9*k, 500, "right", rc.solid(0x52, 0x52, 0x5b))
+		rc.chartText(m, numStr(math.Round(float64(t)*step*100)/100), x0-5, ty+3*k, 9*k, 500, "right", rc.solid(0x52, 0x52, 0x5b))
 	}
 }
 
 func (rc *rctx) drawScatter(m mat, node map[string]any, x0, y0, pw, ph float64, n int, showValues bool) {
 	series := asArr(node["series"])
 	maxV := math.Max(1, chartSeriesMax(series))
+	if chartAxisShown(asObj(node["style"]), "showY") {
+		maxV, _ = chartAxisMax(maxV, ph)
+	}
 	k := chartTextScale(node)
 	style := asObj(node["style"])
 	if chartAxisShown(style, "showX") {
 		rc.chartStroke(m, x0, y0+ph, x0+pw, y0+ph, 1, rc.solid(0xd4, 0xd4, 0xd8))
+		rc.drawCategoryLabels(m, node, x0, y0+ph, pw, n, k, false)
 	}
 	if chartAxisShown(style, "showY") {
 		rc.drawYAxis(m, x0, y0, ph, maxV, k)

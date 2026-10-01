@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  bareFigure,
+  clipToBudget,
+  splitFigure,
+  undashTitle,
   archetypes,
   archetypeBudgets,
   normalizeOutline,
@@ -278,5 +282,71 @@ describe("archetype-aware outlines", () => {
     expect(prompt).toContain("no more than 40 percent");
     expect(prompt).toContain("Never write 'Slide 1'");
     expect(outlineJsonSchema.properties.pages.items.required).toContain("archetype");
+  });
+});
+
+describe("figures and headlines as a designer would set them", () => {
+  it("strips a direction arrow from a stat value and keeps signs, units and words the label owns", () => {
+    expect(bareFigure("↓67%")).toBe("67%");
+    expect(bareFigure("▲ 3.2M")).toBe("3.2M");
+    expect(bareFigure(" 312 ")).toBe("312");
+    expect(bareFigure("-11%")).toBe("-11%");
+    const page = normalizeOutline({ title: "T", pages: [{ title: "x", archetype: "kpiGrid", stats: [{ value: "↓67%", label: "a" }, { value: "→ 4", label: "b" }] }] }).pages[0];
+    expect(page.stats?.map((s) => s.value)).toEqual(["67%", "4"]);
+  });
+
+  it("keeps a figure to one token: a word left in the value moves to the unit, and a unit the model gave wins over it", () => {
+    expect(splitFigure("48 hrs", "hours")).toEqual({ value: "48", unit: "hours" });
+    expect(splitFigure("48 hrs", "")).toEqual({ value: "48", unit: "hrs" });
+    expect(splitFigure("$1.8 million", undefined)).toEqual({ value: "$1.8", unit: "million" });
+    expect(splitFigure("310k /mo", undefined)).toEqual({ value: "310k", unit: "/mo" });
+    expect(splitFigure("Top 10", undefined)).toEqual({ value: "Top 10", unit: "" });
+    expect(splitFigure("3.2M", "riders")).toEqual({ value: "3.2M", unit: "riders" });
+    expect(splitFigure("↓67%", undefined)).toEqual({ value: "67%", unit: "" });
+    // A clipped phrase never ends on a connective.
+    expect(clipToBudget("What is working vs. what is not", 24)).toBe("What is working");
+    expect(clipToBudget("Growth in the north and the south of the region", 24)).toBe("Growth in the north");
+    expect(clipToBudget("A short label", 24)).toBe("A short label");
+    // A no-break space splits like a space, as it does in the Go mirror.
+    expect(splitFigure("48\u00A0hrs", undefined)).toEqual({ value: "48", unit: "hrs" });
+    const page = normalizeOutline({ title: "T", pages: [{ title: "x", archetype: "bigNumber", stat: { value: "48 hrs", unit: "hours", label: "turnaround" } }] }).pages[0];
+    expect(page.stat).toMatchObject({ value: "48", unit: "hours" });
+  });
+
+  it("turns a dash separator in a title into a colon", () => {
+    expect(undashTitle("On-Time Delivery Rate — 2025 by Quarter")).toBe("On-Time Delivery Rate: 2025 by Quarter");
+    expect(undashTitle("Q1 – Q4")).toBe("Q1: Q4");
+    expect(undashTitle("On-time rate")).toBe("On-time rate");
+    const page = normalizeOutline({ title: "T", pages: [{ title: "Harborline — Board Update", archetype: "statement" }] }).pages[0];
+    expect(page.title).toBe("Harborline: Board Update");
+  });
+});
+
+describe("a bespoke composition", () => {
+  it("clamps cells to the grid, drops what overlaps or has nothing to show, and keeps only links between survivors", () => {
+    const page = normalizeOutline({ title: "T", pages: [{ title: "How it flows", archetype: "composition", composition: {
+      cells: [
+        { col: 0, span: 5, row: 0, rows: 3, kind: "heading", text: "Orders in", tone: "tint" },
+        { col: 7, span: 9, row: 0, rows: 3, kind: "list", points: ["Picked", "Packed", "Out the door"], tone: "deep" },
+        { col: 2, span: 4, row: 1, rows: 2, kind: "body", text: "overlaps the first" },
+        { col: 0, span: 12, row: 4, rows: 2, kind: "figure", value: "48 hrs", unit: "hours", text: "door to door" },
+        { col: 0, span: 3, row: 3, rows: 1, kind: "icon" },
+        { col: 3, span: 3, row: 3, rows: 1, kind: "nonsense", text: "x" },
+      ],
+      links: [[0, 1], [0, 2], [1, 1], [3, 0], [0, 1]],
+    } }] }).pages[0];
+    expect(page.archetype).toBe("composition");
+    const cells = page.composition!.cells;
+    expect(cells.map((c) => c.kind)).toEqual(["heading", "list", "figure"]);
+    // The list's span was clamped to the grid's edge.
+    expect(cells[1]).toMatchObject({ col: 7, span: 5, row: 0, rows: 3, tone: "deep" });
+    expect(cells[2]).toMatchObject({ value: "48", unit: "hours", text: "door to door" });
+    // Links re-indexed to the survivors, with the self-link, the dead end and the duplicate gone.
+    expect(page.composition!.links).toEqual([[0, 1], [2, 0]]);
+  });
+
+  it("falls back to bullets when no cell survives", () => {
+    const page = normalizeOutline({ title: "T", pages: [{ title: "x", archetype: "composition", points: ["a"], composition: { cells: [{ col: 0, span: 4, row: 0, rows: 1, kind: "heading" }] } }] }).pages[0];
+    expect(page.archetype).toBe("bullets");
   });
 });

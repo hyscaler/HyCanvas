@@ -144,6 +144,15 @@ describe("AC-6: WCAG contrast and Fix to AA", () => {
   it("Fix to AA leaves an already-passing color unchanged", () => {
     expect(fixToAA(black, WHITE)).toBe(black);
   });
+
+  it("Fix to AA goes the other way when a mid-tone ground defeats the natural direction", () => {
+    // A light accent on a sky blue: lightening tops out at white, 2.77:1.
+    // Darkening clears AA, so the fix must take that road.
+    const sky = fromHex("#0ea5e9")!;
+    const accent = fromHex("#7dd3fc")!;
+    expect(contrastRatio(WHITE, sky)).toBeLessThan(4.5);
+    expect(contrastRatio(fixToAA(accent, sky), sky)).toBeGreaterThanOrEqual(4.5);
+  });
 });
 
 describe("AC-4: palette extraction", () => {

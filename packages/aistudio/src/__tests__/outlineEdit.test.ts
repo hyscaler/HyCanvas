@@ -64,9 +64,40 @@ describe("sanitizeEditedOutline", () => {
     expect(o.pages[0].note).toBe("Keep this.");
   });
 
+  it("keeps every form and payload the model chose, and the deck's style and voice", () => {
+    const o = sanitizeEditedOutline({
+      title: "t", theme: "warm", style: "campfire", organization: "Northwind", kicker: "Twelve months", farewell: "Until next year",
+      pages: [
+        { id: "a", title: " Revenue ", points: [], visualRole: "data", archetype: "bigNumber", stat: { value: "$4.8M", label: "Revenue" }, eyebrow: "Results", icon: "coin", aside: "the one to remember", drawing: "coffee" },
+        { id: "b", title: "", points: [], visualRole: "data", archetype: "kpiGrid", stats: [{ value: "1", label: "a" }, { value: "2", label: "b" }], signature: "scoreboard", pairs: [{ label: "a", value: "+1" }] },
+        { id: "c", title: "Plan", points: ["x"], visualRole: "content", archetype: "timeline", steps: [{ label: "Q1", when: "Q1" }, { label: "Q2", when: "Q2" }], subhead: "The year ahead", image: { subject: "a roastery", treatment: "photo" } },
+      ],
+    });
+    expect(o.style).toBe("campfire");
+    expect(o.organization).toBe("Northwind");
+    expect(o.kicker).toBe("Twelve months");
+    expect(o.farewell).toBe("Until next year");
+    expect(o.pages).toHaveLength(3);
+    expect(o.pages[0]).toMatchObject({ title: "Revenue", archetype: "bigNumber", stat: { value: "$4.8M" }, eyebrow: "Results", icon: "coin", aside: "the one to remember", drawing: "coffee" });
+    // A payload with no words is still a page.
+    expect(o.pages[1]).toMatchObject({ title: "Untitled", archetype: "kpiGrid", signature: "scoreboard" });
+    expect(o.pages[1].stats).toHaveLength(2);
+    expect(o.pages[1].pairs).toHaveLength(1);
+    expect(o.pages[2]).toMatchObject({ archetype: "timeline", subhead: "The year ahead", image: { subject: "a roastery", treatment: "photo" } });
+    expect(o.pages[2].steps).toHaveLength(2);
+  });
+
   it("an edit that empties everything yields zero pages, not a throw", () => {
     const o = sanitizeEditedOutline({ title: "", theme: "", pages: [{ id: "a", title: " ", points: ["  "], visualRole: "content" }] });
     expect(o.pages).toHaveLength(0);
     expect(o.title).toBe("Untitled");
+  });
+});
+
+describe("a review edit keeps the deck's look", () => {
+  it("carries a valid look through and drops an invalid one", () => {
+    const base = { title: "T", theme: "calm", pages: [{ id: "p1", title: "One", points: ["a"], visualRole: "content" as const, archetype: "bullets" as const, note: "" }] };
+    expect(sanitizeEditedOutline({ ...base, look: "editorial" }).look).toBe("editorial");
+    expect(sanitizeEditedOutline({ ...base, look: "fancy" } as unknown as typeof base).look).toBeUndefined();
   });
 });

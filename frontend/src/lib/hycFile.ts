@@ -10,7 +10,7 @@
 // they are stored: data-URL assets are fully self-contained, workspace-hosted
 // assets keep their URLs (which resolve only on the origin instance).
 
-import { currentSchemaVersion, migrate, validate, type DesignFile } from "@hc/schema";
+import { currentSchemaVersion, migrate, repairCornerRadius, validate, type DesignFile } from "@hc/schema";
 import { tr } from "@/lib/i18n";
 import { CodedError } from "./errors";
 
@@ -54,7 +54,9 @@ export function parseHycFile(text: string): DesignFile {
   }
   // Older files forward-migrate (forward-only and idempotent); a current file
   // passes through untouched.
-  const migrated = migrate(file);
+  // A file an earlier writer left with a bare-number radius is repaired before
+  // validation, so an export from that time still imports.
+  const migrated = repairCornerRadius(migrate(file));
   // Structural validation with the same validator the server enforces on write,
   // so a hand-edited file that violates an invariant (a node missing its type, a
   // malformed page) is rejected here with a specific reason. Without this the

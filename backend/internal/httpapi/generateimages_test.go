@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"hycanvas/backend/internal/ai"
@@ -116,5 +117,105 @@ func TestPlaceGeneratedImagesIsCapped(t *testing.T) {
 	res := placeGeneratedImages(context.Background(), file, "u", "ws", gen, up)
 	if res.Requested != maxGeneratedImagesPerDeck || res.Placed != maxGeneratedImagesPerDeck {
 		t.Fatalf("placement = %+v", res)
+	}
+}
+
+// The prompt key is the editor's, byte for byte, so API decks and editor
+// decks reuse each other's pictures.
+func TestPromptAssetKeyMatchesTheEditor(t *testing.T) {
+	if got := promptAssetKey("A dune belt at dawn,  clean professional photography, natural light, no text"); got != "aiimg-54959d50" {
+		t.Fatalf("promptAssetKey = %s", got)
+	}
+	if promptAssetKey("x") == promptAssetKey("y") {
+		t.Fatal("different prompts must not share a key")
+	}
+}
+
+// Routing and subject recovery mirror the editor: a short concrete subject
+// goes to stock, a stylized or long one is generated.
+func TestImageRoutingMirrorsTheEditor(t *testing.T) {
+	if imageSubjectOf("a dune belt at dawn, clean professional photography, natural light, no text") != "a dune belt at dawn" {
+		t.Fatal("subject is the text before the first comma")
+	}
+	if routeImageSource("a dune belt at dawn") != "stock" {
+		t.Fatal("a short concrete subject routes to stock")
+	}
+	if routeImageSource("abstract gradient texture") != "generate" {
+		t.Fatal("a stylized marker routes to generation")
+	}
+	if routeImageSource("volunteers planting marsh grass along a restored shoreline at low tide") != "generate" {
+		t.Fatal("a long subject routes to generation")
+	}
+}
+
+// The ladder: reuse first, stock for a short subject with a free licence,
+// generation last, and every landed asset tagged with the prompt key.
+func TestPlacePicturesRunsTheEditorLadder(t *testing.T) {
+	file := deckWith(
+		standIn("reused", "a lighthouse at dusk, clean professional photography, natural light, no text", 800, 600),
+		standIn("stock", "a dune belt at dawn, clean professional photography, natural light, no text", 800, 600),
+		standIn("gen", "volunteers planting marsh grass along a restored shoreline at low tide, clean professional photography, natural light, no text", 800, 600),
+	)
+	var genCalls, tagged []string
+	src := pictureSources{
+		reuse: func(_ context.Context, _, _, key string) (string, string, string, bool) {
+			if key == promptAssetKey("a lighthouse at dusk, clean professional photography, natural light, no text") {
+				return "old-asset", "/assets/old", "image/png", true
+			}
+			return "", "", "", false
+		},
+		stock: func(_ context.Context, _, subject string) (string, string, map[string]any, bool) {
+			if subject == "a dune belt at dawn" {
+				return "https://photos.example/dune.jpg", "ov-123", map[string]any{"type": "cc0", "attributionRequired": false}, true
+			}
+			return "", "", nil, false
+		},
+		gen: func(_ context.Context, _, prompt, _ string) (string, error) {
+			genCalls = append(genCalls, prompt)
+			return "https://cdn.example/generated.png", nil
+		},
+		up: func(_ context.Context, _, _, img string) (string, string, string, bool) {
+			return "asset-for-" + img[len(img)-8:], "/assets/new", "image/jpeg", true
+		},
+		tag: func(_ context.Context, _, assetID, key string) { tagged = append(tagged, assetID+"="+key) },
+	}
+	res := placePictures(context.Background(), file, "u", "ws", src)
+	if res.Requested != 3 || res.Placed != 3 || res.Reused != 1 || res.Stock != 1 || res.Generated != 1 {
+		t.Fatalf("placement = %+v", res)
+	}
+	if len(genCalls) != 1 || !strings.HasPrefix(genCalls[0], "volunteers") {
+		t.Fatalf("only the long subject should be generated, got %v", genCalls)
+	}
+	nodes := asSlice(asMap(asSlice(file["pages"])[0])["children"])
+	reused, stockNode, gen := asMap(nodes[0]), asMap(nodes[1]), asMap(nodes[2])
+	if asMap(reused["source"])["assetId"] != "old-asset" {
+		t.Fatal("the reused region must point at the existing asset")
+	}
+	if d := asMap(stockNode["data"]); d["origin"] != "stock" || d["stockAssetId"] != "ov-123" || asMap(d["license"])["type"] != "cc0" {
+		t.Fatalf("stock provenance missing: %v", d)
+	}
+	if _, has := asMap(gen["data"])["origin"]; has {
+		t.Fatal("a generated picture carries no stock provenance")
+	}
+	// Stock and generated assets are tagged for reuse; the reused one already was.
+	if len(tagged) != 2 {
+		t.Fatalf("expected the stock and generated assets tagged, got %v", tagged)
+	}
+}
+
+// A stock hit that demands attribution, or that has no absolute URL, is not
+// used automatically.
+func TestPickFreeStockPhotoSkipsCreditedAndRelativeHits(t *testing.T) {
+	hits := []map[string]any{
+		{"id": "by", "sourceUrl": "https://x/by.jpg", "license": map[string]any{"attributionRequired": true}},
+		{"id": "bundled", "previewUrl": "/stock/bundled.jpg", "license": map[string]any{"attributionRequired": false}},
+		{"id": "free", "sourceUrl": "https://x/free.jpg", "license": map[string]any{"type": "cc0", "attributionRequired": false}},
+	}
+	src, id, _, ok := pickFreeStockPhoto(hits)
+	if !ok || id != "free" || src != "https://x/free.jpg" {
+		t.Fatalf("pick = %q %q %v", src, id, ok)
+	}
+	if _, _, _, ok := pickFreeStockPhoto(hits[:2]); ok {
+		t.Fatal("nothing usable must mean no pick")
 	}
 }

@@ -59,6 +59,43 @@ func bedrockRegionFrom(baseURL string) string {
 	return ""
 }
 
+// awsPathSegment percent-encodes one path segment the way SigV4 wants it:
+// every byte except the unreserved set (letters, digits, "-", "_", ".", "~")
+// is encoded, uppercase hex. Go's url.PathEscape leaves ":" and a few other
+// sub-delimiters raw, which is fine for routing but not for the canonical
+// request: AWS canonicalises a Bedrock model id such as "...-v1:0" with
+// "%3A", and a signature computed over the raw colon is rejected with 403.
+// The request path is built with this too, so what is sent and what is
+// signed are the same bytes.
+func awsPathSegment(seg string) string {
+	const hex = "0123456789ABCDEF"
+	var b strings.Builder
+	for i := 0; i < len(seg); i++ {
+		c := seg[i]
+		if ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '-' || c == '_' || c == '.' || c == '~' {
+			b.WriteByte(c)
+			continue
+		}
+		b.WriteByte('%')
+		b.WriteByte(hex[c>>4])
+		b.WriteByte(hex[c&15])
+	}
+	return b.String()
+}
+
+// awsCanonicalURI is the canonical URI for a decoded request path: each
+// segment encoded with awsPathSegment, an empty path as "/".
+func awsCanonicalURI(path string) string {
+	if path == "" || path == "/" {
+		return "/"
+	}
+	segs := strings.Split(strings.TrimPrefix(path, "/"), "/")
+	for i, sg := range segs {
+		segs[i] = awsPathSegment(sg)
+	}
+	return "/" + strings.Join(segs, "/")
+}
+
 func hmacSHA256(key []byte, data string) []byte {
 	m := hmac.New(sha256.New, key)
 	m.Write([]byte(data))
@@ -112,10 +149,7 @@ func signAWSv4(req *http.Request, body []byte, c awsCreds, now time.Time) {
 	}
 	signedHeaders := strings.Join(signed, ";")
 
-	canonicalURI := req.URL.EscapedPath()
-	if canonicalURI == "" {
-		canonicalURI = "/"
-	}
+	canonicalURI := awsCanonicalURI(req.URL.Path)
 	canonicalRequest := strings.Join([]string{
 		req.Method,
 		canonicalURI,

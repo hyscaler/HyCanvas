@@ -1,5 +1,4 @@
 {
- "kind": "deck-outline",
  "id": "deck-event-proposal",
  "title": "Event Proposal",
  "categories": [
@@ -13,61 +12,3086 @@
   "budget"
  ],
  "styleTags": [
-  "editorial"
+  "bold",
+  "modern",
+  "playful"
  ],
- "themeId": "theme-blush",
  "size": [
   1920,
   1080
  ],
- "rank": 72,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Bodoni Moda",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Jost",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Parisienne",
+   "weight": 400
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#131843",
+      0
+     ],
+     [
+      "#070A24",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "27",
+     "family": "Bodoni Moda",
+     "size": 620,
+     "weight": 500,
+     "color": "#262a50",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#2A3170"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#FF3D9E",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Loop",
+     "family": "Jost",
+     "size": 22,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 60,
+     "text": "An invitation, with a budget",
+     "family": "Parisienne",
+     "size": 46,
+     "weight": 400,
+     "color": "#FF6DB6",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 245,
+     "text": "Loop Live:\none day, one room",
+     "family": "Bodoni Moda",
+     "size": 112,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 721,
+     "w": 900,
+     "h": 80,
+     "text": "What it is and who it is for, the day itself, the budget and the break-even line, and what we need approved today.",
+     "family": "Jost",
+     "size": 28,
+     "weight": 400,
+     "color": "#B9BCD6",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Mei Lin, Marketing  ·  November 2026",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#B9BCD6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 9",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#B9BCD6",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#1C2360",
+     "radius": 0,
+     "stroke": "#2A3170",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "400",
+     "family": "Bodoni Moda",
+     "size": 26,
+     "weight": 800,
+     "color": "#FF6DB6",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 246,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "seats",
+     "family": "Jost",
+     "size": 16,
+     "weight": 500,
+     "color": "#B9BCD6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 396,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#1C2360",
+     "radius": 0,
+     "stroke": "#2A3170",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 416,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "13 May",
+     "family": "Bodoni Moda",
+     "size": 26,
+     "weight": 800,
+     "color": "#FF6DB6",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 546,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "2027",
+     "family": "Jost",
+     "size": 16,
+     "weight": 500,
+     "color": "#B9BCD6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 696,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#1C2360",
+     "radius": 0,
+     "stroke": "#2A3170",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "$380K",
+     "family": "Bodoni Moda",
+     "size": 26,
+     "weight": 800,
+     "color": "#FF6DB6",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 846,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "all in",
+     "family": "Jost",
+     "size": 16,
+     "weight": 500,
+     "color": "#B9BCD6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 170,
+     "w": 700,
+     "h": 700,
+     "fill": "#FF3D9E",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1220,
+     "y": 240,
+     "w": 560,
+     "h": 560,
+     "fill": "#FF3D9E",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 826,
+     "w": 720,
+     "h": 98,
+     "text": "the venue holds the date until Friday",
+     "family": "Parisienne",
+     "size": 39,
+     "weight": 400,
+     "color": "#FF6DB6",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day35-firework",
+     "x": 1210,
+     "y": 230,
+     "w": 580,
+     "h": 580,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Statement",
+   "bg": "#1B2154",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "27",
+     "family": "Bodoni Moda",
+     "size": 620,
+     "weight": 500,
+     "color": "#262c5c",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#333B7E"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#333B7E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Loop  ·  Proposal: Loop Live 2027",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#BCBFDA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 9",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#BCBFDA",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 60,
+     "text": "An invitation, with a budget",
+     "family": "Parisienne",
+     "size": 46,
+     "weight": 400,
+     "color": "#FF6DB6",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 310,
+     "w": 120,
+     "h": 6,
+     "fill": "#FF3D9E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 356,
+     "w": 1560,
+     "h": 245,
+     "text": "Our customers have never been in one room. Four hundred finance leaders, one day, and the 2027 plan announced from the stage.",
+     "family": "Bodoni Moda",
+     "size": 70,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 641,
+     "w": 1000,
+     "h": 32,
+     "text": "Why now: the moment this event captures",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#BCBFDA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 910,
+     "w": 760,
+     "h": 46,
+     "text": "they keep asking when we will do this",
+     "family": "Parisienne",
+     "size": 37,
+     "weight": 400,
+     "color": "#FF6DB6",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Text and picture",
+   "bg": "#1B2154",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "27",
+     "family": "Bodoni Moda",
+     "size": 620,
+     "weight": 500,
+     "color": "#262c5c",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#333B7E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The room",
+     "family": "Jost",
+     "size": 20,
+     "weight": 600,
+     "color": "#FF6DB6",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 960,
+     "h": 114,
+     "text": "Four hundred seats, three kinds of guest",
+     "family": "Bodoni Moda",
+     "size": 48,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#333B7E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Loop  ·  Proposal: Loop Live 2027",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#BCBFDA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 9",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#BCBFDA",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 310,
+     "w": 34,
+     "h": 34,
+     "fill": "#4b2e72"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 310,
+     "w": 34,
+     "h": 34,
+     "text": "1",
+     "family": "Bodoni Moda",
+     "size": 17,
+     "weight": 800,
+     "color": "#FF6DB6",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 306,
+     "w": 840,
+     "h": 44,
+     "text": "Customers, two hundred and forty",
+     "family": "Bodoni Moda",
+     "size": 32,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 358,
+     "w": 840,
+     "h": 70,
+     "text": "Finance leaders at the accounts that renew in 2027. They hear the plan first, from the stage.",
+     "family": "Jost",
+     "size": 22,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 488,
+     "w": 34,
+     "h": 34,
+     "fill": "#4b2e72"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 488,
+     "w": 34,
+     "h": 34,
+     "text": "2",
+     "family": "Bodoni Moda",
+     "size": 17,
+     "weight": 800,
+     "color": "#FF6DB6",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 484,
+     "w": 840,
+     "h": 44,
+     "text": "Prospects, one hundred",
+     "family": "Bodoni Moda",
+     "size": 32,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 536,
+     "w": 840,
+     "h": 70,
+     "text": "Late-stage deals, invited as a guest of their rep and seated with a customer in their industry.",
+     "family": "Jost",
+     "size": 22,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 666,
+     "w": 34,
+     "h": 34,
+     "fill": "#4b2e72"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 666,
+     "w": 34,
+     "h": 34,
+     "text": "3",
+     "family": "Bodoni Moda",
+     "size": 17,
+     "weight": 800,
+     "color": "#FF6DB6",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 662,
+     "w": 840,
+     "h": 44,
+     "text": "Partners and press, sixty",
+     "family": "Bodoni Moda",
+     "size": 32,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 152,
+     "y": 714,
+     "w": 840,
+     "h": 70,
+     "text": "Four sponsors, the analysts who cover us, and the two writers who asked to come.",
+     "family": "Jost",
+     "size": 22,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1080,
+     "y": 196,
+     "w": 744,
+     "h": 690,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#504e6f",
+        0
+       ],
+       [
+        "#242B68",
+        1
+       ]
+      ]
+     }
+    },
+    {
+     "kind": "ellipse",
+     "x": 1202,
+     "y": 291,
+     "w": 500,
+     "h": 500,
+     "fill": "#FF3D9E",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1252,
+     "y": 341,
+     "w": 400,
+     "h": 400,
+     "fill": "#FF3D9E",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 910,
+     "w": 760,
+     "h": 46,
+     "text": "every prospect sits next to a customer",
+     "family": "Parisienne",
+     "size": 37,
+     "weight": 400,
+     "color": "#FF6DB6",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-conversation-illustration",
+     "x": 1160,
+     "y": 270,
+     "w": 584,
+     "h": 540
+    }
+   ]
+  },
+  {
+   "name": "Quote",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#131843",
+      0
+     ],
+     [
+      "#070A24",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "27",
+     "family": "Bodoni Moda",
+     "size": 620,
+     "weight": 500,
+     "color": "#262a50",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#2A3170"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#2A3170"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Loop  ·  Proposal: Loop Live 2027",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#B9BCD6",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 9",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#B9BCD6",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 260,
+     "h": 260,
+     "text": "“",
+     "family": "Bodoni Moda",
+     "size": 280,
+     "weight": 800,
+     "color": "#FF6DB6",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 400,
+     "w": 1100,
+     "h": 221,
+     "text": "Put four hundred of us in one room\nand I will bring my CFO, my board pack\nand every question I have been saving.",
+     "family": "Bodoni Moda",
+     "size": 54,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.26
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 116,
+     "y": 681,
+     "w": 84,
+     "h": 84,
+     "fill": "#252D6E"
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 689,
+     "w": 800,
+     "h": 32,
+     "text": "Sofia Marchetti",
+     "family": "Jost",
+     "size": 24,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 224,
+     "y": 725,
+     "w": 800,
+     "h": 28,
+     "text": "Group Finance Director, Harbor and Vale. Customer advisory board",
+     "family": "Jost",
+     "size": 20,
+     "weight": 400,
+     "color": "#B9BCD6",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 875,
+     "w": 720,
+     "h": 49,
+     "text": "unprompted, at the advisory board",
+     "family": "Parisienne",
+     "size": 39,
+     "weight": 400,
+     "color": "#FF6DB6",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "op-peep-102",
+     "x": 128,
+     "y": 689,
+     "w": 60,
+     "h": 68
+    }
+   ]
+  },
+  {
+   "name": "Facts",
+   "bg": "#1B2154",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "27",
+     "family": "Bodoni Moda",
+     "size": 620,
+     "weight": 500,
+     "color": "#262c5c",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#333B7E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The venue",
+     "family": "Jost",
+     "size": 20,
+     "weight": 600,
+     "color": "#FF6DB6",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 900,
+     "h": 72,
+     "text": "The Glasshouse, on the river",
+     "family": "Bodoni Moda",
+     "size": 58,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#333B7E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Loop  ·  Proposal: Loop Live 2027",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#BCBFDA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 9",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#BCBFDA",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 220,
+     "w": 820,
+     "h": 90,
+     "text": "A glass hall on the river, twenty minutes from the airport, with a terrace that faces west. Held for us until Friday.",
+     "family": "Jost",
+     "size": 26,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 340,
+     "w": 56,
+     "h": 56,
+     "fill": "#4b2e72"
+    },
+    {
+     "kind": "icon",
+     "icon": "map-pin",
+     "x": 110,
+     "y": 354,
+     "w": 28,
+     "h": 28,
+     "color": "#FF6DB6"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 338,
+     "w": 740,
+     "h": 34,
+     "text": "Twenty minutes from the airport",
+     "family": "Bodoni Moda",
+     "size": 26,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 374,
+     "w": 740,
+     "h": 30,
+     "text": "Shuttles every fifteen minutes, both ways",
+     "family": "Jost",
+     "size": 20,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 458,
+     "w": 56,
+     "h": 56,
+     "fill": "#4b2e72"
+    },
+    {
+     "kind": "icon",
+     "icon": "ticket",
+     "x": 110,
+     "y": 472,
+     "w": 28,
+     "h": 28,
+     "color": "#FF6DB6"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 456,
+     "w": 740,
+     "h": 34,
+     "text": "A hall that seats four hundred",
+     "family": "Bodoni Moda",
+     "size": 26,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 492,
+     "w": 740,
+     "h": 30,
+     "text": "Cabaret tables, one stage, one screen",
+     "family": "Jost",
+     "size": 20,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 576,
+     "w": 56,
+     "h": 56,
+     "fill": "#4b2e72"
+    },
+    {
+     "kind": "icon",
+     "icon": "home",
+     "x": 110,
+     "y": 590,
+     "w": 28,
+     "h": 28,
+     "color": "#FF6DB6"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 574,
+     "w": 740,
+     "h": 34,
+     "text": "Three rooms for the workshops",
+     "family": "Bodoni Moda",
+     "size": 26,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 610,
+     "w": 740,
+     "h": 30,
+     "text": "Forty seats each, on the floor above",
+     "family": "Jost",
+     "size": 20,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 694,
+     "w": 56,
+     "h": 56,
+     "fill": "#4b2e72"
+    },
+    {
+     "kind": "icon",
+     "icon": "sun",
+     "x": 110,
+     "y": 708,
+     "w": 28,
+     "h": 28,
+     "color": "#FF6DB6"
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 692,
+     "w": 740,
+     "h": 34,
+     "text": "The terrace, facing west",
+     "family": "Bodoni Moda",
+     "size": 26,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 176,
+     "y": 728,
+     "w": 740,
+     "h": 30,
+     "text": "Drinks from five, the band at six, sunset at half past eight",
+     "family": "Jost",
+     "size": 20,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "name": "Photo",
+     "x": 1080,
+     "y": 268,
+     "w": 700,
+     "h": 610,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#504e6f",
+        0
+       ],
+       [
+        "#242B68",
+        1
+       ]
+      ]
+     }
+    },
+    {
+     "kind": "ellipse",
+     "x": 1180,
+     "y": 295,
+     "w": 500,
+     "h": 500,
+     "fill": "#FF3D9E",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1230,
+     "y": 345,
+     "w": 400,
+     "h": 400,
+     "fill": "#FF3D9E",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 910,
+     "w": 760,
+     "h": 46,
+     "text": "the terrace is why we picked it",
+     "family": "Parisienne",
+     "size": 37,
+     "weight": 400,
+     "color": "#FF6DB6",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day54-building",
+     "x": 1190,
+     "y": 320,
+     "w": 480,
+     "h": 420,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Run of show",
+   "bg": "#1B2154",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "27",
+     "family": "Bodoni Moda",
+     "size": 620,
+     "weight": 500,
+     "color": "#262c5c",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#333B7E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Run of show  ·  Thursday 13 May 2027",
+     "family": "Jost",
+     "size": 20,
+     "weight": 600,
+     "color": "#FF6DB6",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 72,
+     "text": "Ten hours, one stage",
+     "family": "Bodoni Moda",
+     "size": 58,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#333B7E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Loop  ·  Proposal: Loop Live 2027",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#BCBFDA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 9",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#BCBFDA",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1438,
+     "y": 130,
+     "w": 7,
+     "h": 7,
+     "fill": "#EACB8A",
+     "opacity": 0.42
+    },
+    {
+     "kind": "ellipse",
+     "x": 1709,
+     "y": 150,
+     "w": 4,
+     "h": 4,
+     "fill": "#EACB8A",
+     "opacity": 0.74
+    },
+    {
+     "kind": "ellipse",
+     "x": 1477,
+     "y": 101,
+     "w": 9,
+     "h": 9,
+     "fill": "#EACB8A",
+     "opacity": 0.54
+    },
+    {
+     "kind": "ellipse",
+     "x": 1479,
+     "y": 145,
+     "w": 8,
+     "h": 8,
+     "fill": "#EACB8A",
+     "opacity": 0.49
+    },
+    {
+     "kind": "ellipse",
+     "x": 1689,
+     "y": 133,
+     "w": 8,
+     "h": 8,
+     "fill": "#EACB8A",
+     "opacity": 0.72
+    },
+    {
+     "kind": "ellipse",
+     "x": 1595,
+     "y": 89,
+     "w": 6,
+     "h": 6,
+     "fill": "#EACB8A",
+     "opacity": 0.37
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 240,
+     "w": 120,
+     "h": 24,
+     "text": "Time",
+     "family": "Jost",
+     "size": 15,
+     "weight": 600,
+     "color": "#FF6DB6",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 276,
+     "y": 240,
+     "w": 400,
+     "h": 24,
+     "text": "On stage",
+     "family": "Jost",
+     "size": 15,
+     "weight": 600,
+     "color": "#FF6DB6",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1230,
+     "y": 240,
+     "w": 280,
+     "h": 24,
+     "text": "Owner",
+     "family": "Jost",
+     "size": 15,
+     "weight": 600,
+     "color": "#FF6DB6",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 240,
+     "w": 284,
+     "h": 24,
+     "text": "Minutes",
+     "family": "Jost",
+     "size": 15,
+     "weight": 600,
+     "color": "#FF6DB6",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 235,
+     "y": 284,
+     "w": 3,
+     "h": 594,
+     "fill": "#333B7E"
+    },
+    {
+     "kind": "ellipse",
+     "x": 538,
+     "y": 211,
+     "w": 380,
+     "h": 380,
+     "fill": "#FF3D9E",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 576,
+     "y": 249,
+     "w": 304,
+     "h": 304,
+     "fill": "#FF3D9E",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 276,
+     "y": 284,
+     "w": 904,
+     "h": 54,
+     "fill": "#242B68",
+     "radius": 0,
+     "stroke": "#333B7E",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 228,
+     "y": 303,
+     "w": 17,
+     "h": 17,
+     "fill": "#BCBFDA"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 298,
+     "w": 120,
+     "h": 26,
+     "text": "09:00",
+     "family": "Jost",
+     "size": 22,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 304,
+     "y": 297,
+     "w": 848,
+     "h": 29,
+     "text": "Doors and coffee",
+     "family": "Bodoni Moda",
+     "size": 24,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1230,
+     "y": 297,
+     "w": 280,
+     "h": 28,
+     "text": "Aisha Bello",
+     "family": "Jost",
+     "size": 21,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 296,
+     "w": 284,
+     "h": 31,
+     "text": "60 min",
+     "family": "Bodoni Moda",
+     "size": 26,
+     "weight": 800,
+     "color": "#EACB8A",
+     "lineHeight": 1,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 276,
+     "y": 344,
+     "w": 904,
+     "h": 114,
+     "fill": "#FF3D9E"
+    },
+    {
+     "kind": "ellipse",
+     "x": 228,
+     "y": 372,
+     "w": 17,
+     "h": 17,
+     "fill": "#FF3D9E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 367,
+     "w": 120,
+     "h": 26,
+     "text": "10:00",
+     "family": "Jost",
+     "size": 22,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 304,
+     "y": 362,
+     "w": 848,
+     "h": 36,
+     "text": "The keynote",
+     "family": "Bodoni Moda",
+     "size": 30,
+     "weight": 800,
+     "color": "#070A24",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 304,
+     "y": 402,
+     "w": 848,
+     "h": 28,
+     "text": "The 2027 plan, two customer stories on stage, and one launch nobody expects.",
+     "family": "Jost",
+     "size": 19,
+     "weight": 400,
+     "color": "#2f1238",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1230,
+     "y": 366,
+     "w": 280,
+     "h": 28,
+     "text": "Priya Raman",
+     "family": "Jost",
+     "size": 21,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 360,
+     "w": 284,
+     "h": 41,
+     "text": "120 min",
+     "family": "Bodoni Moda",
+     "size": 34,
+     "weight": 800,
+     "color": "#FF6DB6",
+     "lineHeight": 1,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 276,
+     "y": 464,
+     "w": 904,
+     "h": 54,
+     "fill": "#242B68",
+     "radius": 0,
+     "stroke": "#333B7E",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 228,
+     "y": 483,
+     "w": 17,
+     "h": 17,
+     "fill": "#BCBFDA"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 478,
+     "w": 120,
+     "h": 26,
+     "text": "12:00",
+     "family": "Jost",
+     "size": 22,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 304,
+     "y": 477,
+     "w": 848,
+     "h": 29,
+     "text": "Lunch",
+     "family": "Bodoni Moda",
+     "size": 24,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1230,
+     "y": 477,
+     "w": 280,
+     "h": 28,
+     "text": "Aisha Bello",
+     "family": "Jost",
+     "size": 21,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 476,
+     "w": 284,
+     "h": 31,
+     "text": "60 min",
+     "family": "Bodoni Moda",
+     "size": 26,
+     "weight": 800,
+     "color": "#EACB8A",
+     "lineHeight": 1,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 276,
+     "y": 524,
+     "w": 904,
+     "h": 84,
+     "fill": "#242B68",
+     "radius": 0,
+     "stroke": "#333B7E",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 228,
+     "y": 550,
+     "w": 17,
+     "h": 17,
+     "fill": "#BCBFDA"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 545,
+     "w": 120,
+     "h": 26,
+     "text": "13:00",
+     "family": "Jost",
+     "size": 22,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 304,
+     "y": 542,
+     "w": 848,
+     "h": 31,
+     "text": "Workshops",
+     "family": "Bodoni Moda",
+     "size": 26,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 304,
+     "y": 577,
+     "w": 848,
+     "h": 28,
+     "text": "Three tracks, forty people each, hands on with their own data.",
+     "family": "Jost",
+     "size": 19,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1230,
+     "y": 544,
+     "w": 280,
+     "h": 28,
+     "text": "Mei Lin",
+     "family": "Jost",
+     "size": 21,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 542,
+     "w": 284,
+     "h": 31,
+     "text": "90 min",
+     "family": "Bodoni Moda",
+     "size": 26,
+     "weight": 800,
+     "color": "#EACB8A",
+     "lineHeight": 1,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 276,
+     "y": 614,
+     "w": 904,
+     "h": 54,
+     "fill": "#242B68",
+     "radius": 0,
+     "stroke": "#333B7E",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 228,
+     "y": 633,
+     "w": 17,
+     "h": 17,
+     "fill": "#BCBFDA"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 628,
+     "w": 120,
+     "h": 26,
+     "text": "14:30",
+     "family": "Jost",
+     "size": 22,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 304,
+     "y": 627,
+     "w": 848,
+     "h": 29,
+     "text": "Roundtables",
+     "family": "Bodoni Moda",
+     "size": 24,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1230,
+     "y": 627,
+     "w": 280,
+     "h": 28,
+     "text": "Jonah Park",
+     "family": "Jost",
+     "size": 21,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 626,
+     "w": 284,
+     "h": 31,
+     "text": "60 min",
+     "family": "Bodoni Moda",
+     "size": 26,
+     "weight": 800,
+     "color": "#EACB8A",
+     "lineHeight": 1,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 276,
+     "y": 674,
+     "w": 904,
+     "h": 84,
+     "fill": "#242B68",
+     "radius": 0,
+     "stroke": "#333B7E",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 228,
+     "y": 700,
+     "w": 17,
+     "h": 17,
+     "fill": "#BCBFDA"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 695,
+     "w": 120,
+     "h": 26,
+     "text": "15:30",
+     "family": "Jost",
+     "size": 22,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 304,
+     "y": 692,
+     "w": 848,
+     "h": 31,
+     "text": "Ask us anything",
+     "family": "Bodoni Moda",
+     "size": 26,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 304,
+     "y": 727,
+     "w": 848,
+     "h": 28,
+     "text": "The product team on stage, the questions from the floor, nothing off the table.",
+     "family": "Jost",
+     "size": 19,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1230,
+     "y": 694,
+     "w": 280,
+     "h": 28,
+     "text": "Priya Raman",
+     "family": "Jost",
+     "size": 21,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 692,
+     "w": 284,
+     "h": 31,
+     "text": "90 min",
+     "family": "Bodoni Moda",
+     "size": 26,
+     "weight": 800,
+     "color": "#EACB8A",
+     "lineHeight": 1,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 276,
+     "y": 764,
+     "w": 904,
+     "h": 114,
+     "fill": "#EACB8A"
+    },
+    {
+     "kind": "ellipse",
+     "x": 228,
+     "y": 792,
+     "w": 17,
+     "h": 17,
+     "fill": "#EACB8A"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 787,
+     "w": 120,
+     "h": 26,
+     "text": "17:00",
+     "family": "Jost",
+     "size": 22,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 304,
+     "y": 782,
+     "w": 848,
+     "h": 36,
+     "text": "The encore",
+     "family": "Bodoni Moda",
+     "size": 30,
+     "weight": 800,
+     "color": "#070A24",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 304,
+     "y": 822,
+     "w": 848,
+     "h": 28,
+     "text": "Drinks on the terrace, the band at six, and the photo everyone posts.",
+     "family": "Jost",
+     "size": 19,
+     "weight": 400,
+     "color": "#474041",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1230,
+     "y": 786,
+     "w": 280,
+     "h": 28,
+     "text": "Jonah Park",
+     "family": "Jost",
+     "size": 21,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 780,
+     "w": 284,
+     "h": 41,
+     "text": "120 min",
+     "family": "Bodoni Moda",
+     "size": 34,
+     "weight": 800,
+     "color": "#EACB8A",
+     "lineHeight": 1,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 910,
+     "w": 760,
+     "h": 46,
+     "text": "the band is on hold too, until Friday",
+     "family": "Parisienne",
+     "size": 37,
+     "weight": 400,
+     "color": "#FF6DB6",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Figures",
+   "bg": "#1B2154",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "27",
+     "family": "Bodoni Moda",
+     "size": 620,
+     "weight": 500,
+     "color": "#262c5c",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#333B7E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Budget",
+     "family": "Jost",
+     "size": 20,
+     "weight": 600,
+     "color": "#FF6DB6",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 67,
+     "text": "Costs, sponsorships, and the break-even line",
+     "family": "Bodoni Moda",
+     "size": 54,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#333B7E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Loop  ·  Proposal: Loop Live 2027",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#BCBFDA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 9",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#BCBFDA",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 235,
+     "w": 414,
+     "h": 560,
+     "fill": "#242B68",
+     "radius": 0,
+     "stroke": "#333B7E",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 235,
+     "w": 414,
+     "h": 6,
+     "fill": "#FF3D9E",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 291,
+     "w": 342,
+     "h": 112,
+     "text": "$380K",
+     "family": "Bodoni Moda",
+     "size": 96,
+     "weight": 800,
+     "color": "#FF6DB6",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 431,
+     "w": 342,
+     "h": 34,
+     "text": "Total cost",
+     "family": "Jost",
+     "size": 24,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 132,
+     "y": 485,
+     "w": 190,
+     "h": 40,
+     "label": "Venue and stage",
+     "fill": "#4b2e72",
+     "color": "#FF6DB6",
+     "family": "Jost",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 555,
+     "w": 342,
+     "h": 140,
+     "text": "Fixed once the venue signs; every other line has a cap.",
+     "family": "Jost",
+     "size": 20,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 235,
+     "w": 414,
+     "h": 560,
+     "fill": "#242B68",
+     "radius": 0,
+     "stroke": "#333B7E",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 235,
+     "w": 414,
+     "h": 6,
+     "fill": "#EACB8A",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 291,
+     "w": 342,
+     "h": 112,
+     "text": "$160K",
+     "family": "Bodoni Moda",
+     "size": 96,
+     "weight": 800,
+     "color": "#EACB8A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 431,
+     "w": 342,
+     "h": 34,
+     "text": "Sponsorships",
+     "family": "Jost",
+     "size": 24,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 570,
+     "y": 485,
+     "w": 190,
+     "h": 40,
+     "label": "Four partners",
+     "fill": "#48486e",
+     "color": "#EACB8A",
+     "family": "Jost",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 555,
+     "w": 342,
+     "h": 140,
+     "text": "Two confirmed in principle, two in conversation.",
+     "family": "Jost",
+     "size": 20,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 235,
+     "w": 414,
+     "h": 560,
+     "fill": "#242B68",
+     "radius": 0,
+     "stroke": "#333B7E",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 235,
+     "w": 414,
+     "h": 6,
+     "fill": "#FF3D9E",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 291,
+     "w": 342,
+     "h": 112,
+     "text": "$120K",
+     "family": "Bodoni Moda",
+     "size": 96,
+     "weight": 800,
+     "color": "#FF6DB6",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 431,
+     "w": 342,
+     "h": 34,
+     "text": "Ticket revenue",
+     "family": "Jost",
+     "size": 24,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1008,
+     "y": 485,
+     "w": 190,
+     "h": 40,
+     "label": "400 at $300",
+     "fill": "#4b2e72",
+     "color": "#FF6DB6",
+     "family": "Jost",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 555,
+     "w": 342,
+     "h": 140,
+     "text": "Customers pay; prospects come as guests of their rep.",
+     "family": "Jost",
+     "size": 20,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 235,
+     "w": 414,
+     "h": 560,
+     "fill": "#242B68",
+     "radius": 0,
+     "stroke": "#333B7E",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 235,
+     "w": 414,
+     "h": 6,
+     "fill": "#EACB8A",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 291,
+     "w": 342,
+     "h": 112,
+     "text": "$100K",
+     "family": "Bodoni Moda",
+     "size": 96,
+     "weight": 800,
+     "color": "#EACB8A",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 431,
+     "w": 342,
+     "h": 34,
+     "text": "Net cost",
+     "family": "Jost",
+     "size": 24,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1446,
+     "y": 485,
+     "w": 190,
+     "h": 40,
+     "label": "Twelve deals",
+     "fill": "#48486e",
+     "color": "#EACB8A",
+     "family": "Jost",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 555,
+     "w": 342,
+     "h": 140,
+     "text": "Twelve enterprise deals sourced at the event pays for it.",
+     "family": "Jost",
+     "size": 20,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 910,
+     "w": 760,
+     "h": 46,
+     "text": "nine deals came out of one dinner",
+     "family": "Parisienne",
+     "size": 37,
+     "weight": 400,
+     "color": "#FF6DB6",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Team",
+   "bg": "#1B2154",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "27",
+     "family": "Bodoni Moda",
+     "size": 620,
+     "weight": 500,
+     "color": "#262c5c",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#333B7E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The team",
+     "family": "Jost",
+     "size": 20,
+     "weight": 600,
+     "color": "#FF6DB6",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 72,
+     "text": "Who runs what",
+     "family": "Bodoni Moda",
+     "size": 58,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#333B7E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Loop  ·  Proposal: Loop Live 2027",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#BCBFDA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "08 / 9",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#BCBFDA",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 193,
+     "y": 370,
+     "w": 220,
+     "h": 220,
+     "fill": "#542f74"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 622,
+     "w": 414,
+     "h": 40,
+     "text": "Mei Lin",
+     "family": "Bodoni Moda",
+     "size": 30,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 668,
+     "w": 414,
+     "h": 28,
+     "text": "Event lead",
+     "family": "Jost",
+     "size": 17,
+     "weight": 600,
+     "color": "#FF6DB6",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 714,
+     "w": 366,
+     "h": 96,
+     "text": "Programme, stage, and the run of show.",
+     "family": "Jost",
+     "size": 21,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4,
+     "align": "center"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 631,
+     "y": 370,
+     "w": 220,
+     "h": 220,
+     "fill": "#504e6f"
+    },
+    {
+     "kind": "text",
+     "x": 534,
+     "y": 622,
+     "w": 414,
+     "h": 40,
+     "text": "Jonah Park",
+     "family": "Bodoni Moda",
+     "size": 30,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 534,
+     "y": 668,
+     "w": 414,
+     "h": 28,
+     "text": "Sponsors and sales",
+     "family": "Jost",
+     "size": 17,
+     "weight": 600,
+     "color": "#EACB8A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 558,
+     "y": 714,
+     "w": 366,
+     "h": 96,
+     "text": "Partners on the floor and every prospect's rep in the room.",
+     "family": "Jost",
+     "size": 21,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4,
+     "align": "center"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 1069,
+     "y": 370,
+     "w": 220,
+     "h": 220,
+     "fill": "#542f74"
+    },
+    {
+     "kind": "text",
+     "x": 972,
+     "y": 622,
+     "w": 414,
+     "h": 40,
+     "text": "Aisha Bello",
+     "family": "Bodoni Moda",
+     "size": 30,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 972,
+     "y": 668,
+     "w": 414,
+     "h": 28,
+     "text": "Experience",
+     "family": "Jost",
+     "size": 17,
+     "weight": 600,
+     "color": "#FF6DB6",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 996,
+     "y": 714,
+     "w": 366,
+     "h": 96,
+     "text": "Registration, the product wall, workshops and the terrace.",
+     "family": "Jost",
+     "size": 21,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4,
+     "align": "center"
+    },
+    {
+     "kind": "ellipse",
+     "name": "Photo",
+     "x": 1507,
+     "y": 370,
+     "w": 220,
+     "h": 220,
+     "fill": "#504e6f"
+    },
+    {
+     "kind": "text",
+     "x": 1410,
+     "y": 622,
+     "w": 414,
+     "h": 40,
+     "text": "Priya Raman",
+     "family": "Bodoni Moda",
+     "size": 30,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.06,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1410,
+     "y": 668,
+     "w": 414,
+     "h": 28,
+     "text": "The keynote",
+     "family": "Jost",
+     "size": 17,
+     "weight": 600,
+     "color": "#EACB8A",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1434,
+     "y": 714,
+     "w": 366,
+     "h": 96,
+     "text": "The plan, the launch, and the two customers on stage.",
+     "family": "Jost",
+     "size": 21,
+     "weight": 400,
+     "color": "#BCBFDA",
+     "lineHeight": 1.4,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 910,
+     "w": 760,
+     "h": 46,
+     "text": "all four have run one of these before",
+     "family": "Parisienne",
+     "size": 37,
+     "weight": 400,
+     "color": "#FF6DB6",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "op-peep-89",
+     "x": 223,
+     "y": 392,
+     "w": 160,
+     "h": 176
+    },
+    {
+     "asset": "op-peep-46",
+     "x": 661,
+     "y": 392,
+     "w": 160,
+     "h": 176
+    },
+    {
+     "asset": "op-peep-96",
+     "x": 1099,
+     "y": 392,
+     "w": 160,
+     "h": 176
+    },
+    {
+     "asset": "op-peep-11",
+     "x": 1537,
+     "y": 392,
+     "w": 160,
+     "h": 176
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#131843",
+      0
+     ],
+     [
+      "#070A24",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 1160,
+     "y": 420,
+     "w": 760,
+     "h": 700,
+     "text": "27",
+     "family": "Bodoni Moda",
+     "size": 620,
+     "weight": 500,
+     "color": "#262a50",
+     "align": "right",
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 64,
+     "w": 1728,
+     "h": 2,
+     "fill": "#2A3170"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#FF3D9E",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#FF3D9E",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#FF3D9E",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Loop",
+     "family": "Jost",
+     "size": 22,
+     "weight": 600,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 60,
+     "text": "The decision",
+     "family": "Parisienne",
+     "size": 46,
+     "weight": 400,
+     "color": "#FF6DB6",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 133,
+     "text": "One yes, by Friday",
+     "family": "Bodoni Moda",
+     "size": 112,
+     "weight": 800,
+     "color": "#FBF5EA",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 467,
+     "w": 940,
+     "h": 120,
+     "text": "Approve the venue deposit and the $380K budget today; the venue holds the date until Friday.",
+     "family": "Jost",
+     "size": 28,
+     "weight": 400,
+     "color": "#B9BCD6",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#FF3D9E"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "mei@loop.example",
+     "family": "Jost",
+     "size": 24,
+     "weight": 500,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "file-text",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#FF3D9E"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "Full budget and venue proposal attached",
+     "family": "Jost",
+     "size": 24,
+     "weight": 500,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "calendar",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#FF3D9E"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "Venue hold expires: Friday",
+     "family": "Jost",
+     "size": 24,
+     "weight": 500,
+     "color": "#FBF5EA",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Approve the budget",
+     "fill": "#FF3D9E",
+     "color": "#070A24",
+     "family": "Jost",
+     "size": 22,
+     "weight": 700,
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "09 / 9",
+     "family": "Jost",
+     "size": 18,
+     "weight": 500,
+     "color": "#B9BCD6",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 875,
+     "w": 720,
+     "h": 49,
+     "text": "a yes today, invitations Monday",
+     "family": "Parisienne",
+     "size": 39,
+     "weight": 400,
+     "color": "#FF6DB6",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day4-polariod",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p5-n3",
+   "kind": "text",
+   "label": "Title",
+   "hint": "One short line"
+  },
+  {
+   "node": "p5-n29",
+   "kind": "text",
+   "label": "Headline act",
+   "hint": "The block the day is built around"
+  },
+  {
+   "node": "p8-n10",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n12",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n14",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Event Proposal",
-  "theme": "persuasive, concrete",
-  "pages": [
-   {
-    "title": "The event",
-    "points": [
-     "What it is and who it is for"
-    ],
-    "visualRole": "cover"
-   },
-   {
-    "title": "Why now",
-    "points": [
-     "The moment this event captures"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "The experience",
-    "points": [
-     "The arc of the day, from doors to encore"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "Budget",
-    "points": [
-     "Costs, sponsorships, and the break-even line"
-    ],
-    "visualRole": "data"
-   },
-   {
-    "title": "The team",
-    "points": [
-     "Who runs what"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "The decision",
-    "points": [
-     "What we need approved today"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 72
 }

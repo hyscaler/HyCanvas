@@ -18,11 +18,14 @@ package httpapi
 import (
 	"context"
 	"errors"
+	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 
 	"hycanvas/backend/internal/ai"
+	"hycanvas/backend/internal/stock"
 	"hycanvas/backend/internal/uploads"
 )
 
@@ -49,9 +52,32 @@ type imageUploader func(ctx context.Context, userID, workspaceID, img string) (i
 type imagePlacement struct {
 	Requested int `json:"requested"`
 	Placed    int `json:"placed"`
+	// How the placed pictures were sourced: an asset the workspace already
+	// had for the same prompt, a licensed stock photo, or a generated image.
+	Reused    int `json:"reused,omitempty"`
+	Stock     int `json:"stock,omitempty"`
+	Generated int `json:"generated,omitempty"`
 	// Unsupported is true when the workspace's provider cannot generate
-	// images at all, so every region was left as a stand-in on purpose.
+	// images at all; regions the reuse and stock steps could not fill were
+	// left as stand-ins on purpose.
 	Unsupported bool `json:"unsupported,omitempty"`
+}
+
+// pictureSources are the steps of the picture ladder the editor's image queue
+// runs, in the same order: reuse an asset already tagged with the prompt
+// key, then a free stock photo for a short concrete subject, then generation;
+// whatever lands is tagged so the next identical prompt reuses it. Each step
+// is a function so the job wires services and the tests wire stand-ins.
+type pictureSources struct {
+	// reuse finds a workspace asset carrying the prompt's key.
+	reuse func(ctx context.Context, userID, workspaceID, key string) (id, url, mime string, ok bool)
+	// stock finds a free photo for a short concrete subject and hands back
+	// where to fetch it and what to credit.
+	stock func(ctx context.Context, userID, subject string) (sourceURL, stockID string, license map[string]any, ok bool)
+	gen   imageGenerator
+	up    imageUploader
+	// tag records the prompt key on a stored asset.
+	tag func(ctx context.Context, userID, assetID, key string)
 }
 
 // generatedRegion is one stand-in to fill.
@@ -95,14 +121,20 @@ func taggedRegions(file map[string]any) []generatedRegion {
 	return out
 }
 
-// placeGeneratedImages fills the deck's tagged regions in place and returns
-// what happened. It never returns an error: a region that cannot be filled
-// keeps its stand-in, which is exactly what the editor shows for the same
-// situation.
+// placeGeneratedImages is the generation-only ladder, kept for callers and
+// tests that have no reuse or stock step to offer.
 func placeGeneratedImages(ctx context.Context, file map[string]any, userID, workspaceID string, gen imageGenerator, up imageUploader) imagePlacement {
+	return placePictures(ctx, file, userID, workspaceID, pictureSources{gen: gen, up: up})
+}
+
+// placePictures fills the deck's tagged regions in place, through the same
+// ladder the editor's image queue runs, and returns what happened. It never
+// returns an error: a region no step could fill keeps its stand-in, which is
+// exactly what the editor shows for the same situation.
+func placePictures(ctx context.Context, file map[string]any, userID, workspaceID string, src pictureSources) imagePlacement {
 	regions := taggedRegions(file)
 	result := imagePlacement{Requested: len(regions)}
-	if len(regions) == 0 || gen == nil || up == nil {
+	if len(regions) == 0 || src.up == nil {
 		return result
 	}
 
@@ -113,6 +145,9 @@ func placeGeneratedImages(ctx context.Context, file map[string]any, userID, work
 		mime   string
 		ok     bool
 		unsup  bool
+		source string
+		// Provenance for a stock photo, stamped on the node as the editor does.
+		provenance map[string]any
 	}
 	outcomes := make([]outcome, len(regions))
 	var wg sync.WaitGroup
@@ -125,13 +160,49 @@ func placeGeneratedImages(ctx context.Context, file map[string]any, userID, work
 			defer func() { <-sem }()
 			ictx, cancel := context.WithTimeout(ctx, perImageTimeout)
 			defer cancel()
-			img, err := gen(ictx, workspaceID, r.prompt, r.size)
+			key := promptAssetKey(r.prompt)
+			// 1. Reuse: the workspace already made this picture once.
+			if src.reuse != nil {
+				if id, url, mime, ok := src.reuse(ictx, userID, workspaceID, key); ok {
+					outcomes[i] = outcome{region: r, id: id, url: url, mime: mime, ok: true, source: "reused"}
+					return
+				}
+			}
+			// 2. Stock: a short concrete subject a photo library can match.
+			// Routed on the subject, never the stylized prompt, as the editor
+			// does; a hit is imported into the workspace, never hotlinked.
+			if src.stock != nil {
+				if subject := imageSubjectOf(r.prompt); subject != "" && routeImageSource(subject) == "stock" {
+					if source, stockID, license, ok := src.stock(ictx, userID, subject); ok {
+						if id, url, mime, ok := src.up(ictx, userID, workspaceID, source); ok {
+							prov := map[string]any{"origin": "stock", "stockAssetId": stockID}
+							if license != nil {
+								prov["license"] = license
+							}
+							if src.tag != nil {
+								src.tag(ictx, userID, id, key)
+							}
+							outcomes[i] = outcome{region: r, id: id, url: url, mime: mime, ok: true, source: "stock", provenance: prov}
+							return
+						}
+					}
+				}
+			}
+			// 3. Generate, then tag the stored asset with the prompt key.
+			if src.gen == nil {
+				outcomes[i] = outcome{region: r}
+				return
+			}
+			img, err := src.gen(ictx, workspaceID, r.prompt, r.size)
 			if err != nil {
 				outcomes[i] = outcome{region: r, unsup: isImageUnsupported(err)}
 				return
 			}
-			id, url, mime, ok := up(ictx, userID, workspaceID, img)
-			outcomes[i] = outcome{region: r, id: id, url: url, mime: mime, ok: ok}
+			id, url, mime, ok := src.up(ictx, userID, workspaceID, img)
+			if ok && src.tag != nil {
+				src.tag(ictx, userID, id, key)
+			}
+			outcomes[i] = outcome{region: r, id: id, url: url, mime: mime, ok: ok, source: "generated"}
 		}(i, r)
 	}
 	wg.Wait()
@@ -147,11 +218,141 @@ func placeGeneratedImages(ctx context.Context, file map[string]any, userID, work
 			continue
 		}
 		becomeImageNode(o.region.node, o.id)
+		if o.provenance != nil {
+			data := asMap(o.region.node["data"])
+			if data == nil {
+				data = map[string]any{}
+				o.region.node["data"] = data
+			}
+			for k, v := range o.provenance {
+				data[k] = v
+			}
+		}
 		assets = append(assets, map[string]any{"id": o.id, "kind": "image", "url": o.url, "mime": o.mime})
 		result.Placed++
+		switch o.source {
+		case "reused":
+			result.Reused++
+		case "stock":
+			result.Stock++
+		default:
+			result.Generated++
+		}
 	}
 	file["assets"] = assets
 	return result
+}
+
+// pictureSourcesFor wires the ladder to the services: the uploads service
+// for reuse, import and tagging; the stock service for licensed photos; the
+// AI service for generation. Any missing service drops its step.
+func pictureSourcesFor(aiSvc *ai.Service, up *uploads.Service, st *stock.Service) pictureSources {
+	src := pictureSources{up: uploadAdapter(up)}
+	if aiSvc != nil {
+		src.gen = aiSvc.Image
+	}
+	if up != nil {
+		src.reuse = func(ctx context.Context, userID, workspaceID, key string) (string, string, string, bool) {
+			hits, err := up.List(ctx, userID, workspaceID, nil, false, key, "")
+			if err != nil || len(hits) == 0 || hits[0].URL == "" {
+				return "", "", "", false
+			}
+			mime := "image/png"
+			if hits[0].MimeType != nil && *hits[0].MimeType != "" {
+				mime = *hits[0].MimeType
+			}
+			return hits[0].ID, hits[0].URL, mime, true
+		}
+		src.tag = func(ctx context.Context, userID, assetID, key string) {
+			tags := []string{key}
+			_, _ = up.UpdateAsset(ctx, userID, assetID, nil, nil, false, &tags)
+		}
+	}
+	if st != nil {
+		src.stock = func(ctx context.Context, userID, subject string) (string, string, map[string]any, bool) {
+			hits, err := st.Search(ctx, stock.Query{Text: subject, Kind: "photo", Limit: 5}, userID)
+			if err != nil {
+				return "", "", nil, false
+			}
+			return pickFreeStockPhoto(hits)
+		}
+	}
+	return src
+}
+
+// pickFreeStockPhoto chooses the first hit an automatic insertion may use:
+// one whose license asks for no credit (a generated deck cannot promise the
+// attribution compiles) and that has an absolute URL to import from.
+func pickFreeStockPhoto(hits []map[string]any) (sourceURL, stockID string, license map[string]any, ok bool) {
+	for _, h := range hits {
+		lic := asMap(h["license"])
+		if req, _ := lic["attributionRequired"].(bool); req {
+			continue
+		}
+		src, _ := h["sourceUrl"].(string)
+		if src == "" {
+			src, _ = h["previewUrl"].(string)
+		}
+		if !strings.HasPrefix(src, "http://") && !strings.HasPrefix(src, "https://") {
+			continue
+		}
+		id, _ := h["id"].(string)
+		return src, id, lic, true
+	}
+	return "", "", nil, false
+}
+
+// imageSubjectOf recovers the concrete subject from a composed picture
+// prompt. The composer writes "<subject>, <treatment style>", so the subject
+// is everything before the first comma; a prompt without one is its own
+// subject.
+func imageSubjectOf(prompt string) string {
+	if i := strings.Index(prompt, ","); i >= 0 {
+		return strings.TrimSpace(prompt[:i])
+	}
+	return strings.TrimSpace(prompt)
+}
+
+// promptAssetKey is the reuse tag for a prompt, computed exactly as the
+// editor computes it (@hc/aistudio promptAssetKey: normalized, FNV-1a
+// 32-bit), so a deck generated through the API reuses what the editor made
+// for the same prompt, and the other way round.
+func promptAssetKey(prompt string) string {
+	norm := strings.TrimSpace(strings.Join(strings.Fields(strings.ToLower(prompt)), " "))
+	h := uint32(0x811c9dc5)
+	for _, r := range norm {
+		// The editor hashes UTF-16 code units; every character the composer
+		// writes is in the basic plane, where code unit and code point agree.
+		h ^= uint32(r)
+		h *= 0x01000193
+	}
+	return fmt.Sprintf("aiimg-%08x", h)
+}
+
+// stylizedMarkers mirror the editor's: a prompt carrying one wants a
+// generated image, whatever its length.
+var stylizedMarkers = regexp.MustCompile(`(?i)\b(abstract|gradient|texture|pattern|illustration|3d|render(?:ed|ing)?|isometric|watercolor|neon|surreal|futuristic|low.?poly|pixel.?art|line.?art|flat.?design|minimalis\w*|vaporwave|cinematic|dramatic|bokeh|logo|icon|background|backdrop|wallpaper|style|styled)\b`)
+
+var glueWords = map[string]bool{"a": true, "an": true, "the": true, "of": true, "in": true, "on": true, "at": true, "with": true, "and": true}
+
+// routeImageSource mirrors the editor's routing: a short concrete subject
+// (five significant words or fewer, no stylized marker) is well served by
+// stock photography; everything else is generated.
+func routeImageSource(prompt string) string {
+	p := strings.TrimSpace(prompt)
+	if p == "" || stylizedMarkers.MatchString(p) {
+		return "generate"
+	}
+	n := 0
+	for _, w := range strings.Fields(strings.ToLower(p)) {
+		if !glueWords[w] {
+			n++
+		}
+	}
+	if n <= 5 {
+		return "stock"
+	}
+	return "generate"
 }
 
 // becomeImageNode turns a stand-in shape into the image node the editor would

@@ -14,7 +14,8 @@
  ],
  "styleTags": [
   "modern",
-  "bold"
+  "bold",
+  "dark"
  ],
  "size": [
   1920,
@@ -30,19 +31,64 @@
    "role": "body",
    "family": "Inter",
    "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "JetBrains Mono",
+   "weight": 500
+  },
+  {
+   "role": "label",
+   "family": "JetBrains Mono",
+   "weight": 500
   }
  ],
  "pages": [
   {
-   "name": "Title",
-   "bg": "#0B1220",
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#0B1220",
+      0
+     ],
+     [
+      "#040812",
+      1
+     ]
+    ]
+   },
    "nodes": [
     {
      "kind": "ellipse",
-     "x": 1520,
-     "y": -240,
-     "w": 620,
-     "h": 620,
+     "x": 1380,
+     "y": -420,
+     "w": 1100,
+     "h": 1100,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#8B5CF6",
+        0
+       ],
+       [
+        "#040812",
+        1
+       ]
+      ],
+      "radial": true
+     },
+     "opacity": 0.6,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": -380,
+     "y": 620,
+     "w": 900,
+     "h": 900,
      "fill": {
       "angle": 135,
       "stops": [
@@ -51,1037 +97,1084 @@
         0
        ],
        [
-        "#8B5CF6",
+        "#040812",
         1
        ]
-      ]
+      ],
+      "radial": true
      },
-     "bleed": true
-    },
-    {
-     "kind": "ellipse",
-     "x": -220,
-     "y": 860,
-     "w": 560,
-     "h": 560,
-     "fill": "#1A1B3A",
+     "opacity": 0.26,
      "bleed": true
     },
     {
      "kind": "rect",
+     "x": 320,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 640,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 960,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 1280,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 1600,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 270,
+     "w": 1920,
+     "h": 1,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 540,
+     "w": 1920,
+     "h": 1,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 810,
+     "w": 1920,
+     "h": 1,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "ellipse",
+     "x": 1564,
+     "y": 775,
+     "w": 8,
+     "h": 8,
+     "fill": "#22D3EE",
+     "opacity": 0.6
+    },
+    {
+     "kind": "ellipse",
+     "x": 1195,
+     "y": 147,
+     "w": 6,
+     "h": 6,
+     "fill": "#22D3EE",
+     "opacity": 0.79
+    },
+    {
+     "kind": "ellipse",
+     "x": 1266,
+     "y": 716,
+     "w": 6,
+     "h": 6,
+     "fill": "#22D3EE",
+     "opacity": 0.58
+    },
+    {
+     "kind": "ellipse",
+     "x": 1252,
+     "y": 596,
+     "w": 8,
+     "h": 8,
+     "fill": "#22D3EE",
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1336,
+     "y": 310,
+     "w": 6,
+     "h": 6,
+     "fill": "#22D3EE",
+     "opacity": 0.43999999999999995
+    },
+    {
+     "kind": "ellipse",
+     "x": 1832,
+     "y": 760,
+     "w": 7,
+     "h": 7,
+     "fill": "#22D3EE",
+     "opacity": 0.5599999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1414,
+     "y": 28,
+     "w": 8,
+     "h": 8,
+     "fill": "#8B5CF6",
+     "opacity": 0.57
+    },
+    {
+     "kind": "ellipse",
+     "x": 1583,
+     "y": 16,
+     "w": 6,
+     "h": 6,
+     "fill": "#8B5CF6",
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1694,
+     "y": 731,
+     "w": 6,
+     "h": 6,
+     "fill": "#8B5CF6",
+     "opacity": 0.38999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1764,
+     "y": 885,
+     "w": 9,
+     "h": 9,
+     "fill": "#8B5CF6",
+     "opacity": 0.44999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1464,
+     "y": 864,
+     "w": 6,
+     "h": 6,
+     "fill": "#8B5CF6",
+     "opacity": 0.6599999999999999
+    },
+    {
+     "kind": "rect",
      "x": 96,
-     "y": 102,
-     "w": 20,
-     "h": 20,
-     "fill": {
-      "angle": 135,
-      "stops": [
-       [
-        "#22D3EE",
-        0
-       ],
-       [
-        "#8B5CF6",
-        1
-       ]
-      ]
-     },
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#22D3EE",
      "radius": 6
     },
     {
      "kind": "text",
-     "x": 130,
-     "y": 95,
-     "w": 400,
-     "h": 34,
-     "text": "Northbeam",
-     "family": "Manrope",
-     "size": 26,
-     "weight": 700,
-     "color": "#F8FAFC",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "rect",
-     "x": 96,
-     "y": 392,
-     "w": 96,
-     "h": 8,
-     "fill": {
-      "angle": 90,
-      "stops": [
-       [
-        "#22D3EE",
-        0
-       ],
-       [
-        "#8B5CF6",
-        1
-       ]
-      ]
-     },
-     "radius": 4
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 428,
-     "w": 1100,
+     "x": 132,
+     "y": 93,
+     "w": 700,
      "h": 30,
-     "text": "Q3 2026 \u00b7 Product & engineering review",
+     "text": "Northbeam",
      "family": "Inter",
      "size": 22,
      "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 36,
+     "text": "// q3 2026, product and engineering",
+     "family": "JetBrains Mono",
+     "size": 28,
+     "weight": 500,
      "color": "#22D3EE",
-     "letterSpacing": 4,
-     "upper": true,
      "lineHeight": 1.2
     },
     {
      "kind": "text",
      "x": 96,
-     "y": 490,
-     "w": 1400,
-     "h": 270,
+     "y": 446,
+     "w": 1000,
+     "h": 245,
      "text": "What we shipped,\nwhat's next",
      "family": "Manrope",
      "size": 112,
      "weight": 700,
      "color": "#F8FAFC",
-     "lineHeight": 1.08
+     "lineHeight": 1.02
     },
     {
      "kind": "text",
      "x": 96,
-     "y": 788,
-     "w": 1300,
-     "h": 42,
+     "y": 721,
+     "w": 900,
+     "h": 80,
      "text": "The platform team's quarter in review: releases, reliability, and the road to Q1.",
      "family": "Inter",
      "size": 28,
      "weight": 400,
      "color": "#94A3B8",
-     "lineHeight": 1.35
+     "lineHeight": 1.4
     },
     {
      "kind": "text",
      "x": 96,
-     "y": 952,
-     "w": 700,
-     "h": 30,
-     "text": "October 14, 2026 \u00b7 Internal",
-     "family": "Inter",
-     "size": 22,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "October 14, 2026  ·  Internal",
+     "family": "JetBrains Mono",
+     "size": 18,
      "weight": 500,
      "color": "#94A3B8",
-     "lineHeight": 1.2
+     "lineHeight": 1.3
     },
     {
      "kind": "text",
-     "x": 1524,
-     "y": 952,
-     "w": 300,
-     "h": 30,
-     "text": "01 / 05",
-     "family": "Inter",
-     "size": 22,
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
      "weight": 500,
      "color": "#94A3B8",
-     "align": "right",
-     "lineHeight": 1.2
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#111A30",
+     "radius": 16,
+     "stroke": "#1B2640",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 116,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "12",
+     "family": "JetBrains Mono",
+     "size": 26,
+     "weight": 700,
+     "color": "#22D3EE",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 246,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "releases",
+     "family": "JetBrains Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 396,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#111A30",
+     "radius": 16,
+     "stroke": "#1B2640",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 416,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "0",
+     "family": "JetBrains Mono",
+     "size": 26,
+     "weight": 700,
+     "color": "#22D3EE",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 546,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "rollbacks",
+     "family": "JetBrains Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 696,
+     "y": 848,
+     "w": 276,
+     "h": 64,
+     "fill": "#111A30",
+     "radius": 16,
+     "stroke": "#1B2640",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 860,
+     "w": 130,
+     "h": 40,
+     "text": "3",
+     "family": "JetBrains Mono",
+     "size": 26,
+     "weight": 700,
+     "color": "#22D3EE",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 846,
+     "y": 868,
+     "w": 110,
+     "h": 26,
+     "text": "teams",
+     "family": "JetBrains Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1180,
+     "y": 150,
+     "w": 640,
+     "h": 640,
+     "fill": "#22D3EE",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1244,
+     "y": 214,
+     "w": 512,
+     "h": 512,
+     "fill": "#22D3EE",
+     "opacity": 0.16,
+     "bleed": true
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-monitor",
+     "x": 1230,
+     "y": 200,
+     "w": 540,
+     "h": 540
     }
    ]
   },
   {
    "name": "Agenda",
-   "bg": "#0B1220",
+   "bg": "#0D1528",
    "nodes": [
     {
-     "kind": "rect",
-     "x": 96,
-     "y": 96,
-     "w": 96,
-     "h": 8,
+     "kind": "ellipse",
+     "x": 1500,
+     "y": -520,
+     "w": 1000,
+     "h": 1000,
      "fill": {
-      "angle": 90,
+      "angle": 135,
       "stops": [
        [
-        "#22D3EE",
+        "#A78BFA",
         0
        ],
        [
-        "#8B5CF6",
+        "#080D1C",
         1
        ]
-      ]
+      ],
+      "radial": true
      },
-     "radius": 4
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 132,
-     "w": 600,
-     "h": 30,
-     "text": "Agenda",
-     "family": "Inter",
-     "size": 22,
-     "weight": 600,
-     "color": "#22D3EE",
-     "letterSpacing": 4,
-     "upper": true,
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 188,
-     "w": 1000,
-     "h": 92,
-     "text": "What we'll cover",
-     "family": "Manrope",
-     "size": 76,
-     "weight": 700,
-     "color": "#F8FAFC",
-     "lineHeight": 1.05
+     "opacity": 0.3,
+     "bleed": true
     },
     {
      "kind": "rect",
-     "x": 96,
-     "y": 360,
-     "w": 56,
-     "h": 56,
-     "fill": "#141D33",
-     "radius": 16
+     "x": 320,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
     },
     {
      "kind": "rect",
-     "x": 96,
-     "y": 480,
-     "w": 56,
-     "h": 56,
-     "fill": "#141D33",
-     "radius": 16
+     "x": 640,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
     },
     {
      "kind": "rect",
-     "x": 96,
-     "y": 600,
-     "w": 56,
-     "h": 56,
-     "fill": "#141D33",
-     "radius": 16
-    },
-    {
-     "kind": "rect",
-     "x": 96,
-     "y": 720,
-     "w": 56,
-     "h": 56,
-     "fill": "#141D33",
-     "radius": 16
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 360,
-     "w": 56,
-     "h": 56,
-     "text": "01",
-     "family": "Inter",
-     "size": 22,
-     "weight": 700,
-     "color": "#22D3EE",
-     "align": "center",
-     "vAlign": "middle",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 480,
-     "w": 56,
-     "h": 56,
-     "text": "02",
-     "family": "Inter",
-     "size": 22,
-     "weight": 700,
-     "color": "#22D3EE",
-     "align": "center",
-     "vAlign": "middle",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 600,
-     "w": 56,
-     "h": 56,
-     "text": "03",
-     "family": "Inter",
-     "size": 22,
-     "weight": 700,
-     "color": "#22D3EE",
-     "align": "center",
-     "vAlign": "middle",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 720,
-     "w": 56,
-     "h": 56,
-     "text": "04",
-     "family": "Inter",
-     "size": 22,
-     "weight": 700,
-     "color": "#22D3EE",
-     "align": "center",
-     "vAlign": "middle",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 192,
-     "y": 366,
-     "w": 1000,
-     "h": 52,
-     "text": "Shipped in Q3",
-     "family": "Manrope",
-     "size": 38,
-     "weight": 600,
-     "color": "#F8FAFC",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 192,
-     "y": 486,
-     "w": 1000,
-     "h": 52,
-     "text": "Reliability and quality",
-     "family": "Manrope",
-     "size": 38,
-     "weight": 600,
-     "color": "#F8FAFC",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 192,
-     "y": 606,
-     "w": 1000,
-     "h": 52,
-     "text": "Roadmap for the next two quarters",
-     "family": "Manrope",
-     "size": 38,
-     "weight": 600,
-     "color": "#F8FAFC",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 192,
-     "y": 726,
-     "w": 1000,
-     "h": 52,
-     "text": "Metrics and asks",
-     "family": "Manrope",
-     "size": 38,
-     "weight": 600,
-     "color": "#F8FAFC",
-     "lineHeight": 1.2
+     "x": 960,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
     },
     {
      "kind": "rect",
      "x": 1280,
-     "y": 360,
-     "w": 544,
-     "h": 416,
-     "fill": "#141D33",
-     "radius": 20
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 1600,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
     },
     {
      "kind": "text",
-     "x": 1328,
-     "y": 416,
-     "w": 448,
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Agenda",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "What we'll cover",
+     "family": "Manrope",
+     "size": 62,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northbeam  ·  Q3 2026 review",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 250,
+     "w": 96,
+     "h": 60,
+     "text": "01",
+     "family": "Manrope",
+     "size": 44,
+     "weight": 700,
+     "color": "#22D3EE",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 248,
+     "w": 900,
+     "h": 44,
+     "text": "Shipped in Q3",
+     "family": "Manrope",
+     "size": 34,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 294,
+     "w": 900,
+     "h": 30,
+     "text": "Twelve releases across three teams",
+     "family": "Inter",
+     "size": 21,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 252,
+     "w": 160,
+     "h": 34,
+     "label": "10 min",
+     "fill": "#153951",
+     "color": "#22D3EE",
+     "family": "Inter",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 350,
+     "w": 1204,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 368,
+     "w": 96,
+     "h": 60,
+     "text": "02",
+     "family": "Manrope",
+     "size": 44,
+     "weight": 700,
+     "color": "#22D3EE",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 366,
+     "w": 900,
+     "h": 44,
+     "text": "Reliability and quality",
+     "family": "Manrope",
+     "size": 34,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 412,
+     "w": 900,
+     "h": 30,
+     "text": "The numbers behind zero rollbacks",
+     "family": "Inter",
+     "size": 21,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 370,
+     "w": 160,
+     "h": 34,
+     "label": "10 min",
+     "fill": "#153951",
+     "color": "#22D3EE",
+     "family": "Inter",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 468,
+     "w": 1204,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 486,
+     "w": 96,
+     "h": 60,
+     "text": "03",
+     "family": "Manrope",
+     "size": 44,
+     "weight": 700,
+     "color": "#22D3EE",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 484,
+     "w": 900,
+     "h": 44,
+     "text": "Roadmap for the next two quarters",
+     "family": "Manrope",
+     "size": 34,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 530,
+     "w": 900,
+     "h": 30,
+     "text": "Now, next and later, with owners",
+     "family": "Inter",
+     "size": 21,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 488,
+     "w": 160,
+     "h": 34,
+     "label": "15 min",
+     "fill": "#153951",
+     "color": "#22D3EE",
+     "family": "Inter",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 586,
+     "w": 1204,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 604,
+     "w": 96,
+     "h": 60,
+     "text": "04",
+     "family": "Manrope",
+     "size": 44,
+     "weight": 700,
+     "color": "#22D3EE",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 602,
+     "w": 900,
+     "h": 44,
+     "text": "Metrics and asks",
+     "family": "Manrope",
+     "size": 34,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 648,
+     "w": 900,
+     "h": 30,
+     "text": "Two numbers, three asks",
+     "family": "Inter",
+     "size": 21,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 606,
+     "w": 160,
+     "h": 34,
+     "label": "10 min",
+     "fill": "#153951",
+     "color": "#22D3EE",
+     "family": "Inter",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 704,
+     "w": 1204,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 722,
+     "w": 96,
+     "h": 60,
+     "text": "05",
+     "family": "Manrope",
+     "size": 44,
+     "weight": 700,
+     "color": "#22D3EE",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 720,
+     "w": 900,
+     "h": 44,
+     "text": "Live demo",
+     "family": "Manrope",
+     "size": 34,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 216,
+     "y": 766,
+     "w": 900,
+     "h": 30,
+     "text": "The new deploy pipeline",
+     "family": "Inter",
+     "size": 21,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 1136,
+     "y": 724,
+     "w": 160,
+     "h": 34,
+     "label": "10 min",
+     "fill": "#153951",
+     "color": "#22D3EE",
+     "family": "Inter",
+     "size": 15,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 822,
+     "w": 1204,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "rect",
+     "x": 1396,
+     "y": 244,
+     "w": 428,
+     "h": 560,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#0B1220",
+        0
+       ],
+       [
+        "#040812",
+        1
+       ]
+      ]
+     },
+     "radius": 16
+    },
+    {
+     "kind": "rect",
+     "x": 1396,
+     "y": 244,
+     "w": 428,
+     "h": 6,
+     "fill": "#22D3EE",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 284,
+     "w": 348,
      "h": 28,
      "text": "The quarter",
-     "family": "Inter",
+     "family": "JetBrains Mono",
      "size": 20,
      "weight": 600,
      "color": "#22D3EE",
-     "letterSpacing": 3,
+     "letterSpacing": 4,
      "upper": true,
      "lineHeight": 1.2
     },
     {
      "kind": "text",
-     "x": 1328,
-     "y": 458,
-     "w": 448,
-     "h": 64,
+     "x": 1436,
+     "y": 324,
+     "w": 348,
+     "h": 120,
      "text": "90 days",
      "family": "Manrope",
-     "size": 54,
-     "weight": 700,
-     "color": "#F8FAFC",
-     "lineHeight": 1.1
-    },
-    {
-     "kind": "text",
-     "x": 1328,
-     "y": 552,
-     "w": 448,
-     "h": 72,
-     "text": "12 releases across 3 teams,\nzero rollback events.",
-     "family": "Inter",
-     "size": 24,
-     "weight": 400,
-     "color": "#94A3B8",
-     "lineHeight": 1.4
-    },
-    {
-     "kind": "rect",
-     "x": 1328,
-     "y": 664,
-     "w": 448,
-     "h": 2,
-     "fill": "#243352"
-    },
-    {
-     "kind": "text",
-     "x": 1328,
-     "y": 690,
-     "w": 448,
-     "h": 30,
-     "text": "Live demo: the new deploy pipeline",
-     "family": "Inter",
-     "size": 22,
-     "weight": 500,
-     "color": "#E2E8F0",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 952,
-     "w": 900,
-     "h": 30,
-     "text": "Northbeam \u00b7 Q3 2026 review",
-     "family": "Inter",
-     "size": 22,
-     "weight": 500,
-     "color": "#94A3B8",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 1524,
-     "y": 952,
-     "w": 300,
-     "h": 30,
-     "text": "02 / 05",
-     "family": "Inter",
-     "size": 22,
-     "weight": 500,
-     "color": "#94A3B8",
-     "align": "right",
-     "lineHeight": 1.2
-    }
-   ]
-  },
-  {
-   "name": "Roadmap",
-   "bg": "#0B1220",
-   "nodes": [
-    {
-     "kind": "rect",
-     "x": 96,
-     "y": 96,
-     "w": 96,
-     "h": 8,
-     "fill": {
-      "angle": 90,
-      "stops": [
-       [
-        "#22D3EE",
-        0
-       ],
-       [
-        "#8B5CF6",
-        1
-       ]
-      ]
-     },
-     "radius": 4
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 132,
-     "w": 600,
-     "h": 30,
-     "text": "Roadmap",
-     "family": "Inter",
-     "size": 22,
-     "weight": 600,
-     "color": "#22D3EE",
-     "letterSpacing": 4,
-     "upper": true,
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 188,
-     "w": 1000,
-     "h": 92,
-     "text": "Next two quarters",
-     "family": "Manrope",
      "size": 76,
      "weight": 700,
      "color": "#F8FAFC",
-     "lineHeight": 1.05
-    },
-    {
-     "kind": "rect",
-     "x": 96,
-     "y": 340,
-     "w": 520,
-     "h": 500,
-     "fill": "#141D33",
-     "radius": 20
-    },
-    {
-     "kind": "rect",
-     "x": 700,
-     "y": 340,
-     "w": 520,
-     "h": 500,
-     "fill": "#141D33",
-     "radius": 20
-    },
-    {
-     "kind": "rect",
-     "x": 1304,
-     "y": 340,
-     "w": 520,
-     "h": 500,
-     "fill": "#141D33",
-     "radius": 20
-    },
-    {
-     "kind": "rect",
-     "x": 144,
-     "y": 388,
-     "w": 64,
-     "h": 6,
-     "fill": {
-      "angle": 90,
-      "stops": [
-       [
-        "#22D3EE",
-        0
-       ],
-       [
-        "#8B5CF6",
-        1
-       ]
-      ]
-     },
-     "radius": 3
-    },
-    {
-     "kind": "rect",
-     "x": 748,
-     "y": 388,
-     "w": 64,
-     "h": 6,
-     "fill": {
-      "angle": 90,
-      "stops": [
-       [
-        "#22D3EE",
-        0
-       ],
-       [
-        "#8B5CF6",
-        1
-       ]
-      ]
-     },
-     "radius": 3
-    },
-    {
-     "kind": "rect",
-     "x": 1352,
-     "y": 388,
-     "w": 64,
-     "h": 6,
-     "fill": {
-      "angle": 90,
-      "stops": [
-       [
-        "#22D3EE",
-        0
-       ],
-       [
-        "#8B5CF6",
-        1
-       ]
-      ]
-     },
-     "radius": 3
+     "lineHeight": 1.06
     },
     {
      "kind": "text",
-     "x": 144,
-     "y": 420,
-     "w": 424,
+     "x": 1436,
+     "y": 480,
+     "w": 120,
      "h": 26,
-     "text": "Now \u00b7 Q4 2026",
-     "family": "Inter",
-     "size": 20,
-     "weight": 700,
-     "color": "#22D3EE",
-     "letterSpacing": 3,
-     "upper": true,
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 748,
-     "y": 420,
-     "w": 424,
-     "h": 26,
-     "text": "Next \u00b7 Q1 2027",
-     "family": "Inter",
-     "size": 20,
-     "weight": 700,
-     "color": "#A78BFA",
-     "letterSpacing": 3,
-     "upper": true,
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 1352,
-     "y": 420,
-     "w": 424,
-     "h": 26,
-     "text": "Later \u00b7 H2 2027",
-     "family": "Inter",
-     "size": 20,
-     "weight": 700,
-     "color": "#94A3B8",
-     "letterSpacing": 3,
-     "upper": true,
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 144,
-     "y": 462,
-     "w": 424,
-     "h": 96,
-     "text": "Realtime\ncollaboration",
-     "family": "Manrope",
-     "size": 40,
-     "weight": 700,
-     "color": "#F8FAFC",
-     "lineHeight": 1.1
-    },
-    {
-     "kind": "text",
-     "x": 748,
-     "y": 462,
-     "w": 424,
-     "h": 96,
-     "text": "AI media\nstudio",
-     "family": "Manrope",
-     "size": 40,
-     "weight": 700,
-     "color": "#F8FAFC",
-     "lineHeight": 1.1
-    },
-    {
-     "kind": "text",
-     "x": 1352,
-     "y": 462,
-     "w": 424,
-     "h": 96,
-     "text": "Enterprise\nplatform",
-     "family": "Manrope",
-     "size": 40,
-     "weight": 700,
-     "color": "#F8FAFC",
-     "lineHeight": 1.1
-    },
-    {
-     "kind": "text",
-     "x": 144,
-     "y": 592,
-     "w": 424,
-     "h": 118,
-     "text": "Multiplayer cursors, presence\nComment threads on nodes\nOffline-first sync core",
-     "family": "Inter",
-     "size": 24,
-     "weight": 400,
-     "color": "#94A3B8",
-     "lineHeight": 1.5
-    },
-    {
-     "kind": "text",
-     "x": 748,
-     "y": 592,
-     "w": 424,
-     "h": 118,
-     "text": "Generate and edit images\nBrand-safe style presets\nBatch background removal",
-     "family": "Inter",
-     "size": 24,
-     "weight": 400,
-     "color": "#94A3B8",
-     "lineHeight": 1.5
-    },
-    {
-     "kind": "text",
-     "x": 1352,
-     "y": 592,
-     "w": 424,
-     "h": 118,
-     "text": "SSO, SCIM, and audit logs\nRegional data residency\nPlugin marketplace beta",
-     "family": "Inter",
-     "size": 24,
-     "weight": 400,
-     "color": "#94A3B8",
-     "lineHeight": 1.5
-    },
-    {
-     "kind": "rect",
-     "x": 144,
-     "y": 738,
-     "w": 424,
-     "h": 2,
-     "fill": "#243352"
-    },
-    {
-     "kind": "rect",
-     "x": 748,
-     "y": 738,
-     "w": 424,
-     "h": 2,
-     "fill": "#243352"
-    },
-    {
-     "kind": "rect",
-     "x": 1352,
-     "y": 738,
-     "w": 424,
-     "h": 2,
-     "fill": "#243352"
-    },
-    {
-     "kind": "text",
-     "x": 144,
-     "y": 762,
-     "w": 424,
-     "h": 30,
-     "text": "Owner: Collab squad",
-     "family": "Inter",
-     "size": 22,
-     "weight": 600,
-     "color": "#E2E8F0",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 748,
-     "y": 762,
-     "w": 424,
-     "h": 30,
-     "text": "Owner: AI squad",
-     "family": "Inter",
-     "size": 22,
-     "weight": 600,
-     "color": "#E2E8F0",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 1352,
-     "y": 762,
-     "w": 424,
-     "h": 30,
-     "text": "Owner: Platform squad",
-     "family": "Inter",
-     "size": 22,
-     "weight": 600,
-     "color": "#E2E8F0",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 952,
-     "w": 900,
-     "h": 30,
-     "text": "Northbeam \u00b7 Q3 2026 review",
-     "family": "Inter",
-     "size": 22,
+     "text": "Releases",
+     "family": "JetBrains Mono",
+     "size": 18,
      "weight": 500,
      "color": "#94A3B8",
-     "lineHeight": 1.2
+     "lineHeight": 1.3
     },
     {
      "kind": "text",
-     "x": 1524,
-     "y": 952,
-     "w": 300,
+     "x": 1436,
+     "y": 508,
+     "w": 348,
      "h": 30,
-     "text": "03 / 05",
+     "text": "12 across 3 teams",
      "family": "Inter",
      "size": 22,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1436,
+     "y": 544,
+     "w": 348,
+     "h": 1,
+     "fill": "#1B2640"
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 554,
+     "w": 120,
+     "h": 26,
+     "text": "Rollbacks",
+     "family": "JetBrains Mono",
+     "size": 18,
      "weight": 500,
      "color": "#94A3B8",
-     "align": "right",
-     "lineHeight": 1.2
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 582,
+     "w": 348,
+     "h": 30,
+     "text": "Zero",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1436,
+     "y": 618,
+     "w": 348,
+     "h": 1,
+     "fill": "#1B2640"
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 628,
+     "w": 120,
+     "h": 26,
+     "text": "Demo",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 656,
+     "w": 348,
+     "h": 30,
+     "text": "The new deploy pipeline",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1436,
+     "y": 692,
+     "w": 348,
+     "h": 1,
+     "fill": "#1B2640"
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 702,
+     "w": 120,
+     "h": 26,
+     "text": "Host",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1436,
+     "y": 730,
+     "w": 348,
+     "h": 30,
+     "text": "Platform squad",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
     }
    ]
   },
   {
-   "name": "Metrics",
-   "bg": "#0B1220",
-   "nodes": [
-    {
-     "kind": "rect",
-     "x": 96,
-     "y": 96,
-     "w": 96,
-     "h": 8,
-     "fill": {
-      "angle": 90,
-      "stops": [
-       [
-        "#22D3EE",
-        0
-       ],
-       [
-        "#8B5CF6",
-        1
-       ]
-      ]
-     },
-     "radius": 4
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 132,
-     "w": 600,
-     "h": 30,
-     "text": "Metrics",
-     "family": "Inter",
-     "size": 22,
-     "weight": 600,
-     "color": "#22D3EE",
-     "letterSpacing": 4,
-     "upper": true,
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 188,
-     "w": 1400,
-     "h": 92,
-     "text": "The quarter in two numbers",
-     "family": "Manrope",
-     "size": 76,
-     "weight": 700,
-     "color": "#F8FAFC",
-     "lineHeight": 1.05
-    },
-    {
-     "kind": "rect",
-     "x": 96,
-     "y": 340,
-     "w": 822,
-     "h": 500,
-     "fill": "#141D33",
-     "radius": 24
-    },
-    {
-     "kind": "rect",
-     "x": 1002,
-     "y": 340,
-     "w": 822,
-     "h": 500,
-     "fill": "#141D33",
-     "radius": 24
-    },
-    {
-     "kind": "text",
-     "x": 160,
-     "y": 404,
-     "w": 694,
-     "h": 28,
-     "text": "Deploy frequency",
-     "family": "Inter",
-     "size": 22,
-     "weight": 600,
-     "color": "#22D3EE",
-     "letterSpacing": 3,
-     "upper": true,
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 1066,
-     "y": 404,
-     "w": 694,
-     "h": 28,
-     "text": "Platform uptime",
-     "family": "Inter",
-     "size": 22,
-     "weight": 600,
-     "color": "#A78BFA",
-     "letterSpacing": 3,
-     "upper": true,
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 160,
-     "y": 448,
-     "w": 694,
-     "h": 150,
-     "text": "4.6/day",
-     "family": "Manrope",
-     "size": 132,
-     "weight": 700,
-     "color": "#F8FAFC",
-     "lineHeight": 1.05
-    },
-    {
-     "kind": "text",
-     "x": 1066,
-     "y": 448,
-     "w": 694,
-     "h": 150,
-     "text": "99.98%",
-     "family": "Manrope",
-     "size": 132,
-     "weight": 700,
-     "color": "#F8FAFC",
-     "lineHeight": 1.05
-    },
-    {
-     "kind": "button",
-     "x": 160,
-     "y": 628,
-     "w": 210,
-     "h": 48,
-     "fill": "#1F2E52",
-     "label": "+156% vs Q2",
-     "color": "#22D3EE",
-     "family": "Inter",
-     "size": 20,
-     "weight": 700
-    },
-    {
-     "kind": "button",
-     "x": 1066,
-     "y": 628,
-     "w": 250,
-     "h": 48,
-     "fill": "#1F2E52",
-     "label": "+0.09 pts vs Q2",
-     "color": "#A78BFA",
-     "family": "Inter",
-     "size": 20,
-     "weight": 700
-    },
-    {
-     "kind": "text",
-     "x": 160,
-     "y": 704,
-     "w": 694,
-     "h": 78,
-     "text": "Up from 1.8 per day in Q2, driven by the\nrelease train and automated canary checks.",
-     "family": "Inter",
-     "size": 26,
-     "weight": 400,
-     "color": "#94A3B8",
-     "lineHeight": 1.4
-    },
-    {
-     "kind": "text",
-     "x": 1066,
-     "y": 704,
-     "w": 694,
-     "h": 78,
-     "text": "Failover rework and multi-region reads\nput four nines within reach.",
-     "family": "Inter",
-     "size": 26,
-     "weight": 400,
-     "color": "#94A3B8",
-     "lineHeight": 1.4
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 884,
-     "w": 900,
-     "h": 28,
-     "text": "Source: delivery dashboard \u00b7 Jul 1 to Sep 30, 2026",
-     "family": "Inter",
-     "size": 20,
-     "weight": 400,
-     "color": "#94A3B8",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 96,
-     "y": 952,
-     "w": 900,
-     "h": 30,
-     "text": "Northbeam \u00b7 Q3 2026 review",
-     "family": "Inter",
-     "size": 22,
-     "weight": 500,
-     "color": "#94A3B8",
-     "lineHeight": 1.2
-    },
-    {
-     "kind": "text",
-     "x": 1524,
-     "y": 952,
-     "w": 300,
-     "h": 30,
-     "text": "04 / 05",
-     "family": "Inter",
-     "size": 22,
-     "weight": 500,
-     "color": "#94A3B8",
-     "align": "right",
-     "lineHeight": 1.2
-    }
-   ]
-  },
-  {
-   "name": "Closing",
-   "bg": "#0B1220",
+   "name": "Section",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#0B1220",
+      0
+     ],
+     [
+      "#040812",
+      1
+     ]
+    ]
+   },
    "nodes": [
     {
      "kind": "ellipse",
-     "x": 1560,
-     "y": -260,
-     "w": 560,
-     "h": 560,
+     "x": 1380,
+     "y": -420,
+     "w": 1100,
+     "h": 1100,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#8B5CF6",
+        0
+       ],
+       [
+        "#040812",
+        1
+       ]
+      ],
+      "radial": true
+     },
+     "opacity": 0.6,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": -380,
+     "y": 620,
+     "w": 900,
+     "h": 900,
      "fill": {
       "angle": 135,
       "stops": [
@@ -1090,52 +1183,394 @@
         0
        ],
        [
-        "#8B5CF6",
+        "#040812",
         1
        ]
-      ]
+      ],
+      "radial": true
      },
-     "bleed": true
-    },
-    {
-     "kind": "ellipse",
-     "x": -200,
-     "y": 880,
-     "w": 520,
-     "h": 520,
-     "fill": "#1A1B3A",
+     "opacity": 0.26,
      "bleed": true
     },
     {
      "kind": "rect",
-     "x": 96,
-     "y": 96,
-     "w": 96,
+     "x": 320,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 640,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 960,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 1280,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 1600,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 270,
+     "w": 1920,
+     "h": 1,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 540,
+     "w": 1920,
+     "h": 1,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 810,
+     "w": 1920,
+     "h": 1,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "ellipse",
+     "x": 1564,
+     "y": 775,
+     "w": 8,
      "h": 8,
-     "fill": {
-      "angle": 90,
-      "stops": [
-       [
-        "#22D3EE",
-        0
-       ],
-       [
-        "#8B5CF6",
-        1
-       ]
-      ]
-     },
-     "radius": 4
+     "fill": "#22D3EE",
+     "opacity": 0.6
+    },
+    {
+     "kind": "ellipse",
+     "x": 1195,
+     "y": 147,
+     "w": 6,
+     "h": 6,
+     "fill": "#22D3EE",
+     "opacity": 0.79
+    },
+    {
+     "kind": "ellipse",
+     "x": 1266,
+     "y": 716,
+     "w": 6,
+     "h": 6,
+     "fill": "#22D3EE",
+     "opacity": 0.58
+    },
+    {
+     "kind": "ellipse",
+     "x": 1252,
+     "y": 596,
+     "w": 8,
+     "h": 8,
+     "fill": "#22D3EE",
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1336,
+     "y": 310,
+     "w": 6,
+     "h": 6,
+     "fill": "#22D3EE",
+     "opacity": 0.43999999999999995
+    },
+    {
+     "kind": "ellipse",
+     "x": 1832,
+     "y": 760,
+     "w": 7,
+     "h": 7,
+     "fill": "#22D3EE",
+     "opacity": 0.5599999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1414,
+     "y": 28,
+     "w": 8,
+     "h": 8,
+     "fill": "#8B5CF6",
+     "opacity": 0.57
+    },
+    {
+     "kind": "ellipse",
+     "x": 1583,
+     "y": 16,
+     "w": 6,
+     "h": 6,
+     "fill": "#8B5CF6",
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1694,
+     "y": 731,
+     "w": 6,
+     "h": 6,
+     "fill": "#8B5CF6",
+     "opacity": 0.38999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1764,
+     "y": 885,
+     "w": 9,
+     "h": 9,
+     "fill": "#8B5CF6",
+     "opacity": 0.44999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1464,
+     "y": 864,
+     "w": 6,
+     "h": 6,
+     "fill": "#8B5CF6",
+     "opacity": 0.6599999999999999
     },
     {
      "kind": "text",
      "x": 96,
-     "y": 132,
-     "w": 600,
-     "h": 30,
-     "text": "Next steps",
+     "y": 236,
+     "w": 800,
+     "h": 240,
+     "text": "01",
+     "family": "Manrope",
+     "size": 220,
+     "weight": 700,
+     "color": "#22D3EE",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 476,
+     "w": 120,
+     "h": 4,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 504,
+     "w": 1100,
+     "h": 112,
+     "text": "Shipped in Q3",
+     "family": "Manrope",
+     "size": 96,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 636,
+     "w": 900,
+     "h": 90,
+     "text": "Twelve releases, three that changed how the platform runs.",
      "family": "Inter",
-     "size": 22,
+     "size": 28,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1240,
+     "y": 280,
+     "w": 560,
+     "h": 560,
+     "fill": "#22D3EE",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1296,
+     "y": 336,
+     "w": 448,
+     "h": 448,
+     "fill": "#22D3EE",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 1000,
+     "h": 50,
+     "text": "// q3 2026, product and engineering",
+     "family": "JetBrains Mono",
+     "size": 28,
+     "weight": 500,
+     "color": "#22D3EE",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#1B2640"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northbeam  ·  Q3 2026 review",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3,
+     "align": "right"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day93-programing",
+     "x": 1300,
+     "y": 340,
+     "w": 440,
+     "h": 440,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#0D1528",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1500,
+     "y": -520,
+     "w": 1000,
+     "h": 1000,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#A78BFA",
+        0
+       ],
+       [
+        "#080D1C",
+        1
+       ]
+      ],
+      "radial": true
+     },
+     "opacity": 0.3,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 320,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 640,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 960,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 1280,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 1600,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Shipped in Q3",
+     "family": "JetBrains Mono",
+     "size": 20,
      "weight": 600,
      "color": "#22D3EE",
      "letterSpacing": 4,
@@ -1145,126 +1580,2470 @@
     {
      "kind": "text",
      "x": 96,
-     "y": 380,
-     "w": 1400,
-     "h": 250,
-     "text": "Help us ship\nthe next quarter",
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "Three releases that mattered",
      "family": "Manrope",
-     "size": 104,
+     "size": 62,
      "weight": 700,
      "color": "#F8FAFC",
-     "lineHeight": 1.08
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#1E2A44"
     },
     {
      "kind": "text",
      "x": 96,
-     "y": 668,
-     "w": 1300,
-     "h": 42,
-     "text": "Three asks: two backend hires, SSO budget, and design partner intros.",
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northbeam  ·  Q3 2026 review",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#121C33",
+     "radius": 16,
+     "stroke": "#1E2A44",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#22D3EE",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#154158"
+    },
+    {
+     "kind": "icon",
+     "icon": "bolt",
+     "x": 156,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "The release train",
+     "family": "Manrope",
+     "size": 34,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "Every merge ships within the hour, behind a flag, with an automated canary. Deploy frequency tripled.",
      "family": "Inter",
-     "size": 28,
+     "size": 22,
      "weight": 400,
      "color": "#94A3B8",
-     "lineHeight": 1.35
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#121C33",
+     "radius": 16,
+     "stroke": "#1E2A44",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#A78BFA",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#30325b"
+    },
+    {
+     "kind": "icon",
+     "icon": "database",
+     "x": 740,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#A78BFA"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "Multi-region reads",
+     "family": "Manrope",
+     "size": 34,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "Read replicas in two regions, failover rehearsed monthly. The base of the four-nines target.",
+     "family": "Inter",
+     "size": 22,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#121C33",
+     "radius": 16,
+     "stroke": "#1E2A44",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#22D3EE",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#154158"
+    },
+    {
+     "kind": "icon",
+     "icon": "lock",
+     "x": 1324,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "SSO and audit logs",
+     "family": "Manrope",
+     "size": 34,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "Enterprise sign-in and a searchable audit trail, live for four customers in the first week.",
+     "family": "Inter",
+     "size": 22,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    }
+   ]
+  },
+  {
+   "name": "Figures",
+   "bg": "#0D1528",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1500,
+     "y": -520,
+     "w": 1000,
+     "h": 1000,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#A78BFA",
+        0
+       ],
+       [
+        "#080D1C",
+        1
+       ]
+      ],
+      "radial": true
+     },
+     "opacity": 0.3,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 320,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 640,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 960,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 1280,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 1600,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Reliability and quality",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "The quarter in four numbers",
+     "family": "Manrope",
+     "size": 62,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northbeam  ·  Q3 2026 review",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 414,
+     "h": 560,
+     "fill": "#121C33",
+     "radius": 16,
+     "stroke": "#1E2A44",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 414,
+     "h": 6,
+     "fill": "#22D3EE",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 300,
+     "w": 342,
+     "h": 120,
+     "text": "4.6 / day",
+     "family": "Manrope",
+     "size": 83.2,
+     "weight": 700,
+     "color": "#22D3EE",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 440,
+     "w": 342,
+     "h": 34,
+     "text": "Deploy frequency",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
     },
     {
      "kind": "button",
-     "x": 96,
-     "y": 772,
-     "w": 520,
-     "h": 92,
+     "x": 132,
+     "y": 494,
+     "w": 190,
+     "h": 40,
+     "label": "+156% on Q2",
+     "fill": "#153d55",
+     "color": "#22D3EE",
+     "family": "Inter",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 564,
+     "w": 342,
+     "h": 140,
+     "text": "Up from 1.8 per day, driven by the release train and automated canary checks.",
+     "family": "Inter",
+     "size": 20,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 244,
+     "w": 414,
+     "h": 560,
+     "fill": "#121C33",
+     "radius": 16,
+     "stroke": "#1E2A44",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 244,
+     "w": 414,
+     "h": 6,
+     "fill": "#A78BFA",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 300,
+     "w": 342,
+     "h": 120,
+     "text": "99.98%",
+     "family": "Manrope",
+     "size": 83.2,
+     "weight": 700,
+     "color": "#A78BFA",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 440,
+     "w": 342,
+     "h": 34,
+     "text": "Platform uptime",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 570,
+     "y": 494,
+     "w": 190,
+     "h": 40,
+     "label": "+0.09 pts",
+     "fill": "#2d3057",
+     "color": "#A78BFA",
+     "family": "Inter",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 564,
+     "w": 342,
+     "h": 140,
+     "text": "Failover rework and multi-region reads put four nines within reach.",
+     "family": "Inter",
+     "size": 20,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 244,
+     "w": 414,
+     "h": 560,
+     "fill": "#121C33",
+     "radius": 16,
+     "stroke": "#1E2A44",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 244,
+     "w": 414,
+     "h": 6,
+     "fill": "#22D3EE",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 300,
+     "w": 342,
+     "h": 120,
+     "text": "0",
+     "family": "Manrope",
+     "size": 104,
+     "weight": 700,
+     "color": "#22D3EE",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 440,
+     "w": 342,
+     "h": 34,
+     "text": "Rollback events",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1008,
+     "y": 494,
+     "w": 190,
+     "h": 40,
+     "label": "−4",
+     "fill": "#153d55",
+     "color": "#22D3EE",
+     "family": "Inter",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 564,
+     "w": 342,
+     "h": 140,
+     "text": "Every release behind a flag; the canary caught the two that would have rolled back.",
+     "family": "Inter",
+     "size": 20,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 244,
+     "w": 414,
+     "h": 560,
+     "fill": "#121C33",
+     "radius": 16,
+     "stroke": "#1E2A44",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 244,
+     "w": 414,
+     "h": 6,
+     "fill": "#A78BFA",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 300,
+     "w": 342,
+     "h": 120,
+     "text": "9 min",
+     "family": "Manrope",
+     "size": 104,
+     "weight": 700,
+     "color": "#A78BFA",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 440,
+     "w": 342,
+     "h": 34,
+     "text": "Median time to cause",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1446,
+     "y": 494,
+     "w": 190,
+     "h": 40,
+     "label": "Was 41",
+     "fill": "#2d3057",
+     "color": "#A78BFA",
+     "family": "Inter",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 564,
+     "w": 342,
+     "h": 140,
+     "text": "From the first alert to the change named in the channel.",
+     "family": "Inter",
+     "size": 20,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    }
+   ]
+  },
+  {
+   "name": "Chart",
+   "bg": "#0D1528",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1500,
+     "y": -520,
+     "w": 1000,
+     "h": 1000,
      "fill": {
-      "angle": 90,
+      "angle": 135,
+      "stops": [
+       [
+        "#A78BFA",
+        0
+       ],
+       [
+        "#080D1C",
+        1
+       ]
+      ],
+      "radial": true
+     },
+     "opacity": 0.3,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 320,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 640,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 960,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 1280,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 1600,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Metrics",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1100,
+     "h": 76,
+     "text": "Deploys per week, by month",
+     "family": "Manrope",
+     "size": 62,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northbeam  ·  Q3 2026 review",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 220,
+     "w": 1100,
+     "h": 70,
+     "text": "The release train landed in August; September ran at three times the Q2 pace with no rollbacks.",
+     "family": "Inter",
+     "size": 24,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 64,
+     "y": 284,
+     "w": 1204,
+     "h": 608,
+     "fill": "#F3F5F9",
+     "radius": 16
+    },
+    {
+     "kind": "chart",
+     "x": 96,
+     "y": 308,
+     "w": 1140,
+     "h": 560,
+     "chartType": "bar",
+     "fontSize": 18,
+     "categories": [
+      "Jul",
+      "Aug",
+      "Sep"
+     ],
+     "series": [
+      {
+       "name": "Deploys per week",
+       "values": [
+        12,
+        24,
+        32
+       ],
+       "color": "#1F2A44"
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 264,
+     "w": 504,
+     "h": 80,
+     "text": "32",
+     "family": "Manrope",
+     "size": 64,
+     "weight": 700,
+     "color": "#22D3EE",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 352,
+     "w": 504,
+     "h": 60,
+     "text": "Deploys per week in September",
+     "family": "Inter",
+     "size": 22,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1320,
+     "y": 416,
+     "w": 504,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 444,
+     "w": 504,
+     "h": 80,
+     "text": "0",
+     "family": "Manrope",
+     "size": 64,
+     "weight": 700,
+     "color": "#22D3EE",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 532,
+     "w": 504,
+     "h": 60,
+     "text": "Rollbacks all quarter",
+     "family": "Inter",
+     "size": 22,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1320,
+     "y": 596,
+     "w": 504,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 624,
+     "w": 504,
+     "h": 80,
+     "text": "3x",
+     "family": "Manrope",
+     "size": 64,
+     "weight": 700,
+     "color": "#22D3EE",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 712,
+     "w": 504,
+     "h": 60,
+     "text": "The Q2 pace",
+     "family": "Inter",
+     "size": 22,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    }
+   ]
+  },
+  {
+   "name": "Roadmap",
+   "bg": "#0D1528",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1500,
+     "y": -520,
+     "w": 1000,
+     "h": 1000,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#A78BFA",
+        0
+       ],
+       [
+        "#080D1C",
+        1
+       ]
+      ],
+      "radial": true
+     },
+     "opacity": 0.3,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 320,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 640,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 960,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 1280,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 1600,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Roadmap",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1000,
+     "h": 76,
+     "text": "Next two quarters",
+     "family": "Manrope",
+     "size": 62,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northbeam  ·  Q3 2026 review",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1136,
+     "y": 130,
+     "w": 688,
+     "h": 80,
+     "text": "Now, next and later, each with an owning squad. Dates shift; the order does not.",
+     "family": "Inter",
+     "size": 21,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 640,
+     "fill": {
+      "angle": 160,
+      "stops": [
+       [
+        "#0B1220",
+        0
+       ],
+       [
+        "#040812",
+        1
+       ]
+      ]
+     },
+     "radius": 16
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 280,
+     "w": 488,
+     "h": 44,
+     "text": "Now",
+     "family": "Manrope",
+     "size": 34,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 328,
+     "w": 488,
+     "h": 26,
+     "text": "Q4 2026",
+     "family": "JetBrains Mono",
+     "size": 15,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 132,
+     "y": 372,
+     "w": 488,
+     "h": 1,
+     "fill": "#1B2640"
+    },
+    {
+     "kind": "ellipse",
+     "x": 132,
+     "y": 408,
+     "w": 12,
+     "h": 12,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 400,
+     "w": 460,
+     "h": 34,
+     "text": "Realtime collaboration",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 440,
+     "w": 460,
+     "h": 80,
+     "text": "Multiplayer cursors, presence and comment threads on nodes.",
+     "family": "Inter",
+     "size": 19,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 132,
+     "y": 564,
+     "w": 12,
+     "h": 12,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 556,
+     "w": 460,
+     "h": 34,
+     "text": "Offline-first sync",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 596,
+     "w": 460,
+     "h": 80,
+     "text": "Full editing without a connection; sync on return.",
+     "family": "Inter",
+     "size": 19,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 132,
+     "y": 720,
+     "w": 12,
+     "h": 12,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 712,
+     "w": 460,
+     "h": 34,
+     "text": "Owner: Collab squad",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 752,
+     "w": 460,
+     "h": 80,
+     "text": "Two engineers, one designer.",
+     "family": "Inter",
+     "size": 19,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 640,
+     "fill": "#121C33",
+     "radius": 16,
+     "stroke": "#1E2A44",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 280,
+     "w": 488,
+     "h": 44,
+     "text": "Next",
+     "family": "Manrope",
+     "size": 34,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 716,
+     "y": 328,
+     "w": 488,
+     "h": 26,
+     "text": "Q1 2027",
+     "family": "JetBrains Mono",
+     "size": 15,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 716,
+     "y": 372,
+     "w": 488,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "ellipse",
+     "x": 716,
+     "y": 408,
+     "w": 12,
+     "h": 12,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 744,
+     "y": 400,
+     "w": 460,
+     "h": 34,
+     "text": "AI media studio",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 744,
+     "y": 440,
+     "w": 460,
+     "h": 80,
+     "text": "Generate and edit images with brand-safe style presets.",
+     "family": "Inter",
+     "size": 19,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 716,
+     "y": 564,
+     "w": 12,
+     "h": 12,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 744,
+     "y": 556,
+     "w": 460,
+     "h": 34,
+     "text": "Batch background removal",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 744,
+     "y": 596,
+     "w": 460,
+     "h": 80,
+     "text": "Whole folders at once, queued.",
+     "family": "Inter",
+     "size": 19,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 716,
+     "y": 720,
+     "w": 12,
+     "h": 12,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 744,
+     "y": 712,
+     "w": 460,
+     "h": 34,
+     "text": "Owner: AI squad",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 744,
+     "y": 752,
+     "w": 460,
+     "h": 80,
+     "text": "Three engineers.",
+     "family": "Inter",
+     "size": 19,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 640,
+     "fill": "#121C33",
+     "radius": 16,
+     "stroke": "#1E2A44",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 1300,
+     "y": 280,
+     "w": 488,
+     "h": 44,
+     "text": "Later",
+     "family": "Manrope",
+     "size": 34,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 1300,
+     "y": 328,
+     "w": 488,
+     "h": 26,
+     "text": "H2 2027",
+     "family": "JetBrains Mono",
+     "size": 15,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 1300,
+     "y": 372,
+     "w": 488,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1300,
+     "y": 408,
+     "w": 12,
+     "h": 12,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 400,
+     "w": 460,
+     "h": 34,
+     "text": "Enterprise platform",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 440,
+     "w": 460,
+     "h": 80,
+     "text": "SCIM, regional data residency and the audit export.",
+     "family": "Inter",
+     "size": 19,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1300,
+     "y": 564,
+     "w": 12,
+     "h": 12,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 556,
+     "w": 460,
+     "h": 34,
+     "text": "Plugin marketplace",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 596,
+     "w": 460,
+     "h": 80,
+     "text": "Third-party panels, reviewed and signed.",
+     "family": "Inter",
+     "size": 19,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1300,
+     "y": 720,
+     "w": 12,
+     "h": 12,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 712,
+     "w": 460,
+     "h": 34,
+     "text": "Owner: Platform squad",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 752,
+     "w": 460,
+     "h": 80,
+     "text": "Hiring two.",
+     "family": "Inter",
+     "size": 19,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#0D1528",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1500,
+     "y": -520,
+     "w": 1000,
+     "h": 1000,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#A78BFA",
+        0
+       ],
+       [
+        "#080D1C",
+        1
+       ]
+      ],
+      "radial": true
+     },
+     "opacity": 0.3,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 320,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 640,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 960,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 1280,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "rect",
+     "x": 1600,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.045
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Asks",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "Three asks for next quarter",
+     "family": "Manrope",
+     "size": 62,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northbeam  ·  Q3 2026 review",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "08 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#121C33",
+     "radius": 16,
+     "stroke": "#1E2A44",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#22D3EE",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#154158"
+    },
+    {
+     "kind": "icon",
+     "icon": "user",
+     "x": 156,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "Two backend hires",
+     "family": "Manrope",
+     "size": 34,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "The platform squad is two people short of the H2 plan. Both roles are open; referrals close them faster.",
+     "family": "Inter",
+     "size": 22,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#121C33",
+     "radius": 16,
+     "stroke": "#1E2A44",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#A78BFA",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#30325b"
+    },
+    {
+     "kind": "icon",
+     "icon": "coin",
+     "x": 740,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#A78BFA"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "SSO budget",
+     "family": "Manrope",
+     "size": 34,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "The identity provider contract for the enterprise tier. Pays back on the second customer.",
+     "family": "Inter",
+     "size": 22,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#121C33",
+     "radius": 16,
+     "stroke": "#1E2A44",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#22D3EE",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#154158"
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 1324,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "Design partner intros",
+     "family": "Manrope",
+     "size": 34,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "Three customers willing to test the AI media studio in December, before general release.",
+     "family": "Inter",
+     "size": 22,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#1E2A44"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "JetBrains Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.3
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#0B1220",
+      0
+     ],
+     [
+      "#040812",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1380,
+     "y": -420,
+     "w": 1100,
+     "h": 1100,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#8B5CF6",
+        0
+       ],
+       [
+        "#040812",
+        1
+       ]
+      ],
+      "radial": true
+     },
+     "opacity": 0.6,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": -380,
+     "y": 620,
+     "w": 900,
+     "h": 900,
+     "fill": {
+      "angle": 135,
       "stops": [
        [
         "#22D3EE",
         0
        ],
        [
-        "#8B5CF6",
+        "#040812",
         1
        ]
-      ]
+      ],
+      "radial": true
      },
-     "label": "Book roadmap office hours",
-     "color": "#0B1220",
-     "family": "Manrope",
-     "size": 26,
-     "weight": 700
+     "opacity": 0.26,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 320,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 640,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 960,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 1280,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 1600,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 270,
+     "w": 1920,
+     "h": 1,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 540,
+     "w": 1920,
+     "h": 1,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 810,
+     "w": 1920,
+     "h": 1,
+     "fill": "#F8FAFC",
+     "opacity": 0.06
+    },
+    {
+     "kind": "ellipse",
+     "x": 1564,
+     "y": 775,
+     "w": 8,
+     "h": 8,
+     "fill": "#22D3EE",
+     "opacity": 0.6
+    },
+    {
+     "kind": "ellipse",
+     "x": 1195,
+     "y": 147,
+     "w": 6,
+     "h": 6,
+     "fill": "#22D3EE",
+     "opacity": 0.79
+    },
+    {
+     "kind": "ellipse",
+     "x": 1266,
+     "y": 716,
+     "w": 6,
+     "h": 6,
+     "fill": "#22D3EE",
+     "opacity": 0.58
+    },
+    {
+     "kind": "ellipse",
+     "x": 1252,
+     "y": 596,
+     "w": 8,
+     "h": 8,
+     "fill": "#22D3EE",
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1336,
+     "y": 310,
+     "w": 6,
+     "h": 6,
+     "fill": "#22D3EE",
+     "opacity": 0.43999999999999995
+    },
+    {
+     "kind": "ellipse",
+     "x": 1832,
+     "y": 760,
+     "w": 7,
+     "h": 7,
+     "fill": "#22D3EE",
+     "opacity": 0.5599999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1414,
+     "y": 28,
+     "w": 8,
+     "h": 8,
+     "fill": "#8B5CF6",
+     "opacity": 0.57
+    },
+    {
+     "kind": "ellipse",
+     "x": 1583,
+     "y": 16,
+     "w": 6,
+     "h": 6,
+     "fill": "#8B5CF6",
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1694,
+     "y": 731,
+     "w": 6,
+     "h": 6,
+     "fill": "#8B5CF6",
+     "opacity": 0.38999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1764,
+     "y": 885,
+     "w": 9,
+     "h": 9,
+     "fill": "#8B5CF6",
+     "opacity": 0.44999999999999996
+    },
+    {
+     "kind": "ellipse",
+     "x": 1464,
+     "y": 864,
+     "w": 6,
+     "h": 6,
+     "fill": "#8B5CF6",
+     "opacity": 0.6599999999999999
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#22D3EE",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#22D3EE",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#22D3EE",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Northbeam",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
     },
     {
      "kind": "text",
      "x": 96,
-     "y": 952,
-     "w": 900,
-     "h": 30,
-     "text": "platform@northbeam.dev \u00b7 #platform-reviews",
-     "family": "Inter",
-     "size": 22,
+     "y": 236,
+     "w": 1000,
+     "h": 36,
+     "text": "// next steps",
+     "family": "JetBrains Mono",
+     "size": 28,
      "weight": 500,
-     "color": "#94A3B8",
+     "color": "#22D3EE",
      "lineHeight": 1.2
     },
     {
      "kind": "text",
-     "x": 1524,
-     "y": 952,
-     "w": 300,
-     "h": 30,
-     "text": "05 / 05",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 256,
+     "text": "Help us ship\nthe next quarter",
+     "family": "Manrope",
+     "size": 112,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 590,
+     "w": 940,
+     "h": 120,
+     "text": "Three asks: two backend hires, SSO budget, and design partner intros. Office hours every Thursday.",
+     "family": "Inter",
+     "size": 28,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "platform@northbeam.example",
+     "family": "Inter",
+     "size": 24,
+     "weight": 500,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "message",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "#platform-reviews on Slack",
+     "family": "Inter",
+     "size": 24,
+     "weight": 500,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "calendar",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "Office hours: Thursdays, 15:00",
+     "family": "Inter",
+     "size": 24,
+     "weight": 500,
+     "color": "#F8FAFC",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Book roadmap office hours",
+     "fill": "#22D3EE",
+     "color": "#040812",
      "family": "Inter",
      "size": 22,
+     "weight": 700,
+     "radius": 16
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "09 / 9",
+     "family": "JetBrains Mono",
+     "size": 18,
      "weight": 500,
      "color": "#94A3B8",
-     "align": "right",
-     "lineHeight": 1.2
+     "lineHeight": 1.3,
+     "align": "right"
     }
    ],
    "illustrations": [
     {
      "asset": "la-free-svg-illustration-rocket",
-     "x": 1300,
-     "y": 390,
-     "w": 440,
-     "h": 490
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540
     }
    ]
   }
  ],
  "fillable": [
   {
-   "node": "p0-n3",
+   "node": "p0-n22",
    "kind": "text",
-   "label": "Product name",
-   "hint": "Company or product wordmark"
+   "label": "Company",
+   "hint": "Your company or team name"
   },
   {
-   "node": "p0-n6",
+   "node": "p0-n24",
    "kind": "text",
-   "label": "Deck title",
-   "hint": "The headline of the review, up to two lines"
+   "label": "Title",
+   "hint": "Two short lines"
   },
   {
-   "node": "p0-n7",
+   "node": "p0-n25",
    "kind": "text",
    "label": "Subtitle",
-   "hint": "One line describing what the deck covers"
+   "hint": "One sentence on what the deck covers"
   },
   {
-   "node": "p4-n6-label",
+   "node": "p0-n26",
    "kind": "text",
-   "label": "CTA label",
-   "hint": "Closing call to action"
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
   },
   {
-   "node": "p4-n7",
+   "node": "p8-n29",
    "kind": "text",
-   "label": "Contact line",
-   "hint": "Email or channel for follow-ups"
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n31",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p8-n33",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
   }
  ],
- "version": 2,
- "updated": "2026-07-10T00:00:00.000Z",
+ "version": 3,
+ "created": "2026-07-10T00:00:00.000Z",
+ "updated": "2026-09-30T00:00:00.000Z",
  "rank": 20
 }

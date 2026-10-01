@@ -4,7 +4,9 @@
 // auto-layout suggestion mapping, and the staggered auto-animate plan.
 
 import { describe, expect, it } from "vitest";
+import { createNode, type DesignFile } from "@hc/schema";
 import {
+  critiquePage,
   detectContrast,
   detectOffCanvas,
   detectReadability,
@@ -186,5 +188,36 @@ describe("autoAnimatePlan", () => {
     expect(plan.map((p) => p.nodeId)).toEqual(["topLeft", "topRight", "bottom"]);
     expect(plan.map((p) => p.delayMs)).toEqual([0, 100, 200]);
     expect(plan.every((p) => p.preset === "rise")).toBe(true);
+  });
+});
+
+describe("critiquePage", () => {
+  const WHITE = { srgb: { r: 1, g: 1, b: 1, a: 1 } };
+  const MAGENTA = { srgb: { r: 0.6, g: 0.1, b: 0.4, a: 1 } };
+  const docWith = (children: unknown[]): DesignFile =>
+    ({ format: "hycanvas.design", schemaVersion: 1, id: "d", title: "t", unit: "px", dpi: 96, meta: {}, assets: [], fonts: [], pages: [{ id: "p", width: 1920, height: 1080, background: { type: "solid", color: WHITE }, children }] }) as unknown as DesignFile;
+  const panel = createNode("shape", {
+    name: "Panel",
+    shape: "rect",
+    transform: { x: 100, y: 100, scaleX: 1, scaleY: 1, rotation: 0 },
+    size: { width: 800, height: 600 },
+    fills: [{ type: "gradient", gradient: "linear", angle: 160, stops: [{ position: 0, color: MAGENTA }, { position: 1, color: MAGENTA }] }],
+  } as never);
+  const copy = createNode("text", {
+    name: "Text",
+    transform: { x: 150, y: 200, scaleX: 1, scaleY: 1, rotation: 0 },
+    size: { width: 600, height: 60 },
+    content: [{ runs: [{ text: "White copy on the card", style: { fontFamily: "system", fontStyle: "Regular", fontSize: 28, fill: { type: "solid", color: WHITE } } }], style: { align: "left", direction: "auto" } }],
+  } as never);
+  const contrast = (children: unknown[]) => critiquePage(docWith(children), 0).filter((i) => i.category === "contrast");
+
+  it("reads a gradient panel as the ground under the copy it carries", () => {
+    // A composed deck's cards are gradient panels; white copy on one is
+    // readable, and used to be flagged against the page's paper instead.
+    expect(contrast([panel, copy])).toEqual([]);
+  });
+
+  it("still flags copy that really sits on the page's own ground", () => {
+    expect(contrast([copy])).toHaveLength(1);
   });
 });

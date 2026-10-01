@@ -334,7 +334,107 @@ func (rc *rctx) strokeOutline(m mat, node map[string]any, outline [][2]float64, 
 	if width <= 0 {
 		return
 	}
-	rc.strokePolyline(transformPts(m, outline), width*avgScale(m), rasterColor(paint, rc.alpha), closed)
+	rc.strokeDashed(transformPts(m, outline), width*avgScale(m), rasterColor(paint, rc.alpha), closed, dashPattern(stroke, avgScale(m)))
+}
+
+// dashPattern reads a stroke's dash lengths (user units) as device lengths,
+// or nil for a solid stroke: no pattern, or nothing in it to draw.
+func dashPattern(stroke map[string]any, scale float64) []float64 {
+	raw := asArr(stroke["dash"])
+	if len(raw) == 0 {
+		return nil
+	}
+	out := make([]float64, 0, len(raw))
+	total := 0.0
+	for _, v := range raw {
+		d := asNum(v)
+		if d < 0 || math.IsNaN(d) || math.IsInf(d, 0) {
+			return nil
+		}
+		out = append(out, d*scale)
+		total += d
+	}
+	if total <= 0 {
+		return nil
+	}
+	return out
+}
+
+// strokeDashed strokes a polyline solid, or as the dashes of a pattern the
+// way the browser strokes with setLineDash: on, off, on, along the line and
+// once around a closed outline.
+func (rc *rctx) strokeDashed(dev [][2]float64, widthDev float64, col color.RGBA, closed bool, dash []float64) {
+	if dash == nil {
+		rc.strokePolyline(dev, widthDev, col, closed)
+		return
+	}
+	for _, piece := range dashPolyline(dev, closed, dash) {
+		rc.strokePolyline(piece, widthDev, col, false)
+	}
+}
+
+// dashPolyline cuts a device-space polyline into the "on" runs of a dash
+// pattern (device lengths, at least one positive). A closed outline is
+// walked once around; every piece comes back as an open polyline.
+func dashPolyline(dev [][2]float64, closed bool, pattern []float64) [][][2]float64 {
+	if len(dev) < 2 || len(pattern) == 0 {
+		return nil
+	}
+	pts := dev
+	if closed {
+		pts = append(append([][2]float64{}, dev...), dev[0])
+	}
+	var out [][][2]float64
+	var cur [][2]float64
+	idx := 0
+	remain := pattern[0]
+	on := true
+	advance := func() {
+		on = !on
+		for range pattern {
+			idx = (idx + 1) % len(pattern)
+			remain = pattern[idx]
+			if remain > 0 {
+				return
+			}
+			on = !on
+		}
+	}
+	for remain == 0 {
+		advance()
+	}
+	if on {
+		cur = [][2]float64{pts[0]}
+	}
+	for i := 0; i+1 < len(pts); i++ {
+		p0, p1 := pts[i], pts[i+1]
+		segLen := math.Hypot(p1[0]-p0[0], p1[1]-p0[1])
+		pos := 0.0
+		for segLen-pos > remain {
+			pos += remain
+			t := pos / segLen
+			pt := [2]float64{p0[0] + (p1[0]-p0[0])*t, p0[1] + (p1[1]-p0[1])*t}
+			if on {
+				cur = append(cur, pt)
+				if len(cur) >= 2 {
+					out = append(out, cur)
+				}
+				cur = nil
+			}
+			advance()
+			if on {
+				cur = [][2]float64{pt}
+			}
+		}
+		remain -= segLen - pos
+		if on {
+			cur = append(cur, p1)
+		}
+	}
+	if on && len(cur) >= 2 {
+		out = append(out, cur)
+	}
+	return out
 }
 
 // strokePolyline strokes a device-space polyline as one thick quad per segment
@@ -608,37 +708,108 @@ func (rc *rctx) rasterPath(m mat, node map[string]any) {
 			src = image.NewUniform(col)
 		}
 	}
-	if src == nil {
-		return
-	}
-	if len(contours) == 1 {
-		r := vector.NewRasterizer(rc.w, rc.h)
-		tracePathContour(r, m, segs, closed)
-		r.Draw(rc.dst, rc.dst.Bounds(), src, image.Point{})
-		return
-	}
-	// The vector rasterizer accumulates non-zero winding, which cannot cut a
-	// hole whose contour winds the same direction as its parent. Rasterize each
-	// contour's coverage separately and fold it in as |acc - mask| (a soft XOR),
-	// which realizes the even-odd rule on antialiased coverage.
-	acc := image.NewAlpha(rc.dst.Bounds())
-	tmp := image.NewAlpha(rc.dst.Bounds())
-	for _, c := range contours {
-		for i := range tmp.Pix {
-			tmp.Pix[i] = 0
-		}
-		r := vector.NewRasterizer(rc.w, rc.h)
-		tracePathContour(r, m, c.segs, c.closed)
-		r.Draw(tmp, tmp.Bounds(), image.Opaque, image.Point{})
-		for i := range acc.Pix {
-			d := int(acc.Pix[i]) - int(tmp.Pix[i])
-			if d < 0 {
-				d = -d
+	if src != nil {
+		if len(contours) == 1 {
+			r := vector.NewRasterizer(rc.w, rc.h)
+			tracePathContour(r, m, segs, closed)
+			r.Draw(rc.dst, rc.dst.Bounds(), src, image.Point{})
+		} else {
+			// The vector rasterizer accumulates non-zero winding, which cannot cut a
+			// hole whose contour winds the same direction as its parent. Rasterize each
+			// contour's coverage separately and fold it in as |acc - mask| (a soft XOR),
+			// which realizes the even-odd rule on antialiased coverage.
+			acc := image.NewAlpha(rc.dst.Bounds())
+			tmp := image.NewAlpha(rc.dst.Bounds())
+			for _, c := range contours {
+				for i := range tmp.Pix {
+					tmp.Pix[i] = 0
+				}
+				r := vector.NewRasterizer(rc.w, rc.h)
+				tracePathContour(r, m, c.segs, c.closed)
+				r.Draw(tmp, tmp.Bounds(), image.Opaque, image.Point{})
+				for i := range acc.Pix {
+					d := int(acc.Pix[i]) - int(tmp.Pix[i])
+					if d < 0 {
+						d = -d
+					}
+					acc.Pix[i] = uint8(d)
+				}
 			}
-			acc.Pix[i] = uint8(d)
+			draw.DrawMask(rc.dst, rc.dst.Bounds(), src, image.Point{}, acc, image.Point{}, draw.Over)
 		}
 	}
-	draw.DrawMask(rc.dst, rc.dst.Bounds(), src, image.Point{}, acc, image.Point{}, draw.Over)
+	// The outline, the way the browser engine strokes a path after its fill:
+	// every contour flattened to device points and stroked at the node's
+	// width. A stroke-only path (an arrow, a connector, a drawing's line
+	// layer) is drawn here and nowhere else.
+	if stroke := asObj(node["stroke"]); stroke != nil {
+		col := rasterColor(pdfPaint(asObj(stroke["fill"])), rc.alpha)
+		width := asNum(stroke["width"])
+		if width <= 0 {
+			width = 1
+		}
+		dash := dashPattern(stroke, avgScale(m))
+		for _, c := range contours {
+			rc.strokeDashed(flattenPathContour(m, c.segs, c.closed), width*avgScale(m), col, c.closed, dash)
+		}
+	}
+}
+
+// flattenPathContour walks a path contour in device space, sampling each
+// cubic segment finely enough for a stroke to read as a curve.
+func flattenPathContour(m mat, segs []any, closed bool) [][2]float64 {
+	if len(segs) == 0 {
+		return nil
+	}
+	first := asObj(segs[0])
+	sx, sy := m.apply(asNum(first["x"]), asNum(first["y"]))
+	pts := [][2]float64{{sx, sy}}
+	count := len(segs) - 1
+	if closed {
+		count = len(segs)
+	}
+	for i := 0; i < count; i++ {
+		from := asObj(segs[i])
+		to := asObj(segs[(i+1)%len(segs)])
+		cOut := asObj(from["cOut"])
+		cIn := asObj(to["cIn"])
+		tx, ty := m.apply(asNum(to["x"]), asNum(to["y"]))
+		if cOut == nil && cIn == nil {
+			pts = append(pts, [2]float64{tx, ty})
+			continue
+		}
+		p0x, p0y := pts[len(pts)-1][0], pts[len(pts)-1][1]
+		c1x, c1y := asNum(from["x"]), asNum(from["y"])
+		if cOut != nil {
+			c1x, c1y = asNum(cOut["x"]), asNum(cOut["y"])
+		}
+		c2x, c2y := asNum(to["x"]), asNum(to["y"])
+		if cIn != nil {
+			c2x, c2y = asNum(cIn["x"]), asNum(cIn["y"])
+		}
+		a1, b1 := m.apply(c1x, c1y)
+		a2, b2 := m.apply(c2x, c2y)
+		// Steps from the control polygon's device length, at most one per 4 px.
+		steps := int(math.Ceil((math.Hypot(a1-p0x, b1-p0y) + math.Hypot(a2-a1, b2-b1) + math.Hypot(tx-a2, ty-b2)) / 4))
+		if steps < 4 {
+			steps = 4
+		}
+		if steps > 64 {
+			steps = 64
+		}
+		for k := 1; k <= steps; k++ {
+			t := float64(k) / float64(steps)
+			u := 1 - t
+			x := u*u*u*p0x + 3*u*u*t*a1 + 3*u*t*t*a2 + t*t*t*tx
+			y := u*u*u*p0y + 3*u*u*t*b1 + 3*u*t*t*b2 + t*t*t*ty
+			pts = append(pts, [2]float64{x, y})
+		}
+	}
+	if closed && len(pts) > 1 {
+		// The walk already returned to the start; strokePolyline closes the loop.
+		pts = pts[:len(pts)-1]
+	}
+	return pts
 }
 
 // rasterLine draws each polyline segment as a thick filled quad (stroke approx).
@@ -1016,6 +1187,7 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 				}
 				return true
 			}
+			runStart := x
 			for _, r := range text {
 				if drawRune(r) {
 					continue
@@ -1036,6 +1208,26 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 				}
 			}
 			_ = face.Close()
+			// Underline and strikethrough, drawn in the run's own colour after
+			// its glyphs, at the browser engine's offsets (baseline + 0.12 em,
+			// baseline - 0.3 em) and thickness (a sixteenth of the size).
+			if decs := asArr(style["decoration"]); len(decs) > 0 && x > runStart {
+				th := math.Max(1, size/16)
+				for _, dv := range decs {
+					var off float64
+					switch asStr(dv) {
+					case "underline":
+						off = size * 0.12
+					case "strikethrough":
+						off = -size * 0.3
+					default:
+						continue
+					}
+					x0, y0 := m.apply(runStart, y+off)
+					x1, y1 := m.apply(x, y+off)
+					rc.strokeSegDevice(x0, y0, x1, y1, th*avgScale(m)/2, rasterColor(col, rc.alpha))
+				}
+			}
 			return x
 		}
 		if ln.marker != "" {
@@ -1248,7 +1440,13 @@ func (rc *rctx) rasterNodeDirect(m mat, node map[string]any) {
 		if asStr(node["type"]) == "frame" {
 			if fill := firstFill(node); fill != nil {
 				if w, h := sizeOf(node); w > 0 && h > 0 {
-					rc.fillPolyPaint(transformPts(cm, [][2]float64{{0, 0}, {w, 0}, {w, h}, {0, h}}), fill, avgScale(cm))
+					// An elliptical frame (a portrait slot) fills its ellipse, as
+					// the browser clips it; every other mask fills the box.
+					if asStr(node["maskShape"]) == "ellipse" {
+						rc.fillPolyPaint(transformPts(cm, ellipseOutline(w, h, avgScale(cm))), fill, avgScale(cm))
+					} else {
+						rc.fillPolyPaint(transformPts(cm, [][2]float64{{0, 0}, {w, 0}, {w, h}, {0, h}}), fill, avgScale(cm))
+					}
 				}
 			}
 		}

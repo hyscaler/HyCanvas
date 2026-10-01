@@ -13,6 +13,7 @@
  ],
  "styleTags": [
   "minimal",
+  "modern",
   "corporate"
  ],
  "size": [
@@ -22,155 +23,712 @@
  "typography": [
   {
    "role": "heading",
-   "family": "Poppins",
-   "weight": 700
+   "family": "Plus Jakarta Sans",
+   "weight": 800
   },
   {
    "role": "body",
-   "family": "Inter",
+   "family": "Onest",
    "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Reenie Beanie",
+   "weight": 400
+  },
+  {
+   "role": "label",
+   "family": "Geist Mono",
+   "weight": 500
   }
  ],
  "pages": [
   {
-   "name": "Title",
-   "bg": "#0F172A",
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#2A2F37",
+      0
+     ],
+     [
+      "#14171C",
+      1
+     ]
+    ]
+   },
    "nodes": [
     {
      "kind": "ellipse",
-     "x": 1660,
-     "y": -120,
-     "w": 420,
-     "h": 420,
+     "x": 1380,
+     "y": -420,
+     "w": 1100,
+     "h": 1100,
      "fill": {
       "angle": 135,
       "stops": [
        [
-        "#22D3EE",
+        "#CFE7F7",
         0
        ],
        [
-        "#6366F1",
+        "#14171C",
         1
        ]
-      ]
+      ],
+      "radial": true
      },
+     "opacity": 0.6,
      "bleed": true
     },
     {
      "kind": "ellipse",
-     "x": 1620,
-     "y": 820,
-     "w": 480,
-     "h": 480,
-     "fill": "#6366F1",
-     "opacity": 0.1,
+     "x": -380,
+     "y": 620,
+     "w": 900,
+     "h": 900,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#9AD6FF",
+        0
+       ],
+       [
+        "#14171C",
+        1
+       ]
+      ],
+      "radial": true
+     },
+     "opacity": 0.26,
      "bleed": true
     },
     {
-     "kind": "text",
-     "x": 160,
-     "y": 300,
-     "w": 900,
-     "h": 32,
-     "text": "Quarterly Review",
-     "family": "Poppins",
-     "size": 24,
-     "weight": 600,
-     "color": "#22D3EE",
-     "letterSpacing": 4,
-     "upper": true,
-     "lineHeight": 1.1
+     "kind": "rect",
+     "x": 320,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F3F5F8",
+     "opacity": 0.06
     },
     {
      "kind": "rect",
-     "x": 160,
-     "y": 356,
-     "w": 90,
-     "h": 12,
-     "fill": "#22D3EE",
+     "x": 640,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F3F5F8",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 960,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F3F5F8",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 1280,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F3F5F8",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 1600,
+     "y": 0,
+     "w": 1,
+     "h": 1080,
+     "fill": "#F3F5F8",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 270,
+     "w": 1920,
+     "h": 1,
+     "fill": "#F3F5F8",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 540,
+     "w": 1920,
+     "h": 1,
+     "fill": "#F3F5F8",
+     "opacity": 0.06
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 810,
+     "w": 1920,
+     "h": 1,
+     "fill": "#F3F5F8",
+     "opacity": 0.06
+    },
+    {
+     "kind": "ellipse",
+     "x": 1195,
+     "y": 147,
+     "w": 6,
+     "h": 6,
+     "fill": "#9AD6FF",
+     "opacity": 0.79
+    },
+    {
+     "kind": "ellipse",
+     "x": 1252,
+     "y": 596,
+     "w": 8,
+     "h": 8,
+     "fill": "#9AD6FF",
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 1336,
+     "y": 310,
+     "w": 6,
+     "h": 6,
+     "fill": "#9AD6FF",
+     "opacity": 0.43999999999999995
+    },
+    {
+     "kind": "ellipse",
+     "x": 1414,
+     "y": 28,
+     "w": 8,
+     "h": 8,
+     "fill": "#CFE7F7",
+     "opacity": 0.57
+    },
+    {
+     "kind": "ellipse",
+     "x": 1583,
+     "y": 16,
+     "w": 6,
+     "h": 6,
+     "fill": "#CFE7F7",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#9AD6FF",
      "radius": 6
     },
     {
      "kind": "text",
-     "x": 160,
-     "y": 410,
-     "w": 1320,
-     "h": 274,
-     "text": "Building\nwhat\u2019s next",
-     "family": "Poppins",
-     "size": 116,
-     "weight": 700,
-     "color": "#F8FAFC",
-     "lineHeight": 1.12
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Northwind Labs",
+     "family": "Onest",
+     "size": 22,
+     "weight": 600,
+     "color": "#F3F5F8",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1620,
+     "y": 88,
+     "w": 204,
+     "h": 40,
+     "fill": "#333944",
+     "radius": 20,
+     "stroke": "#3D444F",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1636,
+     "y": 98,
+     "w": 20,
+     "h": 20,
+     "fill": "#9AD6FF",
+     "opacity": 0.22
+    },
+    {
+     "kind": "ellipse",
+     "x": 1641,
+     "y": 103,
+     "w": 10,
+     "h": 10,
+     "fill": "#9AD6FF"
     },
     {
      "kind": "text",
-     "x": 160,
-     "y": 716,
-     "w": 1180,
-     "h": 42,
-     "text": "A clear look at progress, priorities, and the road ahead.",
-     "family": "Inter",
-     "size": 30,
+     "x": 1668,
+     "y": 98,
+     "w": 148,
+     "h": 22,
+     "text": "Q3  ·  2026",
+     "family": "Geist Mono",
+     "size": 16,
+     "weight": 600,
+     "color": "#9AD6FF",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 296,
+     "w": 1000,
+     "h": 60,
+     "text": "quarterly review",
+     "family": "Reenie Beanie",
+     "size": 46,
      "weight": 400,
-     "color": "#94A3B8",
+     "color": "#9AD6FF",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 362,
+     "w": 1000,
+     "h": 254,
+     "text": "Building\nwhat's next",
+     "family": "Plus Jakarta Sans",
+     "size": 116,
+     "weight": 800,
+     "color": "#F3F5F8",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 642,
+     "w": 900,
+     "h": 80,
+     "text": "A clear look at progress, priorities, and the road ahead.",
+     "family": "Onest",
+     "size": 28,
+     "weight": 400,
+     "color": "#A5AEBA",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1190,
+     "y": 114,
+     "w": 620,
+     "h": 620,
+     "fill": "#9AD6FF",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1252,
+     "y": 176,
+     "w": 496,
+     "h": 496,
+     "fill": "#9AD6FF",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       96,
+       905
+      ],
+      [
+       96,
+       888
+      ],
+      [
+       240,
+       876
+      ],
+      [
+       384,
+       884
+      ],
+      [
+       528,
+       869
+      ],
+      [
+       672,
+       860
+      ],
+      [
+       816,
+       867
+      ],
+      [
+       960,
+       853
+      ],
+      [
+       1104,
+       843
+      ],
+      [
+       1248,
+       850
+      ],
+      [
+       1392,
+       834
+      ],
+      [
+       1536,
+       815
+      ],
+      [
+       1680,
+       786
+      ],
+      [
+       1824,
+       807
+      ],
+      [
+       1824,
+       905
+      ]
+     ],
+     "fill": "#9AD6FF",
+     "closed": true,
+     "opacity": 0.14
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       96,
+       888
+      ],
+      [
+       240,
+       876
+      ],
+      [
+       384,
+       884
+      ],
+      [
+       528,
+       869
+      ],
+      [
+       672,
+       860
+      ],
+      [
+       816,
+       867
+      ],
+      [
+       960,
+       853
+      ],
+      [
+       1104,
+       843
+      ],
+      [
+       1248,
+       850
+      ],
+      [
+       1392,
+       834
+      ],
+      [
+       1536,
+       815
+      ],
+      [
+       1680,
+       786
+      ],
+      [
+       1824,
+       807
+      ]
+     ],
+     "stroke": "#9AD6FF",
+     "strokeWidth": 9,
+     "opacity": 0.2
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       96,
+       888
+      ],
+      [
+       240,
+       876
+      ],
+      [
+       384,
+       884
+      ],
+      [
+       528,
+       869
+      ],
+      [
+       672,
+       860
+      ],
+      [
+       816,
+       867
+      ],
+      [
+       960,
+       853
+      ],
+      [
+       1104,
+       843
+      ],
+      [
+       1248,
+       850
+      ],
+      [
+       1392,
+       834
+      ],
+      [
+       1536,
+       815
+      ],
+      [
+       1680,
+       786
+      ],
+      [
+       1824,
+       807
+      ]
+     ],
+     "stroke": "#9AD6FF",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 905,
+     "w": 1728,
+     "h": 1,
+     "fill": "#3D444F"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 760,
+     "w": 700,
+     "h": 22,
+     "text": "Weekly bookings  ·  thirteen weeks",
+     "family": "Geist Mono",
+     "size": 15,
+     "weight": 600,
+     "color": "#9AD6FF",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 1664,
+     "y": 770,
+     "w": 32,
+     "h": 32,
+     "fill": "#9AD6FF",
+     "opacity": 0.25
+    },
+    {
+     "kind": "ellipse",
+     "x": 1673,
+     "y": 779,
+     "w": 14,
+     "h": 14,
+     "fill": "#9AD6FF"
+    },
+    {
+     "kind": "text",
+     "x": 1540,
+     "y": 760,
+     "w": 116,
+     "h": 20,
+     "text": "$1.6M",
+     "family": "Geist Mono",
+     "size": 15,
+     "weight": 600,
+     "color": "#F3F5F8",
+     "align": "right",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 899,
+     "w": 1,
+     "h": 12,
+     "fill": "#3D444F"
+    },
+    {
+     "kind": "text",
+     "x": 108,
+     "y": 911,
+     "w": 200,
+     "h": 20,
+     "text": "Jul",
+     "family": "Geist Mono",
+     "size": 14,
+     "weight": 500,
+     "color": "#A5AEBA",
+     "upper": true,
+     "letterSpacing": 2,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 672,
+     "y": 899,
+     "w": 1,
+     "h": 12,
+     "fill": "#3D444F"
+    },
+    {
+     "kind": "text",
+     "x": 684,
+     "y": 911,
+     "w": 200,
+     "h": 20,
+     "text": "Aug",
+     "family": "Geist Mono",
+     "size": 14,
+     "weight": 500,
+     "color": "#A5AEBA",
+     "upper": true,
+     "letterSpacing": 2,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 1248,
+     "y": 899,
+     "w": 1,
+     "h": 12,
+     "fill": "#3D444F"
+    },
+    {
+     "kind": "text",
+     "x": 1260,
+     "y": 911,
+     "w": 200,
+     "h": 20,
+     "text": "Sep",
+     "family": "Geist Mono",
+     "size": 14,
+     "weight": 500,
+     "color": "#A5AEBA",
+     "upper": true,
+     "letterSpacing": 2,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Dana Cole, Chief Operating Officer  ·  9 October 2026",
+     "family": "Geist Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A5AEBA",
      "lineHeight": 1.3
     },
     {
      "kind": "text",
-     "x": 160,
-     "y": 980,
-     "w": 900,
-     "h": 30,
-     "text": "Northwind Labs \u00b7 2026",
-     "family": "Inter",
-     "size": 22,
-     "weight": 500,
-     "color": "#94A3B8",
-     "letterSpacing": 2,
-     "lineHeight": 1.2
+     "x": 1140,
+     "y": 688,
+     "w": 720,
+     "h": 49,
+     "text": "thirteen weeks, one line",
+     "family": "Reenie Beanie",
+     "size": 39,
+     "weight": 400,
+     "color": "#9AD6FF",
+     "lineHeight": 1.2,
+     "align": "center"
     }
    ],
    "illustrations": [
     {
-     "asset": "la-free-svg-illustration-rocket",
-     "x": 1290,
-     "y": 240,
-     "w": 600,
-     "h": 700,
-     "position": "after:deck-title-modern-p0-n1"
+     "asset": "la-monitor",
+     "x": 1230,
+     "y": 164,
+     "w": 540,
+     "h": 520
     }
    ]
   }
  ],
  "fillable": [
   {
-   "node": "p0-n2",
+   "node": "p0-n16",
    "kind": "text",
-   "label": "Eyebrow",
-   "hint": "Deck type or series, e.g. Quarterly Review"
+   "label": "Company",
+   "hint": "Your company or team name"
   },
   {
-   "node": "p0-n4",
+   "node": "p0-n20",
+   "kind": "text",
+   "label": "Quarter",
+   "hint": "The period this deck reviews"
+  },
+  {
+   "node": "p0-n22",
    "kind": "text",
    "label": "Title",
-   "hint": "The presentation title"
+   "hint": "Two short lines"
   },
   {
-   "node": "p0-n5",
+   "node": "p0-n23",
    "kind": "text",
    "label": "Subtitle",
-   "hint": "One line on what the deck covers"
+   "hint": "One sentence on what the deck covers"
   },
   {
-   "node": "p0-n6",
+   "node": "p0-n40",
    "kind": "text",
-   "label": "Company and year",
-   "hint": "Company name and year"
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
   }
  ],
- "version": 2,
- "updated": "2026-07-10T00:00:00.000Z",
+ "version": 3,
+ "created": "2026-07-04T00:00:00.000Z",
+ "updated": "2026-09-30T00:00:00.000Z",
  "rank": 5
 }

@@ -91,7 +91,8 @@ func TestBedrockRequestShapes(t *testing.T) {
 		APIKey:    "AKIDEXAMPLE",
 		APISecret: "secret",
 		BaseURL:   "https://bedrock-runtime.eu-west-1.amazonaws.com",
-		Model:     "anthropic.claude-sonnet-4-5-20250929-v1:0",
+		// A versioned profile id: the colon must survive path escaping.
+		Model: "us.anthropic.claude-opus-4-7-v1:0",
 	}
 
 	text := buildTextRequest(cfg, "write a headline", "be terse")
@@ -99,7 +100,7 @@ func TestBedrockRequestShapes(t *testing.T) {
 		t.Fatalf("text should go to the Converse route: %s", text.url)
 	}
 	// The model id contains a colon, which must survive path escaping.
-	if !strings.Contains(text.url, "v1%3A0") && !strings.Contains(text.url, "v1:0") {
+	if !strings.Contains(text.url, "/model/us.anthropic.claude-opus-4-7-v1%3A0/") && !strings.Contains(text.url, "/model/us.anthropic.claude-opus-4-7-v1:0/") {
 		t.Fatalf("model id lost in the path: %s", text.url)
 	}
 	if text.sign == nil || text.sign.Region != "eu-west-1" || text.sign.Service != "bedrock" {
@@ -338,5 +339,47 @@ func TestBedrockEndToEnd_DB(t *testing.T) {
 	}
 	if secretCipher != nil {
 		t.Fatal("a new key must not keep the previous provider's secret")
+	}
+}
+
+// The canonical URI is what AWS computes, not what Go escapes: a versioned
+// model id's colon is "%3A" in the signature and in the request path alike.
+// Signing the raw colon was a 403 for every "...-v1:0" model id.
+func TestCanonicalURIEncodesTheModelIdLikeAWS(t *testing.T) {
+	if got := awsCanonicalURI("/model/us.anthropic.claude-opus-4-7-v1:0/converse"); got != "/model/us.anthropic.claude-opus-4-7-v1%3A0/converse" {
+		t.Fatalf("canonical URI = %s", got)
+	}
+	if got := awsCanonicalURI("/"); got != "/" {
+		t.Fatalf("root = %s", got)
+	}
+	if got := awsPathSegment("a b~c.d-e_f"); got != "a%20b~c.d-e_f" {
+		t.Fatalf("segment = %s", got)
+	}
+	cfg := CallConfig{Provider: ProviderBedrock, APIKey: "AKIDEXAMPLE", APISecret: "secret", BaseURL: "https://bedrock-runtime.us-east-1.amazonaws.com", Model: "us.anthropic.claude-opus-4-7-v1:0"}
+	req := buildTextRequest(cfg, "hi", "")
+	if !strings.HasSuffix(req.url, "/model/us.anthropic.claude-opus-4-7-v1%3A0/converse") {
+		t.Fatalf("request path must carry the same encoding the signature covers: %s", req.url)
+	}
+	// Signing a request whose path Go decoded from %3A yields the canonical
+	// form again, so the two agree byte for byte.
+	httpReq, _ := http.NewRequest("POST", req.url, strings.NewReader("{}"))
+	if httpReq.URL.Path != "/model/us.anthropic.claude-opus-4-7-v1:0/converse" || awsCanonicalURI(httpReq.URL.Path) != "/model/us.anthropic.claude-opus-4-7-v1%3A0/converse" {
+		t.Fatalf("decoded path %s canonicalises to %s", httpReq.URL.Path, awsCanonicalURI(httpReq.URL.Path))
+	}
+}
+
+// A rejected request leaves the provider's reason in the log, bounded and on
+// one line, and never in the error the caller gets.
+func TestUpstreamReasonIsBoundedAndOneLine(t *testing.T) {
+	long := strings.Repeat("x", 500)
+	got := upstreamReason(strings.NewReader(`{"message":"The request signature we calculated does not match\n the signature you provided. ` + long + `"}`))
+	if !strings.HasPrefix(got, "The request signature we calculated does not match the signature you provided.") || len(got) > 243 || strings.Contains(got, "\n") {
+		t.Fatalf("reason = %q", got)
+	}
+	if got := upstreamReason(strings.NewReader(`{"error":{"message":"invalid api key"}}`)); got != "invalid api key" {
+		t.Fatalf("openai shape = %q", got)
+	}
+	if got := upstreamReason(strings.NewReader("plain text\r\nsecond")); got != "plain text second" {
+		t.Fatalf("plain = %q", got)
 	}
 }

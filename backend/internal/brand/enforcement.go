@@ -13,8 +13,6 @@ import (
 	"fmt"
 	"math"
 	"strings"
-
-	"hycanvas/backend/internal/color"
 )
 
 // ErrBrandLocked is returned when a save violates an active brand lock.
@@ -207,18 +205,19 @@ func findBrandViolations(file map[string]any, kit BrandKit) []Violation {
 		palette := kitColors(kit)
 		if len(palette) > 0 {
 			seen := map[string]bool{}
+			// A swatch, or a tint, shade or blend of swatches, is the brand's
+			// (blend.go); judged once per distinct colour.
+			judged := map[string]bool{}
 			for _, ca := range colors {
-				inKit := false
-				for _, p := range palette {
-					if color.DeltaE(ca.c.r, ca.c.g, ca.c.b, p.r, p.g, p.b) <= colorTolerance {
-						inKit = true
-						break
-					}
+				hex := hexOf(ca.c)
+				inKit, done := judged[hex]
+				if !done {
+					inKit = onBrand(ca.c, palette)
+					judged[hex] = inKit
 				}
 				if inKit {
 					continue
 				}
-				hex := hexOf(ca.c)
 				key := hex + "@" + ca.nodeID
 				if seen[key] {
 					continue

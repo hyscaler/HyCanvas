@@ -71,8 +71,8 @@ func TestCompose_OutputShape(t *testing.T) {
 		t.Fatalf("schemaVersion %v != current %d", file["schemaVersion"], persistence.CurrentSchemaVersion)
 	}
 	pages, _ := file["pages"].([]any)
-	if len(pages) != 4 {
-		t.Fatalf("want 4 pages, got %d", len(pages))
+	if len(pages) != 5 {
+		t.Fatalf("want 5 pages, got %d", len(pages))
 	}
 	first := pages[0].(map[string]any)
 	if kids, _ := first["children"].([]any); len(kids) == 0 {

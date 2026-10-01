@@ -23,6 +23,8 @@ const oc = {
   deleteAiImageConfig: vi.fn(),
   testAiImageConfig: vi.fn(),
   testAiConfig: vi.fn(),
+  listAiModels: vi.fn(),
+  listAiImageModels: vi.fn(),
 };
 vi.mock("@/lib/sdk", () => ({ oc }));
 
@@ -36,7 +38,7 @@ const { AiProviderSettings } = await import("./AiProviderSettings");
 
 const caps = (image: boolean) => ({ text: true, image, describeImage: false, editImage: false });
 const PRESETS: AiProviderPreset[] = [
-  { id: "bedrock", label: "Amazon Bedrock", baseUrl: "", defaultModel: "anthropic.claude-sonnet-4-5-20250929-v1:0", defaultImageModel: "amazon.nova-canvas-v1:0", capabilities: caps(true), needsBaseUrl: true, needsSecret: true },
+  { id: "bedrock", label: "Amazon Bedrock", baseUrl: "", defaultModel: "us.anthropic.claude-opus-4-7", defaultImageModel: "amazon.nova-canvas-v1:0", capabilities: caps(true), needsBaseUrl: true, needsSecret: true },
   { id: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", defaultModel: "gpt-4o-mini", defaultImageModel: "dall-e-3", capabilities: caps(true) },
   { id: "deepseek", label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", defaultModel: "deepseek-chat", capabilities: caps(false) },
   { id: "together", label: "Together AI", baseUrl: "https://api.together.xyz/v1", defaultModel: "llama", defaultImageModel: "flux", capabilities: caps(true) },
@@ -87,7 +89,117 @@ beforeEach(() => {
   oc.getAiImageConfig.mockResolvedValue(null);
   oc.testAiConfig.mockResolvedValue(undefined);
   oc.testAiImageConfig.mockResolvedValue({ verified: true });
+  oc.listAiModels.mockResolvedValue({ models: [], supported: true });
+  oc.listAiImageModels.mockResolvedValue({ models: [], supported: true });
   confirmAction.mockResolvedValue(true);
+});
+
+/** The main form's buttons, outside the image section, by name. */
+function mainButton(name: string): HTMLElement {
+  const group = screen.queryByRole("group", { name: "Image provider" });
+  const match = screen.getAllByRole("button", { name }).find((el) => !group?.contains(el));
+  if (!match) throw new Error(`no main-form button "${name}"`);
+  return match;
+}
+
+describe("the model catalog", () => {
+  it("asks for the connection first and the model after it", async () => {
+    renderForm();
+    await screen.findByRole("button", { name: "Replace" });
+    const order = ["Provider", "Base URL", "Model (optional)"].map((l) => mainField(l));
+    // Document order: each field follows the one before it.
+    expect(order[0].compareDocumentPosition(order[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(order[1].compareDocumentPosition(order[2]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The stored key's stand-in (with its Replace button) sits between the
+    // host and the model too.
+    const key = mainButton("Replace");
+    expect(order[1].compareDocumentPosition(key) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(key.compareDocumentPosition(order[2]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("fetches the stored provider's catalog as the form opens and offers it under the model field", async () => {
+    oc.listAiModels.mockImplementation(async (_ws: string, _c: unknown, purpose?: string) =>
+      purpose === "image"
+        ? { models: [{ id: "dall-e-3" }], supported: true }
+        : { models: [{ id: "gpt-4o", label: "GPT-4o" }, { id: "gpt-4o-mini" }], supported: true },
+    );
+    renderForm();
+    await waitFor(() => expect(oc.listAiModels).toHaveBeenCalledWith("ws-1", undefined, "text"));
+    const model = mainField("Model (optional)") as HTMLInputElement;
+    await waitFor(() => expect(screen.getByText("2 models available. Pick one from the list or type a name.")).toBeTruthy());
+    // The list opens on focus, matches anywhere in the id or label, and a
+    // pick writes the id into the field.
+    // The suggestion list (not the page's provider selects, which have options too).
+    const suggestions = () => screen.queryByRole("listbox");
+    const items = () => within(suggestions()!).getAllByRole("option").map((o) => o.textContent);
+    // The field holds a picked model, so focus opens the whole catalog with
+    // it highlighted, and Enter keeps it.
+    fireEvent.focus(model);
+    expect(items()).toEqual(["gpt-4oGPT-4o", "gpt-4o-mini"]);
+    expect(within(suggestions()!).getAllByRole("option")[1].getAttribute("aria-selected")).toBe("true");
+    fireEvent.keyDown(model, { key: "Enter" });
+    expect(model.value).toBe("gpt-4o-mini");
+    fireEvent.focus(model);
+    fireEvent.change(model, { target: { value: "mini" } });
+    expect(items()).toEqual(["gpt-4o-mini"]);
+    fireEvent.keyDown(model, { key: "Enter" });
+    expect(model.value).toBe("gpt-4o-mini");
+    expect(suggestions()).toBeNull();
+    // A name the catalog does not carry stays as typed.
+    fireEvent.change(model, { target: { value: "gpt-6-preview" } });
+    expect(suggestions()).toBeNull();
+    expect(model.value).toBe("gpt-6-preview");
+    // The image model field gets the image catalog beside it.
+    const imageModel = mainField("Image model (optional)") as HTMLInputElement;
+    fireEvent.focus(imageModel);
+    expect(items()).toEqual(["dall-e-3"]);
+  });
+
+  it("fetches with the settings as typed, and retires the list when the connection changes", async () => {
+    renderForm(null);
+    await screen.findByRole("button", { name: "Fetch models" });
+    // No key yet: the button says what is missing rather than calling out.
+    fireEvent.click(mainButton("Fetch models"));
+    expect(oc.listAiModels).not.toHaveBeenCalled();
+    expect(screen.getByText(/Enter the key first/)).toBeTruthy();
+
+    fireEvent.change(mainField("Provider"), { target: { value: "deepseek" } });
+    fireEvent.change(mainField("API key"), { target: { value: "sk-new" } });
+    oc.listAiModels.mockResolvedValue({ models: [{ id: "deepseek-chat" }, { id: "deepseek-reasoner" }], supported: true });
+    fireEvent.click(mainButton("Fetch models"));
+    await waitFor(() => expect(oc.listAiModels).toHaveBeenCalledWith("ws-1", { provider: "deepseek", baseUrl: "", apiKey: "sk-new", apiSecret: undefined }, "text"));
+    await screen.findByText("2 models available. Pick one from the list or type a name.");
+    // DeepSeek cannot make images, so no image catalog was asked for.
+    expect(oc.listAiModels).toHaveBeenCalledTimes(1);
+
+    // A different key is a different connection: the list no longer applies.
+    fireEvent.change(mainField("API key"), { target: { value: "sk-other" } });
+    expect(screen.queryByText(/models available/)).toBeNull();
+  });
+
+  it("says so when a provider lists no models, and names a rejected key", async () => {
+    renderForm(null);
+    await screen.findByRole("button", { name: "Fetch models" });
+    fireEvent.change(mainField("API key"), { target: { value: "sk-1" } });
+    oc.listAiModels.mockResolvedValue({ models: [], supported: false });
+    fireEvent.click(mainButton("Fetch models"));
+    await screen.findByText("This provider does not list its models here. Type the model name.");
+
+    fireEvent.change(mainField("API key"), { target: { value: "sk-2" } });
+    oc.listAiModels.mockRejectedValue(new ApiError(502, "/x", { code: "ai_provider_auth_failed" }));
+    fireEvent.click(mainButton("Fetch models"));
+    await waitFor(() => expect(screen.getByText(/Could not fetch the models/)).toBeTruthy());
+  });
+
+  it("fetches the image provider's own catalog", async () => {
+    oc.getAiImageConfig.mockResolvedValue({ provider: "together", model: "flux", baseUrl: null, hasKey: true, capabilities: caps(true) });
+    oc.listAiImageModels.mockResolvedValue({ models: [{ id: "black-forest-labs/FLUX.1-schnell" }], supported: true });
+    renderForm();
+    const section = await screen.findByRole("group", { name: "Image provider" });
+    fireEvent.click(within(section).getByRole("button", { name: "Fetch models" }));
+    await waitFor(() => expect(oc.listAiImageModels).toHaveBeenCalledWith("ws-1", { provider: "together", baseUrl: "" }));
+    await within(section).findByText("1 models available. Pick one from the list or type a name.");
+  });
 });
 
 describe("the stored API key", () => {
@@ -123,26 +235,29 @@ describe("the stored API key", () => {
 });
 
 describe("a provider that signs its requests", () => {
-  it("asks for a secret access key, and only for the provider that needs one", async () => {
+  it("asks for an access key and a secret key, and only for the provider that needs them", async () => {
     renderForm();
     await screen.findByRole("group", { name: "Image provider" });
     // OpenAI is selected: no second credential exists for it.
-    expect(screen.queryByLabelText("Secret access key")).toBeNull();
+    expect(screen.queryByLabelText("Secret key")).toBeNull();
 
     fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
-    expect(mainField("Secret access key")).toBeTruthy();
+    expect(mainField("Secret key")).toBeTruthy();
+    // The first credential is named for what it is on a signing provider.
+    expect(mainField("Access key")).toBeTruthy();
+    expect(screen.queryByLabelText("API key")).toBeNull();
   });
 
   it("refuses to save a signing provider with only half its credential", async () => {
     renderForm();
     await screen.findByRole("group", { name: "Image provider" });
     fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
-    fireEvent.change(mainField("API key"), { target: { value: "AKIDEXAMPLE" } });
+    fireEvent.change(mainField("Access key"), { target: { value: "AKIDEXAMPLE" } });
     fireEvent.change(mainField("Base URL"), { target: { value: "https://bedrock-runtime.us-east-1.amazonaws.com" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
 
-    // An access key ID alone cannot produce a signature, so this never reaches
+    // An access key alone cannot produce a signature, so this never reaches
     // the server.
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
     expect(oc.setAiConfig).not.toHaveBeenCalled();
@@ -153,8 +268,8 @@ describe("a provider that signs its requests", () => {
     renderForm();
     await screen.findByRole("group", { name: "Image provider" });
     fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
-    fireEvent.change(mainField("API key"), { target: { value: "AKIDEXAMPLE" } });
-    fireEvent.change(mainField("Secret access key"), { target: { value: "secret" } });
+    fireEvent.change(mainField("Access key"), { target: { value: "AKIDEXAMPLE" } });
+    fireEvent.change(mainField("Secret key"), { target: { value: "secret" } });
     fireEvent.change(mainField("Base URL"), { target: { value: "https://bedrock-runtime.us-east-1.amazonaws.com" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
@@ -177,8 +292,8 @@ describe("a provider that signs its requests", () => {
     // offered with nowhere to put the second half of its credential, and every
     // save was refused with no way to satisfy it.
     fireEvent.change(section.getByLabelText("Provider"), { target: { value: "bedrock" } });
-    fireEvent.change(section.getByLabelText("API key"), { target: { value: "AKIDEXAMPLE" } });
-    fireEvent.change(section.getByLabelText("Secret access key"), { target: { value: "secret" } });
+    fireEvent.change(section.getByLabelText("Access key"), { target: { value: "AKIDEXAMPLE" } });
+    fireEvent.change(section.getByLabelText("Secret key"), { target: { value: "secret" } });
     fireEvent.change(section.getByLabelText("Base URL"), { target: { value: "https://bedrock-runtime.us-east-1.amazonaws.com" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
@@ -195,7 +310,7 @@ describe("a provider that signs its requests", () => {
     renderForm();
     const section = within(await screen.findByRole("group", { name: "Image provider" }));
     fireEvent.change(section.getByLabelText("Provider"), { target: { value: "bedrock" } });
-    fireEvent.change(section.getByLabelText("API key"), { target: { value: "AKIDEXAMPLE" } });
+    fireEvent.change(section.getByLabelText("Access key"), { target: { value: "AKIDEXAMPLE" } });
     fireEvent.change(section.getByLabelText("Base URL"), { target: { value: "https://bedrock-runtime.us-east-1.amazonaws.com" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
@@ -209,11 +324,11 @@ describe("a provider that signs its requests", () => {
     renderForm();
     await screen.findByRole("group", { name: "Image provider" });
     fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
-    fireEvent.change(mainField("Secret access key"), { target: { value: "aws-secret" } });
+    fireEvent.change(mainField("Secret key"), { target: { value: "aws-secret" } });
     // Away to a provider with no secret, and back.
     fireEvent.change(mainField("Provider"), { target: { value: "deepseek" } });
     fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
-    expect((mainField("Secret access key") as HTMLInputElement).value).toBe("");
+    expect((mainField("Secret key") as HTMLInputElement).value).toBe("");
   });
 });
 

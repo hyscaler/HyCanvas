@@ -283,6 +283,80 @@ function num(attrs: Attrs, key: string, dflt = 0): number {
 // even-odd rule instead of each flooding as a separate solid shape. A
 // degenerate leading subpath (a lone moveto) would make renderers skip the
 // whole node, so the primary slot gets the first drawable subpath instead.
+// --- transforms --------------------------------------------------------------
+// An SVG transform list as a 2 by 3 matrix [a, b, c, d, e, f]. Groups nest
+// their transforms; every leaf is emitted in root space, so a drawing whose
+// parts sit in translated groups (every Sketch export) lands where it was
+// drawn. A pure translate or scale keeps a rect or ellipse as a shape; a
+// rotation or skew turns it into a path, which carries any matrix exactly.
+
+type Mat = [number, number, number, number, number, number];
+const IDENTITY: Mat = [1, 0, 0, 1, 0, 0];
+
+function matMul(m: Mat, n: Mat): Mat {
+  return [
+    m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1],
+    m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3],
+    m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5],
+  ];
+}
+const matApply = (m: Mat, x: number, y: number) => ({ x: m[0] * x + m[2] * y + m[4], y: m[1] * x + m[3] * y + m[5] });
+const matIsIdentity = (m: Mat) => m[0] === 1 && m[1] === 0 && m[2] === 0 && m[3] === 1 && m[4] === 0 && m[5] === 0;
+/** No rotation or skew, positive scale: a shape can stay a shape. */
+const matIsAxisAligned = (m: Mat) => m[1] === 0 && m[2] === 0 && m[0] > 0 && m[3] > 0;
+
+export function parseTransform(v: string | undefined): Mat {
+  let m: Mat = IDENTITY;
+  if (!v) return m;
+  for (const t of v.matchAll(/(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^)]*)\)/g)) {
+    const a = t[2].trim().split(/[\s,]+/).filter(Boolean).map(Number);
+    let n: Mat = IDENTITY;
+    switch (t[1]) {
+      case "matrix": if (a.length >= 6) n = [a[0], a[1], a[2], a[3], a[4], a[5]]; break;
+      case "translate": n = [1, 0, 0, 1, a[0] ?? 0, a[1] ?? 0]; break;
+      case "scale": n = [a[0] ?? 1, 0, 0, a[1] ?? a[0] ?? 1, 0, 0]; break;
+      case "rotate": {
+        const r = ((a[0] ?? 0) * Math.PI) / 180;
+        const rot: Mat = [Math.cos(r), Math.sin(r), -Math.sin(r), Math.cos(r), 0, 0];
+        n = a.length >= 3 ? matMul(matMul([1, 0, 0, 1, a[1], a[2]], rot), [1, 0, 0, 1, -a[1], -a[2]]) : rot;
+        break;
+      }
+      case "skewX": n = [1, 0, Math.tan(((a[0] ?? 0) * Math.PI) / 180), 1, 0, 0]; break;
+      case "skewY": n = [1, Math.tan(((a[0] ?? 0) * Math.PI) / 180), 0, 1, 0, 0]; break;
+    }
+    if (n.some((x) => !Number.isFinite(x))) continue;
+    m = matMul(m, n);
+  }
+  return m;
+}
+
+function transformSegments(m: Mat, segs: PathSegment[]): PathSegment[] {
+  if (matIsIdentity(m)) return segs;
+  return segs.map((sg) => ({
+    ...sg,
+    ...matApply(m, sg.x, sg.y),
+    ...(sg.cIn ? { cIn: matApply(m, sg.cIn.x, sg.cIn.y) } : {}),
+    ...(sg.cOut ? { cOut: matApply(m, sg.cOut.x, sg.cOut.y) } : {}),
+  }));
+}
+
+/** A rect as a closed path (corner radius dropped: only a rotated or skewed
+ *  rect takes this road, and a rounded one of those is rare in packs). */
+function rectSegments(x: number, y: number, w: number, h: number): PathSegment[] {
+  return [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
+}
+
+/** An ellipse as four cubic arcs. */
+function ellipseSegments(cx: number, cy: number, rx: number, ry: number): PathSegment[] {
+  const k = 0.5522847498;
+  return [
+    { x: cx + rx, y: cy, cIn: { x: cx + rx, y: cy + ry * k }, cOut: { x: cx + rx, y: cy - ry * k } },
+    { x: cx, y: cy - ry, cIn: { x: cx + rx * k, y: cy - ry }, cOut: { x: cx - rx * k, y: cy - ry } },
+    { x: cx - rx, y: cy, cIn: { x: cx - rx, y: cy - ry * k }, cOut: { x: cx - rx, y: cy + ry * k } },
+    { x: cx, y: cy + ry, cIn: { x: cx - rx * k, y: cy + ry }, cOut: { x: cx + rx * k, y: cy + ry } },
+  ];
+}
+
 function pathNodeFromSubs(subs: SubPathData[], fills: Fill[], id: string, stroke?: Stroke, opacity?: number): Node {
   const pi = Math.max(0, subs.findIndex((s) => s.segments.length >= 2));
   const first = subs[pi];
@@ -354,11 +428,32 @@ export function svgToNodes(
   const inherited = rootInherited(svg);
   const withInherited = (own: Attrs): Attrs => ({ ...inherited, ...own });
 
-  const re = /<(path|rect|circle|ellipse|polygon|polyline|line|image)\b([^>]*?)\/?>|<text\b([^>]*)>([\s\S]*?)<\/text>/gi;
+  // Containers are walked in document order alongside the leaves: a group
+  // pushes its transform for everything inside it, and the contents of
+  // defs, clip paths, masks, symbols, patterns and markers are not drawn.
+  const stack: { tag: string; mat: Mat; hidden: boolean }[] = [];
+  const current = (): Mat => (stack.length ? stack[stack.length - 1].mat : IDENTITY);
+  const hidden = (): boolean => stack.some((f) => f.hidden);
+  const HIDDEN = new Set(["defs", "clippath", "mask", "symbol", "pattern", "marker"]);
+  const re = /<(g|defs|clipPath|mask|symbol|pattern|marker)\b([^>]*?)(\/?)>|<\/(g|defs|clipPath|mask|symbol|pattern|marker)\s*>|<(path|rect|circle|ellipse|polygon|polyline|line|image)\b([^>]*?)\/?>|<text\b([^>]*)>([\s\S]*?)<\/text>/gi;
   for (const m of svg.matchAll(re)) {
-    if (m[3] !== undefined) {
-      const attrs = withInherited(parseAttrs(m[3]));
-      const text = decodeEntities(m[4].replace(/<[^<>]+>/g, " ")).replace(/\s+/g, " ").trim();
+    if (m[1] !== undefined) {
+      if (m[3] === "/") continue; // an empty container
+      const tag = m[1].toLowerCase();
+      const own = parseTransform(parseAttrs(m[2]).transform);
+      stack.push({ tag, mat: matMul(current(), own), hidden: HIDDEN.has(tag) });
+      continue;
+    }
+    if (m[4] !== undefined) {
+      // Pop to the matching open tag; a stray close tag pops nothing.
+      const tag = m[4].toLowerCase();
+      for (let i = stack.length - 1; i >= 0; i--) if (stack[i].tag === tag) { stack.length = i; break; }
+      continue;
+    }
+    if (hidden()) continue;
+    if (m[7] !== undefined) {
+      const attrs = withInherited(parseAttrs(m[7]));
+      const text = decodeEntities(m[8].replace(/<[^<>]+>/g, " ")).replace(/\s+/g, " ").trim();
       if (!text) continue;
       const fontSize = num(attrs, "font-size", 16) || 16;
       const weight = weightFrom(attrs["font-weight"]);
@@ -366,13 +461,14 @@ export function svgToNodes(
       const color: Color = fc && fc !== "none" && fc.type === "solid" ? fc.color : { srgb: { r: 0, g: 0, b: 0, a: 1 } };
       const estW = Math.max(16, text.length * fontSize * 0.55);
       const align = anchorToAlign(attrs["text-anchor"]);
-      const x = num(attrs, "x");
-      const left = align === "center" ? x - estW / 2 : align === "right" ? x - estW : x;
+      const tm = matMul(current(), parseTransform(attrs.transform));
+      const at = matApply(tm, num(attrs, "x"), num(attrs, "y"));
+      const left = align === "center" ? at.x - estW / 2 : align === "right" ? at.x - estW : at.x;
       const op = opacityOf(attrs, "opacity");
       nodes.push(createNode("text", {
         id: idGen(),
         name: text.slice(0, 24),
-        transform: { x: left, y: num(attrs, "y") - fontSize * 0.8, scaleX: 1, scaleY: 1, rotation: 0 },
+        transform: { x: left, y: at.y - fontSize * 0.8, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: estW, height: fontSize * 1.4 },
         ...(op < 1 ? { opacity: op } : {}),
         box: { mode: "fixed", width: estW, height: fontSize * 1.4, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
@@ -383,65 +479,82 @@ export function svgToNodes(
       } as Partial<Node>));
       continue;
     }
-    const tag = m[1].toLowerCase();
-    const attrs = withInherited(parseAttrs(m[2]));
+    const tag = m[5].toLowerCase();
+    const attrs = withInherited(parseAttrs(m[6]));
     const stroke = strokeFrom(attrs, gradients);
     const op = opacityOf(attrs, "opacity");
     const opP = op < 1 ? op : undefined;
+    const tm = matMul(current(), parseTransform(attrs.transform));
+    const aligned = matIsAxisAligned(tm);
+    // A stroke's width scales with the drawing, uniformly enough.
+    const scaled = stroke && !matIsIdentity(tm) ? { ...stroke, width: stroke.width * Math.sqrt(Math.abs(tm[0] * tm[3] - tm[1] * tm[2])) } : stroke;
     if (tag === "image") {
       const href = attrs.href || attrs["xlink:href"];
       if (!href) continue;
-      const w = num(attrs, "width", 100) || 100;
-      const h = num(attrs, "height", 100) || 100;
+      const w = (num(attrs, "width", 100) || 100) * (aligned ? tm[0] : 1);
+      const h = (num(attrs, "height", 100) || 100) * (aligned ? tm[3] : 1);
+      const at = matApply(tm, num(attrs, "x"), num(attrs, "y"));
       const assetId = idGen();
       assets.push({ assetId, url: href });
       nodes.push(createNode("image", {
         id: idGen(),
         source: { assetId, naturalWidth: w, naturalHeight: h },
         fit: "cover",
-        transform: { x: num(attrs, "x"), y: num(attrs, "y"), scaleX: 1, scaleY: 1, rotation: 0 },
+        transform: { x: at.x, y: at.y, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: w, height: h },
         ...(opP != null ? { opacity: opP } : {}),
       } as Partial<Node>));
     } else if (tag === "path") {
       if (/[aA]/.test(attrs.d ?? "")) approximated = true;
-      const subs = parsePathData(attrs.d ?? "");
+      const subs = parsePathData(attrs.d ?? "").map((sp) => ({ ...sp, segments: transformSegments(tm, sp.segments) }));
       const fills = ff(attrs, !stroke);
-      if (subs.length) nodes.push(pathNodeFromSubs(subs, fills, idGen(), stroke, opP));
+      if (subs.length) nodes.push(pathNodeFromSubs(subs, fills, idGen(), scaled, opP));
     } else if (tag === "rect") {
       const r = num(attrs, "rx", num(attrs, "ry", 0));
+      const x = num(attrs, "x"), y = num(attrs, "y"), w = num(attrs, "width"), h = num(attrs, "height");
+      if (!aligned) {
+        nodes.push(pathNodeFromSubs([{ segments: transformSegments(tm, rectSegments(x, y, w, h)), closed: true }], ff(attrs, !stroke), idGen(), scaled, opP));
+        continue;
+      }
+      const at = matApply(tm, x, y);
       nodes.push(createNode("shape", {
         id: idGen(),
         shape: "rect",
-        transform: { x: num(attrs, "x"), y: num(attrs, "y"), scaleX: 1, scaleY: 1, rotation: 0 },
-        size: { width: num(attrs, "width"), height: num(attrs, "height") },
-        cornerRadius: r > 0 ? { topLeft: r, topRight: r, bottomRight: r, bottomLeft: r } : undefined,
+        transform: { x: at.x, y: at.y, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: w * tm[0], height: h * tm[3] },
+        cornerRadius: r > 0 ? { topLeft: r * tm[0], topRight: r * tm[0], bottomRight: r * tm[0], bottomLeft: r * tm[0] } : undefined,
         fills: ff(attrs, !stroke),
-        ...(stroke ? { stroke } : {}),
+        ...(scaled ? { stroke: scaled } : {}),
         ...(opP != null ? { opacity: opP } : {}),
       } as Partial<Node>));
     } else if (tag === "circle" || tag === "ellipse") {
       const rx = tag === "circle" ? num(attrs, "r") : num(attrs, "rx");
       const ry = tag === "circle" ? num(attrs, "r") : num(attrs, "ry");
+      const cx = num(attrs, "cx"), cy = num(attrs, "cy");
+      if (!aligned) {
+        nodes.push(pathNodeFromSubs([{ segments: transformSegments(tm, ellipseSegments(cx, cy, rx, ry)), closed: true }], ff(attrs, !stroke), idGen(), scaled, opP));
+        continue;
+      }
+      const at = matApply(tm, cx - rx, cy - ry);
       nodes.push(createNode("shape", {
         id: idGen(),
         shape: "ellipse",
-        transform: { x: num(attrs, "cx") - rx, y: num(attrs, "cy") - ry, scaleX: 1, scaleY: 1, rotation: 0 },
-        size: { width: rx * 2, height: ry * 2 },
+        transform: { x: at.x, y: at.y, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: rx * 2 * tm[0], height: ry * 2 * tm[3] },
         fills: ff(attrs, !stroke),
-        ...(stroke ? { stroke } : {}),
+        ...(scaled ? { stroke: scaled } : {}),
         ...(opP != null ? { opacity: opP } : {}),
       } as Partial<Node>));
     } else if (tag === "polygon" || tag === "polyline") {
-      const segs = pointsToSegments(attrs.points ?? "");
+      const segs = transformSegments(tm, pointsToSegments(attrs.points ?? ""));
       const fills = tag === "polygon" ? ff(attrs, !stroke) : [];
-      if (segs.length) nodes.push(pathNodeFromSubs([{ segments: segs, closed: tag === "polygon" }], fills, idGen(), stroke, opP));
+      if (segs.length) nodes.push(pathNodeFromSubs([{ segments: segs, closed: tag === "polygon" }], fills, idGen(), scaled, opP));
     } else if (tag === "line") {
-      const segs: PathSegment[] = [
+      const segs: PathSegment[] = transformSegments(tm, [
         { x: num(attrs, "x1"), y: num(attrs, "y1") },
         { x: num(attrs, "x2"), y: num(attrs, "y2") },
-      ];
-      nodes.push(pathNodeFromSubs([{ segments: segs, closed: false }], [], idGen(), stroke, opP));
+      ]);
+      nodes.push(pathNodeFromSubs([{ segments: segs, closed: false }], [], idGen(), scaled, opP));
     }
   }
   return { nodes, assets, approximated };

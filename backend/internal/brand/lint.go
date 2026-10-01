@@ -168,11 +168,14 @@ func lintFile(file map[string]any, kit lintKit) []LintViolation {
 			}
 			walkBrand(asArrAny(page["children"]), &colors, &fonts)
 			for _, u := range colors {
-				dist, near := nearestDistance(u.c, kit.palette)
-				if dist <= colorTolerance {
+				// A tint, shade or blend of swatches is the brand's (blend.go);
+				// only a foreign colour is reported, with the nearest swatch as
+				// the fix.
+				hex := hexOf(u.c)
+				if onBrand(u.c, kit.palette) {
 					continue
 				}
-				hex := hexOf(u.c)
+				_, near := nearestDistance(u.c, kit.palette)
 				key := "color:" + hex + "@" + u.nodeID
 				if seen[key] {
 					continue

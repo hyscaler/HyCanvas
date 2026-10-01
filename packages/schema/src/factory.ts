@@ -4,6 +4,7 @@
 import {
   currentSchemaVersion,
   type Color,
+  type CornerRadius,
   type DesignFile,
   type Fill,
   type Node,
@@ -16,6 +17,14 @@ import {
 /** Fresh UUID v4 for node and file ids (FR-11). */
 export function newId(): string {
   return globalThis.crypto.randomUUID();
+}
+
+/** The format's per-corner radius record for one uniform radius. The
+ *  renderers read the record and treat a bare number as square corners, so
+ *  every writer that rounds a rect goes through here. */
+export function roundedCorners(radius: number): CornerRadius {
+  const r = Math.max(0, radius);
+  return { topLeft: r, topRight: r, bottomRight: r, bottomLeft: r };
 }
 
 const black: Color = { srgb: { r: 0, g: 0, b: 0, a: 1 } };

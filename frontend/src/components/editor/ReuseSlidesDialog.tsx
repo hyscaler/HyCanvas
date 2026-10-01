@@ -20,8 +20,8 @@ import { Spinner } from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/Toast";
 import { tr } from "@/lib/i18n";
 
-const THUMB_W = 148;
-const THUMB_H = 90;
+export const THUMB_W = 148;
+export const THUMB_H = 90;
 
 /** A thumbnail of one page of a FOREIGN design file (SlideThumb renders only
  *  the open document). Same engine path, so the preview cannot lie. Renders
@@ -30,7 +30,7 @@ const THUMB_H = 90;
  *  Known preview-only limitation: an asset id this document already resolves
  *  to a DIFFERENT image previews with this document's image (insertion is
  *  correct - importPagesFrom remints the id). */
-function ForeignThumb({ file, index }: { file: DesignFile; index: number }) {
+export function ForeignThumb({ file, index }: { file: DesignFile; index: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [near, setNear] = useState(false);
   useEffect(() => {

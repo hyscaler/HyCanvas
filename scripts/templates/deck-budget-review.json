@@ -1,5 +1,4 @@
 {
- "kind": "deck-outline",
  "id": "deck-budget-review",
  "title": "Budget Review",
  "categories": [
@@ -13,55 +12,5336 @@
   "planning"
  ],
  "styleTags": [
-  "warm",
-  "professional"
+  "professional",
+  "classic",
+  "elegant"
  ],
- "themeId": "theme-cocoa",
  "size": [
   1920,
   1080
  ],
- "rank": 88,
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Newsreader",
+   "weight": 600
+  },
+  {
+   "role": "body",
+   "family": "Public Sans",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Architects Daughter",
+   "weight": 400
+  },
+  {
+   "role": "label",
+   "family": "DM Mono",
+   "weight": 500
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#10305A",
+      0
+     ],
+     [
+      "#081B36",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1227,
+     "y": 380,
+     "w": 9,
+     "h": 9,
+     "fill": "#7FDDC0",
+     "opacity": 0.76
+    },
+    {
+     "kind": "ellipse",
+     "x": 1429,
+     "y": 468,
+     "w": 5,
+     "h": 5,
+     "fill": "#7FDDC0",
+     "opacity": 0.63
+    },
+    {
+     "kind": "ellipse",
+     "x": 1261,
+     "y": 823,
+     "w": 5,
+     "h": 5,
+     "fill": "#7FDDC0",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1516,
+     "y": 289,
+     "w": 5,
+     "h": 5,
+     "fill": "#7FDDC0",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1383,
+     "y": 304,
+     "w": 8,
+     "h": 8,
+     "fill": "#7FDDC0",
+     "opacity": 0.36
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#7FDDC0",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Cobalt Health",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#F3F6F1",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 372,
+     "w": 1000,
+     "h": 44,
+     "text": "Spend against plan",
+     "family": "Architects Daughter",
+     "size": 34,
+     "weight": 400,
+     "color": "#93E6CC",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 446,
+     "w": 1000,
+     "h": 245,
+     "text": "Where the\nmoney went",
+     "family": "Newsreader",
+     "size": 112,
+     "weight": 600,
+     "color": "#F3F6F1",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 721,
+     "w": 900,
+     "h": 80,
+     "text": "Actuals against plan for the first half, the variances that matter, and one reallocation to approve.",
+     "family": "Public Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#AEBCCB",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 940,
+     "w": 900,
+     "h": 28,
+     "text": "Dana Whitfield, Finance Director  ·  15 July 2026",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#AEBCCB",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "01 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#AEBCCB",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 170,
+     "w": 700,
+     "h": 700,
+     "fill": "#7FDDC0",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1220,
+     "y": 240,
+     "w": 560,
+     "h": 560,
+     "fill": "#7FDDC0",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 888,
+     "w": 720,
+     "h": 36,
+     "text": "one ledger, one decision, no surprises",
+     "family": "Architects Daughter",
+     "size": 29,
+     "weight": 400,
+     "color": "#93E6CC",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day36-abacus",
+     "x": 1210,
+     "y": 230,
+     "w": 580,
+     "h": 580,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Figures",
+   "bg": "#F6F7F3",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The picture",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "First half against plan",
+     "family": "Newsreader",
+     "size": 62,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Cobalt Health  ·  Budget review, H1 2026",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "02 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 414,
+     "h": 560,
+     "fill": "#ECF1EC",
+     "radius": 4,
+     "stroke": "#D4DBD6",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 414,
+     "h": 6,
+     "fill": "#1E4C8F",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 300,
+     "w": 342,
+     "h": 120,
+     "text": "$18.6M",
+     "family": "Newsreader",
+     "size": 83.2,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 440,
+     "w": 342,
+     "h": 34,
+     "text": "Total spend",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 132,
+     "y": 494,
+     "w": 190,
+     "h": 40,
+     "label": "97% of plan",
+     "fill": "#c7d3db",
+     "color": "#1E4C8F",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 564,
+     "w": 342,
+     "h": 140,
+     "text": "Under plan in headcount, over in cloud and travel.",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 244,
+     "w": 414,
+     "h": 560,
+     "fill": "#ECF1EC",
+     "radius": 4,
+     "stroke": "#D4DBD6",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 534,
+     "y": 244,
+     "w": 414,
+     "h": 6,
+     "fill": "#1E7860",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 300,
+     "w": 342,
+     "h": 120,
+     "text": "$640K",
+     "family": "Newsreader",
+     "size": 104,
+     "weight": 600,
+     "color": "#1E7860",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 440,
+     "w": 342,
+     "h": 34,
+     "text": "Cloud overspend",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 570,
+     "y": 494,
+     "w": 190,
+     "h": 40,
+     "label": "+22% vs plan",
+     "fill": "#c7dbd3",
+     "color": "#1E7860",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 570,
+     "y": 564,
+     "w": 342,
+     "h": 140,
+     "text": "Usage grew faster than forecast; reserved capacity was bought late.",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 244,
+     "w": 414,
+     "h": 560,
+     "fill": "#ECF1EC",
+     "radius": 4,
+     "stroke": "#D4DBD6",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 972,
+     "y": 244,
+     "w": 414,
+     "h": 6,
+     "fill": "#1E4C8F",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 300,
+     "w": 342,
+     "h": 120,
+     "text": "$1.2M",
+     "family": "Newsreader",
+     "size": 104,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 440,
+     "w": 342,
+     "h": 34,
+     "text": "Headcount underspend",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1008,
+     "y": 494,
+     "w": 190,
+     "h": 40,
+     "label": "14 roles open",
+     "fill": "#c7d3db",
+     "color": "#1E4C8F",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1008,
+     "y": 564,
+     "w": 342,
+     "h": 140,
+     "text": "Hiring ran two months behind; the gap closes by October.",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 244,
+     "w": 414,
+     "h": 560,
+     "fill": "#ECF1EC",
+     "radius": 4,
+     "stroke": "#D4DBD6",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1410,
+     "y": 244,
+     "w": 414,
+     "h": 6,
+     "fill": "#1E7860",
+     "radius": 0
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 300,
+     "w": 342,
+     "h": 120,
+     "text": "$310K",
+     "family": "Newsreader",
+     "size": 104,
+     "weight": 600,
+     "color": "#1E7860",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 440,
+     "w": 342,
+     "h": 34,
+     "text": "Travel overspend",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 1446,
+     "y": 494,
+     "w": 190,
+     "h": 40,
+     "label": "+31% vs plan",
+     "fill": "#c7dbd3",
+     "color": "#1E7860",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 1446,
+     "y": 564,
+     "w": 342,
+     "h": 140,
+     "text": "Two conferences and the Lisbon office opening.",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 922,
+     "w": 760,
+     "h": 34,
+     "text": "97% of plan, but not evenly",
+     "family": "Architects Daughter",
+     "size": 27,
+     "weight": 400,
+     "color": "#1E4C8F",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Chart",
+   "bg": "#F6F7F3",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Where the money went",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1100,
+     "h": 76,
+     "text": "Actuals by department",
+     "family": "Newsreader",
+     "size": 62,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Cobalt Health  ·  Budget review, H1 2026",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "03 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 220,
+     "w": 1100,
+     "h": 70,
+     "text": "Engineering and sales are under plan on people; platform is over on infrastructure.",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "chart",
+     "x": 96,
+     "y": 308,
+     "w": 1140,
+     "h": 560,
+     "chartType": "barGrouped",
+     "fontSize": 18,
+     "categories": [
+      "Eng",
+      "Sales",
+      "Platform",
+      "Marketing",
+      "G&A"
+     ],
+     "series": [
+      {
+       "name": "Plan",
+       "values": [
+        6.2,
+        4.8,
+        3.1,
+        2.9,
+        2.2
+       ],
+       "color": "#1E7860"
+      },
+      {
+       "name": "Actual",
+       "values": [
+        5.6,
+        4.4,
+        3.7,
+        3,
+        1.9
+       ],
+       "color": "#1E4C8F"
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 264,
+     "w": 504,
+     "h": 80,
+     "text": "−$1.0M",
+     "family": "Newsreader",
+     "size": 64,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 352,
+     "w": 504,
+     "h": 60,
+     "text": "Under plan across engineering and sales",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1320,
+     "y": 416,
+     "w": 504,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 444,
+     "w": 504,
+     "h": 80,
+     "text": "+$600K",
+     "family": "Newsreader",
+     "size": 64,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 532,
+     "w": 504,
+     "h": 60,
+     "text": "Over plan in platform, all cloud",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1320,
+     "y": 596,
+     "w": 504,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 624,
+     "w": 504,
+     "h": 80,
+     "text": "$18.6M",
+     "family": "Newsreader",
+     "size": 64,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 1320,
+     "y": 712,
+     "w": 504,
+     "h": 60,
+     "text": "Total, 97% of plan",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 922,
+     "w": 760,
+     "h": 34,
+     "text": "platform's bar is the one to watch",
+     "family": "Architects Daughter",
+     "size": 27,
+     "weight": 400,
+     "color": "#1E4C8F",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Ledger",
+   "bg": "#F6F7F3",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Variances",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "Line by line against plan",
+     "family": "Newsreader",
+     "size": 62,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Cobalt Health  ·  Budget review, H1 2026",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "04 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 244,
+     "w": 464,
+     "h": 28,
+     "text": "Cost line",
+     "family": "DM Mono",
+     "size": 17,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "left"
+    },
+    {
+     "kind": "text",
+     "x": 580,
+     "y": 244,
+     "w": 200,
+     "h": 28,
+     "text": "Plan",
+     "family": "DM Mono",
+     "size": 17,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 800,
+     "y": 244,
+     "w": 200,
+     "h": 28,
+     "text": "Actual",
+     "family": "DM Mono",
+     "size": 17,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1020,
+     "y": 244,
+     "w": 220,
+     "h": 28,
+     "text": "Variance",
+     "family": "DM Mono",
+     "size": 17,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1290,
+     "y": 244,
+     "w": 534,
+     "h": 28,
+     "text": "Why",
+     "family": "DM Mono",
+     "size": 17,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "left"
+    },
+    {
+     "kind": "text",
+     "x": 1290,
+     "y": 246,
+     "w": 534,
+     "h": 26,
+     "text": "All figures in $K",
+     "family": "DM Mono",
+     "size": 16,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 284,
+     "w": 1728,
+     "h": 2,
+     "fill": "#12284A"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 302,
+     "w": 4,
+     "h": 60,
+     "fill": "#1E4C8F",
+     "radius": 2
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 316,
+     "w": 440,
+     "h": 34,
+     "text": "Headcount",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 580,
+     "y": 316,
+     "w": 200,
+     "h": 34,
+     "text": "12,400",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 500,
+     "color": "#4B5B72",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 800,
+     "y": 316,
+     "w": 200,
+     "h": 34,
+     "text": "11,200",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 500,
+     "color": "#12284A",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1020,
+     "y": 316,
+     "w": 220,
+     "h": 34,
+     "text": "−1,200",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1290,
+     "y": 318,
+     "w": 534,
+     "h": 30,
+     "text": "14 roles open; hiring ran two months behind",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 369,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 370,
+     "w": 1728,
+     "h": 76,
+     "fill": "#d3e2db"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 378,
+     "w": 4,
+     "h": 60,
+     "fill": "#1E7860",
+     "radius": 2
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 392,
+     "w": 440,
+     "h": 34,
+     "text": "Cloud and infrastructure",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 580,
+     "y": 392,
+     "w": 200,
+     "h": 34,
+     "text": "2,900",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 500,
+     "color": "#4B5B72",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 800,
+     "y": 392,
+     "w": 200,
+     "h": 34,
+     "text": "3,540",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 500,
+     "color": "#12284A",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1020,
+     "y": 392,
+     "w": 220,
+     "h": 34,
+     "text": "+640",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 600,
+     "color": "#1E7860",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1290,
+     "y": 394,
+     "w": 534,
+     "h": 30,
+     "text": "Usage grew 22%; reserved capacity bought late",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 445,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 446,
+     "w": 1728,
+     "h": 76,
+     "fill": "#d3e2db"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 454,
+     "w": 4,
+     "h": 60,
+     "fill": "#1E7860",
+     "radius": 2
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 468,
+     "w": 440,
+     "h": 34,
+     "text": "Travel and events",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 580,
+     "y": 468,
+     "w": 200,
+     "h": 34,
+     "text": "1,000",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 500,
+     "color": "#4B5B72",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 800,
+     "y": 468,
+     "w": 200,
+     "h": 34,
+     "text": "1,310",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 500,
+     "color": "#12284A",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1020,
+     "y": 468,
+     "w": 220,
+     "h": 34,
+     "text": "+310",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 600,
+     "color": "#1E7860",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1290,
+     "y": 470,
+     "w": 534,
+     "h": 30,
+     "text": "Two conferences and the Lisbon office opening",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 521,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 530,
+     "w": 4,
+     "h": 60,
+     "fill": "#1E4C8F",
+     "radius": 2
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 544,
+     "w": 440,
+     "h": 34,
+     "text": "Software and tooling",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 580,
+     "y": 544,
+     "w": 200,
+     "h": 34,
+     "text": "900",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 500,
+     "color": "#4B5B72",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 800,
+     "y": 544,
+     "w": 200,
+     "h": 34,
+     "text": "800",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 500,
+     "color": "#12284A",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1020,
+     "y": 544,
+     "w": 220,
+     "h": 34,
+     "text": "−100",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1290,
+     "y": 546,
+     "w": 534,
+     "h": 30,
+     "text": "Two renewals negotiated down at term",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 597,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 598,
+     "w": 1728,
+     "h": 76,
+     "fill": "#d3e2db"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 606,
+     "w": 4,
+     "h": 60,
+     "fill": "#1E7860",
+     "radius": 2
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 620,
+     "w": 440,
+     "h": 34,
+     "text": "Marketing programs",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 580,
+     "y": 620,
+     "w": 200,
+     "h": 34,
+     "text": "1,400",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 500,
+     "color": "#4B5B72",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 800,
+     "y": 620,
+     "w": 200,
+     "h": 34,
+     "text": "1,450",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 500,
+     "color": "#12284A",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1020,
+     "y": 620,
+     "w": 220,
+     "h": 34,
+     "text": "+50",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 600,
+     "color": "#1E7860",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1290,
+     "y": 622,
+     "w": 534,
+     "h": 30,
+     "text": "The Q2 campaign pulled forward a month",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 673,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 682,
+     "w": 4,
+     "h": 60,
+     "fill": "#1E4C8F",
+     "radius": 2
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 696,
+     "w": 440,
+     "h": 34,
+     "text": "Facilities and other",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 580,
+     "y": 696,
+     "w": 200,
+     "h": 34,
+     "text": "600",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 500,
+     "color": "#4B5B72",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 800,
+     "y": 696,
+     "w": 200,
+     "h": 34,
+     "text": "300",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 500,
+     "color": "#12284A",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1020,
+     "y": 696,
+     "w": 220,
+     "h": 34,
+     "text": "−300",
+     "family": "DM Mono",
+     "size": 28,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1290,
+     "y": 698,
+     "w": 534,
+     "h": 30,
+     "text": "The Lisbon fit-out slipped into H2",
+     "family": "Public Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 749,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 762,
+     "w": 1728,
+     "h": 3,
+     "fill": "#1E4C8F"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 782,
+     "w": 464,
+     "h": 40,
+     "text": "Total, first half",
+     "family": "Newsreader",
+     "size": 28,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 580,
+     "y": 780,
+     "w": 200,
+     "h": 40,
+     "text": "19,200",
+     "family": "DM Mono",
+     "size": 32,
+     "weight": 600,
+     "color": "#4B5B72",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 800,
+     "y": 780,
+     "w": 200,
+     "h": 40,
+     "text": "18,600",
+     "family": "DM Mono",
+     "size": 32,
+     "weight": 600,
+     "color": "#12284A",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1020,
+     "y": 780,
+     "w": 220,
+     "h": 40,
+     "text": "−600",
+     "family": "DM Mono",
+     "size": 32,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "align": "right",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "button",
+     "x": 1290,
+     "y": 780,
+     "w": 196,
+     "h": 40,
+     "label": "97% of plan",
+     "fill": "#cbd7dd",
+     "color": "#1E4C8F",
+     "family": "Public Sans",
+     "size": 17,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 870,
+     "w": 14,
+     "h": 14,
+     "fill": "#1E7860",
+     "radius": 2
+    },
+    {
+     "kind": "text",
+     "x": 122,
+     "y": 864,
+     "w": 240,
+     "h": 28,
+     "text": "over plan",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 296,
+     "y": 870,
+     "w": 14,
+     "h": 14,
+     "fill": "#1E4C8F",
+     "radius": 2
+    },
+    {
+     "kind": "text",
+     "x": 322,
+     "y": 864,
+     "w": 240,
+     "h": 28,
+     "text": "under plan",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 922,
+     "w": 760,
+     "h": 34,
+     "text": "the unders are timing, the overs are real",
+     "family": "Architects Daughter",
+     "size": 27,
+     "weight": 400,
+     "color": "#1E4C8F",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Section",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#10305A",
+      0
+     ],
+     [
+      "#081B36",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1227,
+     "y": 380,
+     "w": 9,
+     "h": 9,
+     "fill": "#7FDDC0",
+     "opacity": 0.76
+    },
+    {
+     "kind": "ellipse",
+     "x": 1429,
+     "y": 468,
+     "w": 5,
+     "h": 5,
+     "fill": "#7FDDC0",
+     "opacity": 0.63
+    },
+    {
+     "kind": "ellipse",
+     "x": 1261,
+     "y": 823,
+     "w": 5,
+     "h": 5,
+     "fill": "#7FDDC0",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1516,
+     "y": 289,
+     "w": 5,
+     "h": 5,
+     "fill": "#7FDDC0",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1383,
+     "y": 304,
+     "w": 8,
+     "h": 8,
+     "fill": "#7FDDC0",
+     "opacity": 0.36
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 800,
+     "h": 256,
+     "text": "$1.2M",
+     "family": "Newsreader",
+     "size": 236,
+     "weight": 600,
+     "color": "#93E6CC",
+     "lineHeight": 1
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 492,
+     "w": 120,
+     "h": 4,
+     "fill": "#7FDDC0"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 520,
+     "w": 1100,
+     "h": 112,
+     "text": "What we move",
+     "family": "Newsreader",
+     "size": 96,
+     "weight": 600,
+     "color": "#F3F6F1",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 652,
+     "w": 900,
+     "h": 90,
+     "text": "Real money sitting idle until the hires land. Three moves put it to work, all inside the line.",
+     "family": "Public Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#AEBCCB",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1240,
+     "y": 280,
+     "w": 560,
+     "h": 560,
+     "fill": "#7FDDC0",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1296,
+     "y": 336,
+     "w": 448,
+     "h": 448,
+     "fill": "#7FDDC0",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 180,
+     "w": 1000,
+     "h": 50,
+     "text": "The reallocation",
+     "family": "Architects Daughter",
+     "size": 34,
+     "weight": 400,
+     "color": "#93E6CC",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#27456E"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Cobalt Health  ·  Budget review, H1 2026",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#AEBCCB",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "05 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#AEBCCB",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 888,
+     "w": 720,
+     "h": 36,
+     "text": "nothing new asked for, only moved",
+     "family": "Architects Daughter",
+     "size": 29,
+     "weight": 400,
+     "color": "#93E6CC",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day6-open-vault",
+     "x": 1300,
+     "y": 340,
+     "w": 440,
+     "h": 440,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Three cards",
+   "bg": "#F6F7F3",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "Reallocation proposal",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "What we move, and what it buys",
+     "family": "Newsreader",
+     "size": 62,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Cobalt Health  ·  Budget review, H1 2026",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "06 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#ECF1EC",
+     "radius": 4,
+     "stroke": "#D4DBD6",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#1E4C8F",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 136,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#c3d0d9"
+    },
+    {
+     "kind": "icon",
+     "icon": "database",
+     "x": 156,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#1E4C8F"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "Reserve cloud capacity now",
+     "family": "Newsreader",
+     "size": 34,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "Move $400K of the headcount underspend to reserved instances. Saves $180K in H2 against on-demand pricing.",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "01",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#ECF1EC",
+     "radius": 4,
+     "stroke": "#D4DBD6",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#1E7860",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 720,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#c3d9d0"
+    },
+    {
+     "kind": "icon",
+     "icon": "user",
+     "x": 740,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#1E7860"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "Fund two of the open roles as contractors",
+     "family": "Newsreader",
+     "size": 34,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "Bridge the platform gap for six months while the hires land. $260K, fully within the underspend.",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 720,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "02",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 580,
+     "fill": "#ECF1EC",
+     "radius": 4,
+     "stroke": "#D4DBD6",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 1264,
+     "y": 244,
+     "w": 560,
+     "h": 6,
+     "fill": "#1E4C8F",
+     "radius": 0
+    },
+    {
+     "kind": "ellipse",
+     "x": 1304,
+     "y": 292,
+     "w": 80,
+     "h": 80,
+     "fill": "#c3d0d9"
+    },
+    {
+     "kind": "icon",
+     "icon": "plane",
+     "x": 1324,
+     "y": 312,
+     "w": 40,
+     "h": 40,
+     "color": "#1E4C8F"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 408,
+     "w": 480,
+     "h": 100,
+     "text": "Cap travel for H2",
+     "family": "Newsreader",
+     "size": 34,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 520,
+     "w": 480,
+     "h": 160,
+     "text": "Conference attendance by approval only. Brings the line back to plan by December.",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 740,
+     "w": 480,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "text",
+     "x": 1304,
+     "y": 764,
+     "w": 120,
+     "h": 28,
+     "text": "03",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 922,
+     "w": 760,
+     "h": 34,
+     "text": "all three fit inside the $1.2M",
+     "family": "Architects Daughter",
+     "size": 27,
+     "weight": 400,
+     "color": "#1E4C8F",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Timeline",
+   "bg": "#F6F7F3",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 40,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 120,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1360,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1440,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1520,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1600,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1680,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 200,
+     "w": 5,
+     "h": 5,
+     "fill": "#12284A",
+     "opacity": 0.14
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 1200,
+     "h": 28,
+     "text": "The path back",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 124,
+     "w": 1240,
+     "h": 76,
+     "text": "When the lines come back to plan",
+     "family": "Newsreader",
+     "size": 62,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Cobalt Health  ·  Budget review, H1 2026",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 992,
+     "w": 240,
+     "h": 26,
+     "text": "07 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#4B5B72",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 427,
+     "w": 1728,
+     "h": 3,
+     "fill": "#D4DBD6"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 427,
+     "w": 216,
+     "h": 3,
+     "fill": "#1E4C8F"
+    },
+    {
+     "kind": "ellipse",
+     "x": 96,
+     "y": 414,
+     "w": 30,
+     "h": 30,
+     "fill": "#1E4C8F"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 354,
+     "w": 300,
+     "h": 28,
+     "text": "July",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 478,
+     "w": 384,
+     "h": 44,
+     "text": "Reserve the cloud",
+     "family": "Newsreader",
+     "size": 32,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 530,
+     "w": 384,
+     "h": 120,
+     "text": "Reserved instances bought the week this is approved. The saving starts in August.",
+     "family": "Public Sans",
+     "size": 21,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 528,
+     "y": 414,
+     "w": 30,
+     "h": 30,
+     "fill": "#F6F7F3",
+     "stroke": "#1E4C8F",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 354,
+     "w": 300,
+     "h": 28,
+     "text": "August",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 478,
+     "w": 384,
+     "h": 44,
+     "text": "Contractors start",
+     "family": "Newsreader",
+     "size": 32,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 530,
+     "w": 384,
+     "h": 120,
+     "text": "Two platform contractors on six-month terms, funded from the underspend.",
+     "family": "Public Sans",
+     "size": 21,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 960,
+     "y": 414,
+     "w": 30,
+     "h": 30,
+     "fill": "#F6F7F3",
+     "stroke": "#1E4C8F",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 354,
+     "w": 300,
+     "h": 28,
+     "text": "October",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 478,
+     "w": 384,
+     "h": 44,
+     "text": "Hires land",
+     "family": "Newsreader",
+     "size": 32,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 960,
+     "y": 530,
+     "w": 384,
+     "h": 120,
+     "text": "The fourteen open roles close and the headcount line returns to plan.",
+     "family": "Public Sans",
+     "size": 21,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1392,
+     "y": 414,
+     "w": 30,
+     "h": 30,
+     "fill": "#F6F7F3",
+     "stroke": "#1E4C8F",
+     "strokeWidth": 3
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 354,
+     "w": 300,
+     "h": 28,
+     "text": "December",
+     "family": "DM Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#1E4C8F",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 478,
+     "w": 384,
+     "h": 44,
+     "text": "Travel on plan",
+     "family": "Newsreader",
+     "size": 32,
+     "weight": 600,
+     "color": "#12284A",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1392,
+     "y": 530,
+     "w": 384,
+     "h": 120,
+     "text": "Approval-only conferences bring the travel line back by year end.",
+     "family": "Public Sans",
+     "size": 21,
+     "weight": 400,
+     "color": "#4B5B72",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1064,
+     "y": 922,
+     "w": 760,
+     "h": 34,
+     "text": "every date here has an owner in the workbook",
+     "family": "Architects Daughter",
+     "size": 27,
+     "weight": 400,
+     "color": "#1E4C8F",
+     "lineHeight": 1.2,
+     "align": "right"
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#10305A",
+      0
+     ],
+     [
+      "#081B36",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 96,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 184,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 272,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 360,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 448,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 536,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 624,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 712,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1320,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1408,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1496,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1672,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1760,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1848,
+     "y": 800,
+     "w": 6,
+     "h": 6,
+     "fill": "#F3F6F1",
+     "opacity": 0.16
+    },
+    {
+     "kind": "ellipse",
+     "x": 1227,
+     "y": 380,
+     "w": 9,
+     "h": 9,
+     "fill": "#7FDDC0",
+     "opacity": 0.76
+    },
+    {
+     "kind": "ellipse",
+     "x": 1429,
+     "y": 468,
+     "w": 5,
+     "h": 5,
+     "fill": "#7FDDC0",
+     "opacity": 0.63
+    },
+    {
+     "kind": "ellipse",
+     "x": 1261,
+     "y": 823,
+     "w": 5,
+     "h": 5,
+     "fill": "#7FDDC0",
+     "opacity": 0.53
+    },
+    {
+     "kind": "ellipse",
+     "x": 1516,
+     "y": 289,
+     "w": 5,
+     "h": 5,
+     "fill": "#7FDDC0",
+     "opacity": 0.39999999999999997
+    },
+    {
+     "kind": "ellipse",
+     "x": 1383,
+     "y": 304,
+     "w": 8,
+     "h": 8,
+     "fill": "#7FDDC0",
+     "opacity": 0.36
+    },
+    {
+     "kind": "ellipse",
+     "x": 1200,
+     "y": 200,
+     "w": 640,
+     "h": 640,
+     "fill": "#7FDDC0",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 264,
+     "w": 512,
+     "h": 512,
+     "fill": "#7FDDC0",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 22,
+     "h": 22,
+     "fill": "#7FDDC0",
+     "radius": 6
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 93,
+     "w": 700,
+     "h": 30,
+     "text": "Cobalt Health",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#F3F6F1",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1000,
+     "h": 44,
+     "text": "Decision today",
+     "family": "Architects Daughter",
+     "size": 34,
+     "weight": 400,
+     "color": "#93E6CC",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 300,
+     "w": 1100,
+     "h": 133,
+     "text": "The decision",
+     "family": "Newsreader",
+     "size": 112,
+     "weight": 600,
+     "color": "#F3F6F1",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 467,
+     "w": 940,
+     "h": 120,
+     "text": "Approve the reallocation as proposed, adjust the amounts, or defer to the September review.",
+     "family": "Public Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#AEBCCB",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "icon",
+     "icon": "mail",
+     "x": 96,
+     "y": 702,
+     "w": 28,
+     "h": 28,
+     "color": "#7FDDC0"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 700,
+     "w": 800,
+     "h": 34,
+     "text": "dana@cobalthealth.example",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#F3F6F1",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "file-text",
+     "x": 96,
+     "y": 764,
+     "w": 28,
+     "h": 28,
+     "color": "#7FDDC0"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 800,
+     "h": 34,
+     "text": "Full variance workbook attached",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#F3F6F1",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "icon",
+     "icon": "calendar",
+     "x": 96,
+     "y": 826,
+     "w": 28,
+     "h": 28,
+     "color": "#7FDDC0"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 824,
+     "w": 800,
+     "h": 34,
+     "text": "Next review: 16 September",
+     "family": "Public Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#F3F6F1",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 910,
+     "w": 340,
+     "h": 64,
+     "label": "Approve the proposal",
+     "fill": "#7FDDC0",
+     "color": "#12284A",
+     "family": "Public Sans",
+     "size": 22,
+     "weight": 700,
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 1584,
+     "y": 940,
+     "w": 240,
+     "h": 28,
+     "text": "08 / 8",
+     "family": "DM Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#AEBCCB",
+     "lineHeight": 1.3,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1140,
+     "y": 888,
+     "w": 720,
+     "h": 36,
+     "text": "the cloud saving starts the week we sign",
+     "family": "Architects Daughter",
+     "size": 29,
+     "weight": 400,
+     "color": "#93E6CC",
+     "lineHeight": 1.2,
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day5-vault",
+     "x": 1250,
+     "y": 250,
+     "w": 540,
+     "h": 540,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n69",
+   "kind": "text",
+   "label": "Company",
+   "hint": "Your company or team name"
+  },
+  {
+   "node": "p0-n71",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short lines"
+  },
+  {
+   "node": "p0-n72",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One sentence on what the deck covers"
+  },
+  {
+   "node": "p0-n73",
+   "kind": "text",
+   "label": "Presenter and date",
+   "hint": "Who presents, and when"
+  },
+  {
+   "node": "p3-n19",
+   "kind": "text",
+   "label": "Title",
+   "hint": "One short line"
+  },
+  {
+   "node": "p7-n76",
+   "kind": "text",
+   "label": "Email",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p7-n78",
+   "kind": "text",
+   "label": "Website",
+   "hint": "Contact detail"
+  },
+  {
+   "node": "p7-n80",
+   "kind": "text",
+   "label": "Phone",
+   "hint": "Contact detail"
+  }
+ ],
+ "version": 3,
  "created": "2026-08-28T00:00:00.000Z",
- "outline": {
-  "title": "Budget Review",
-  "theme": "transparent, decision-ready",
-  "pages": [
-   {
-    "title": "The picture",
-    "points": [
-     "Spend against plan, year to date"
-    ],
-    "visualRole": "cover"
-   },
-   {
-    "title": "Where the money went",
-    "points": [
-     "Actuals by department"
-    ],
-    "visualRole": "data"
-   },
-   {
-    "title": "Variances",
-    "points": [
-     "The overs, the unders, and the why"
-    ],
-    "visualRole": "data"
-   },
-   {
-    "title": "Reallocation proposal",
-    "points": [
-     "What we move and what it buys"
-    ],
-    "visualRole": "content"
-   },
-   {
-    "title": "The decision",
-    "points": [
-     "Approve, adjust, or defer"
-    ],
-    "visualRole": "closing"
-   }
-  ]
- }
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 88
 }

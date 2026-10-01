@@ -11,7 +11,10 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"hycanvas/backend/internal/ai"
+	"hycanvas/backend/internal/brand"
+	"hycanvas/backend/internal/stock"
 	"hycanvas/backend/internal/uploads"
 	"net/http"
 	"regexp"
@@ -30,8 +33,8 @@ import (
 	"hycanvas/backend/internal/templates"
 )
 
-func mountGenerate(api chi.Router, svc *aistudio.Service, aiSvc *ai.Service, up *uploads.Service, acct *accounts.Service, p *persistence.Service, reg *jobs.Registry, tpl *templates.Service) {
-	api.With(requireAuth(acct)).Post("/generate/presentation", generatePresentationHandler(svc, aiSvc, up, acct, p, reg, tpl))
+func mountGenerate(api chi.Router, svc *aistudio.Service, aiSvc *ai.Service, up *uploads.Service, st *stock.Service, br *brand.Service, acct *accounts.Service, p *persistence.Service, reg *jobs.Registry, tpl *templates.Service) {
+	api.With(requireAuth(acct)).Post("/generate/presentation", generatePresentationHandler(svc, aiSvc, up, st, br, acct, p, reg, tpl))
 	// The built-in theme catalog (F40 E12): harmless metadata, any session or
 	// valid key may list it (the generation themeId is validated against it).
 	api.With(requireAuth(acct)).Get("/themes", func(w http.ResponseWriter, _ *http.Request) {
@@ -87,7 +90,16 @@ type generateInput struct {
 	ThemeID      string   `json:"themeId"`
 	TemplateID   string   `json:"templateId"`
 	BrandPalette []string `json:"brandPalette"`
-	Sources      []struct {
+	// Motion is the entrance motion on the composed pages: "subtle" (default)
+	// or "none".
+	Motion string `json:"motion"`
+	// Look is the deck's house style: "classic", "editorial", "bold" or
+	// "technical". Empty lets the model's choice, then the theme's, stand.
+	Look string `json:"look"`
+	// BrandKitID grounds the deck in this kit instead of the workspace's
+	// default; it must belong to the workspace.
+	BrandKitID string `json:"brandKitId"`
+	Sources    []struct {
 		Name string `json:"name"`
 		Text string `json:"text"`
 	} `json:"sources"`
@@ -102,6 +114,9 @@ type generatePlan struct {
 	Brief     string
 	Palette   []string
 	ThemeID   string
+	Motion    string
+	Look      string
+	BrandKit  string
 	// Template contribution (E14), resolved by the caller (needs the
 	// templates service): the layout system and/or theme record.
 	LayoutSet   any
@@ -166,6 +181,12 @@ func planGeneration(ctx context.Context, acct *accounts.Service, userID string, 
 	if themeID != "" && !aistudio.ValidThemeID(themeID) {
 		return plan, &generateReject{http.StatusBadRequest, "invalid_theme_id", "unknown themeId; list the built-in themes at GET /v1/themes"}
 	}
+	motion := strings.ToLower(strings.TrimSpace(in.Motion))
+	switch motion {
+	case "", "subtle", "none":
+	default:
+		return plan, &generateReject{http.StatusBadRequest, "invalid_motion", "motion must be 'subtle' or 'none'"}
+	}
 
 	// The tighter generation budget: keyed per API key when present, else
 	// per user, on top of the general per-key budget.
@@ -225,13 +246,21 @@ func planGeneration(ctx context.Context, acct *accounts.Service, userID string, 
 	plan.Brief = brief
 	plan.Palette = palette
 	plan.ThemeID = themeID
+	plan.BrandKit = strings.TrimSpace(in.BrandKitID)
+	switch look := strings.ToLower(strings.TrimSpace(in.Look)); look {
+	case "", "classic", "editorial", "bold", "technical":
+		plan.Look = look
+	default:
+		return plan, &generateReject{http.StatusBadRequest, "invalid_look", "look must be one of classic, editorial, bold, technical"}
+	}
+	plan.Motion = motion
 	return plan, nil
 }
 
 // startGenerationJob runs a validated plan through the job registry:
 // server-side outline generation (per-page copy polish), goja composition,
 // then a normal persistence.Create through the write boundary.
-func startGenerationJob(svc *aistudio.Service, aiSvc *ai.Service, up *uploads.Service, p *persistence.Service, reg *jobs.Registry, userID string, plan generatePlan) *jobs.Job {
+func startGenerationJob(svc *aistudio.Service, aiSvc *ai.Service, up *uploads.Service, st *stock.Service, br *brand.Service, p *persistence.Service, reg *jobs.Registry, userID string, plan generatePlan) *jobs.Job {
 	job := reg.Start(userID, "generate-presentation")
 	go func() {
 		// A panic in this background goroutine would kill the PROCESS (the
@@ -246,15 +275,24 @@ func startGenerationJob(svc *aistudio.Service, aiSvc *ai.Service, up *uploads.Se
 		// on its own bounded clock.
 		ctx, cancel := context.WithTimeout(context.Background(), generateTimeout)
 		defer cancel()
-		outline, err := svc.GenerateDesign(ctx, plan.Workspace, plan.Dt, plan.Brief, "", plan.PageCount)
+		// The workspace's brand kit grounds the deck the way it grounds the
+		// editor's: voice into the outline, palette into the theme unless the
+		// caller named one, fonts into the type, the logo onto the pages.
+		grounding := groundInBrand(ctx, br, up, plan.Workspace, userID, plan.BrandKit)
+		palette := plan.Palette
+		if len(palette) == 0 {
+			palette = grounding.Palette
+		}
+		outline, err := svc.GenerateDesign(ctx, plan.Workspace, plan.Dt, plan.Brief, grounding.Clause, plan.PageCount)
 		if err != nil {
 			reg.Fail(job.ID, userMessageForAI(err))
 			return
 		}
 		compose := func() ([]byte, composer.Report, error) {
 			return composer.ComposeWithReport(ctx, composer.Input{
-				Outline: outline, Width: plan.Size.w, Height: plan.Size.h, BrandPalette: plan.Palette,
-				ThemeID: plan.ThemeID, LayoutSet: plan.LayoutSet, ThemeRecord: plan.ThemeRecord,
+				Outline: outline, Width: plan.Size.w, Height: plan.Size.h, BrandPalette: palette,
+				ThemeID: plan.ThemeID, LayoutSet: plan.LayoutSet, ThemeRecord: plan.ThemeRecord, Motion: plan.Motion, DesignType: plan.Dt, Look: plan.Look,
+				BrandFonts: grounding.Fonts, Logo: grounding.Logo,
 			})
 		}
 		fileJSON, report, err := compose()
@@ -269,7 +307,7 @@ func startGenerationJob(svc *aistudio.Service, aiSvc *ai.Service, up *uploads.Se
 		if len(report.Shorten) > 0 {
 			for _, i := range report.Shorten {
 				if i >= 0 && i < len(outline.Pages) {
-					outline.Pages[i] = svc.ShortenPage(ctx, plan.Workspace, outline.Pages[i], "")
+					outline.Pages[i] = svc.ShortenPage(ctx, plan.Workspace, outline.Pages[i], grounding.Clause)
 				}
 			}
 			if again, againReport, err2 := compose(); err2 == nil {
@@ -281,17 +319,28 @@ func startGenerationJob(svc *aistudio.Service, aiSvc *ai.Service, up *uploads.Se
 			reg.Fail(job.ID, "composition produced an unreadable file")
 			return
 		}
-		// Pictures, through the workspace's own image provider, before the
-		// deck is saved: the composer left a tagged stand-in in every picture
-		// region, and this is the server-side twin of the editor's queue.
+		// Pictures before the deck is saved: the composer left a tagged
+		// stand-in in every picture region, and this is the server-side twin
+		// of the editor's queue, same ladder (reuse, stock, generate).
 		images := imagePlacement{}
-		if aiSvc != nil && up != nil {
-			images = placeGeneratedImages(ctx, file, userID, plan.Workspace, aiSvc.Image, uploadAdapter(up))
+		if up != nil {
+			images = placePictures(ctx, file, userID, plan.Workspace, pictureSourcesFor(aiSvc, up, st))
 		}
 		rec, err := p.Create(ctx, plan.Workspace, outline.Title, file, &userID)
 		if err != nil {
 			reg.Fail(job.ID, "could not save the generated design")
 			return
+		}
+		// The look, after the save so a slow reviewer can never cost the
+		// deck: each page rendered as an export would draw it, reviewed by
+		// a provider that can read images, findings in the quality result.
+		titles := make([]string, len(outline.Pages))
+		for i := range outline.Pages {
+			titles[i] = outline.Pages[i].Title
+		}
+		reviewed, review := reviewSavedDeck(ctx, svc, plan.Workspace, file, titles)
+		if review == nil {
+			review = []pageReview{}
 		}
 		reg.Complete(job.ID, map[string]any{
 			"designId":  rec.ID,
@@ -305,6 +354,13 @@ func startGenerationJob(svc *aistudio.Service, aiSvc *ai.Service, up *uploads.Se
 				"ok":          report.OK,
 				"stillLong":   len(report.Shorten),
 				"bulletShare": report.BulletShare,
+				// Text runs the composer re-inked to AA on the way out, so a
+				// consumer knows the palette was corrected rather than clean.
+				"contrastRepairs": report.Repairs,
+				// The look: whether a provider that can read images reviewed
+				// the rendered pages, and what it saw, per page.
+				"reviewed": reviewed,
+				"review":   review,
 			},
 			// How many picture regions the deck had and how many were filled
 			// through the workspace's image provider; a region that failed
@@ -346,7 +402,7 @@ func resolveTemplateForGeneration(ctx context.Context, tpl *templates.Service, u
 	return layoutSet, theme, nil
 }
 
-func generatePresentationHandler(svc *aistudio.Service, aiSvc *ai.Service, up *uploads.Service, acct *accounts.Service, p *persistence.Service, reg *jobs.Registry, tpl *templates.Service) http.HandlerFunc {
+func generatePresentationHandler(svc *aistudio.Service, aiSvc *ai.Service, up *uploads.Service, st *stock.Service, br *brand.Service, acct *accounts.Service, p *persistence.Service, reg *jobs.Registry, tpl *templates.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body generateInput
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -381,6 +437,8 @@ func generatePresentationHandler(svc *aistudio.Service, aiSvc *ai.Service, up *u
 				problemWithCode(w, r, rej.Status, http.StatusText(rej.Status), rej.Msg, "template_without_style")
 			case "invalid_theme_id":
 				problemWithCode(w, r, rej.Status, http.StatusText(rej.Status), rej.Msg, "invalid_theme_id")
+			case "invalid_motion":
+				problemWithCode(w, r, rej.Status, http.StatusText(rej.Status), rej.Msg, "invalid_motion")
 			case "generation_rate_limited":
 				problemWithCode(w, r, rej.Status, http.StatusText(rej.Status), rej.Msg, "generation_rate_limited")
 			case "missing_workspaceid":
@@ -396,7 +454,7 @@ func generatePresentationHandler(svc *aistudio.Service, aiSvc *ai.Service, up *u
 			return
 		}
 		// Key-authed calls are audited by the auth middleware; nothing extra here.
-		job := startGenerationJob(svc, aiSvc, up, p, reg, u.ID, plan)
+		job := startGenerationJob(svc, aiSvc, up, st, br, p, reg, u.ID, plan)
 		w.Header().Set("Location", "/api/v1/jobs/"+job.ID)
 		writeJSON(w, http.StatusAccepted, map[string]any{"jobId": job.ID, "poll": "/api/v1/jobs/" + job.ID})
 	}
@@ -406,5 +464,10 @@ func generatePresentationHandler(svc *aistudio.Service, aiSvc *ai.Service, up *u
 // internals: the aistudio service already returns coded, human-safe errors
 // for the common cases (no provider configured, quota, refusal).
 func userMessageForAI(err error) string {
+	// A cut-off reply is joined onto the gateway error; the user needs the
+	// reason, not the wrapper.
+	if errors.Is(err, ai.ErrReplyTruncated) {
+		return ai.ErrReplyTruncated.Error()
+	}
 	return cutUTF8(err.Error(), 300)
 }

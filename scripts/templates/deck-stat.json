@@ -1,34 +1,595 @@
 {
-  "id": "deck-stat",
-  "title": "Big Stat Slide",
-  "categories": ["presentations", "business"],
-  "tags": ["slide", "stat", "data"],
-  "styleTags": ["bold", "data"],
-  "size": [1920, 1080],
-  "typography": [
-    { "role": "heading", "family": "Montserrat", "weight": 800 },
-    { "role": "body", "family": "Inter", "weight": 400 }
-  ],
-  "pages": [
+ "id": "deck-stat",
+ "title": "Big Stat Slide",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "slide",
+  "stat",
+  "data"
+ ],
+ "styleTags": [
+  "bold",
+  "modern"
+ ],
+ "size": [
+  1920,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Big Shoulders Display",
+   "weight": 900
+  },
+  {
+   "role": "body",
+   "family": "Onest",
+   "weight": 400
+  },
+  {
+   "role": "accent",
+   "family": "Just Another Hand",
+   "weight": 400
+  },
+  {
+   "role": "label",
+   "family": "Red Hat Mono",
+   "weight": 500
+  }
+ ],
+ "pages": [
+  {
+   "name": "The stage",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#113626",
+      0
+     ],
+     [
+      "#061810",
+      1
+     ]
+    ]
+   },
+   "nodes": [
     {
-      "name": "Big stat",
-      "bg": "#052E16",
-      "nodes": [
-        { "kind": "ellipse", "x": 1560, "y": -240, "w": 640, "h": 640, "fill": "#4ADE80", "opacity": 0.1, "bleed": true },
-        { "kind": "text", "x": 160, "y": 300, "w": 800, "h": 40, "text": "Revenue impact", "family": "Inter", "size": 30, "weight": 600, "color": "#4ADE80", "letterSpacing": 4, "upper": true, "lineHeight": 1.2 },
-        { "kind": "rect", "x": 160, "y": 356, "w": 90, "h": 8, "fill": "#4ADE80", "radius": 4 },
-        { "kind": "text", "x": 160, "y": 366, "w": 1200, "h": 326, "text": "$1.2M", "family": "Montserrat", "size": 300, "weight": 800, "color": "#FFFFFF", "lineHeight": 1.03 },
-        { "kind": "text", "x": 160, "y": 746, "w": 1100, "h": 48, "text": "Added in net-new ARR from the redesigned checkout.", "family": "Inter", "size": 34, "weight": 400, "color": "#BBF7D0", "lineHeight": 1.3 },
-        { "kind": "button", "x": 1440, "y": 520, "w": 320, "h": 76, "fill": "#4ADE80", "label": "+38% vs Q1", "color": "#052E16", "family": "Montserrat", "size": 28, "weight": 700 },
-        { "kind": "text", "x": 160, "y": 990, "w": 700, "h": 30, "text": "Northwind Labs · Q3 business review", "family": "Inter", "size": 22, "weight": 500, "color": "#86EFAC", "lineHeight": 1.2 },
-        { "kind": "text", "x": 1460, "y": 990, "w": 300, "h": 30, "text": "12 / 24", "family": "Inter", "size": 22, "weight": 500, "color": "#86EFAC", "align": "right", "lineHeight": 1.2 }
+     "kind": "rect",
+     "x": 1180,
+     "y": -300,
+     "w": 90,
+     "h": 1700,
+     "fill": "#C9F236",
+     "rotation": 24,
+     "opacity": 0.1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 1370,
+     "y": -300,
+     "w": 90,
+     "h": 1700,
+     "fill": "#C9F236",
+     "rotation": 24,
+     "opacity": 0.15000000000000002,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 1560,
+     "y": -300,
+     "w": 90,
+     "h": 1700,
+     "fill": "#C9F236",
+     "rotation": 24,
+     "opacity": 0.2,
+     "bleed": true
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       800,
+       -60
+      ],
+      [
+       1120,
+       -60
+      ],
+      [
+       1600,
+       744
+      ],
+      [
+       320,
+       744
       ]
+     ],
+     "fill": "#C9F236",
+     "opacity": 0.06,
+     "closed": true,
+     "bleed": true
+    },
+    {
+     "kind": "path",
+     "points": [
+      [
+       880,
+       -60
+      ],
+      [
+       1040,
+       -60
+      ],
+      [
+       1350,
+       744
+      ],
+      [
+       570,
+       744
+      ]
+     ],
+     "fill": "#C9F236",
+     "opacity": 0.08,
+     "closed": true,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 320,
+     "y": 710,
+     "w": 1280,
+     "h": 68,
+     "fill": "#C9F236",
+     "opacity": 0.1
+    },
+    {
+     "kind": "ellipse",
+     "x": 600,
+     "y": 160,
+     "w": 720,
+     "h": 720,
+     "fill": "#C9F236",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 672,
+     "y": 232,
+     "w": 576,
+     "h": 576,
+     "fill": "#C9F236",
+     "opacity": 0.16,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 236,
+     "w": 1728,
+     "h": 28,
+     "text": "Revenue impact",
+     "family": "Red Hat Mono",
+     "size": 20,
+     "weight": 600,
+     "color": "#C9F236",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 320,
+     "w": 1728,
+     "h": 404,
+     "text": "$1.2M",
+     "family": "Big Shoulders Display",
+     "size": 380,
+     "weight": 900,
+     "color": "#C9F236",
+     "lineHeight": 1,
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 560,
+     "w": 380,
+     "h": 24,
+     "text": "Q1 run-rate",
+     "family": "Red Hat Mono",
+     "size": 15,
+     "weight": 600,
+     "color": "#C9F236",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 594,
+     "w": 380,
+     "h": 72,
+     "text": "$3.2M",
+     "family": "Big Shoulders Display",
+     "size": 64,
+     "weight": 900,
+     "color": "#A6BFAD",
+     "lineHeight": 1,
+     "strike": true
+    },
+    {
+     "kind": "text",
+     "x": 1444,
+     "y": 560,
+     "w": 380,
+     "h": 24,
+     "text": "Q3 run-rate",
+     "family": "Red Hat Mono",
+     "size": 15,
+     "weight": 600,
+     "color": "#C9F236",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "align": "right"
+    },
+    {
+     "kind": "text",
+     "x": 1444,
+     "y": 594,
+     "w": 380,
+     "h": 72,
+     "text": "$4.4M",
+     "family": "Big Shoulders Display",
+     "size": 64,
+     "weight": 900,
+     "color": "#F3F7E8",
+     "lineHeight": 1,
+     "align": "right"
+    },
+    {
+     "kind": "ellipse",
+     "x": 660,
+     "y": 728,
+     "w": 600,
+     "h": 24,
+     "fill": "#061810",
+     "opacity": 0.55
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 744,
+     "w": 1728,
+     "h": 2,
+     "fill": "#24523B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 144,
+     "y": 746,
+     "w": 32,
+     "h": 32,
+     "fill": "#C9F236",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 155,
+     "y": 757,
+     "w": 10,
+     "h": 10,
+     "fill": "#C9F236",
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 304,
+     "y": 746,
+     "w": 32,
+     "h": 32,
+     "fill": "#C9F236",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 315,
+     "y": 757,
+     "w": 10,
+     "h": 10,
+     "fill": "#C9F236",
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 464,
+     "y": 746,
+     "w": 32,
+     "h": 32,
+     "fill": "#C9F236",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 475,
+     "y": 757,
+     "w": 10,
+     "h": 10,
+     "fill": "#C9F236",
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 624,
+     "y": 746,
+     "w": 32,
+     "h": 32,
+     "fill": "#C9F236",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 635,
+     "y": 757,
+     "w": 10,
+     "h": 10,
+     "fill": "#C9F236",
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 784,
+     "y": 746,
+     "w": 32,
+     "h": 32,
+     "fill": "#C9F236",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 795,
+     "y": 757,
+     "w": 10,
+     "h": 10,
+     "fill": "#C9F236",
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 944,
+     "y": 746,
+     "w": 32,
+     "h": 32,
+     "fill": "#C9F236",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 955,
+     "y": 757,
+     "w": 10,
+     "h": 10,
+     "fill": "#C9F236",
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 1104,
+     "y": 746,
+     "w": 32,
+     "h": 32,
+     "fill": "#C9F236",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1115,
+     "y": 757,
+     "w": 10,
+     "h": 10,
+     "fill": "#C9F236",
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 1264,
+     "y": 746,
+     "w": 32,
+     "h": 32,
+     "fill": "#C9F236",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1275,
+     "y": 757,
+     "w": 10,
+     "h": 10,
+     "fill": "#C9F236",
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 1424,
+     "y": 746,
+     "w": 32,
+     "h": 32,
+     "fill": "#C9F236",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1435,
+     "y": 757,
+     "w": 10,
+     "h": 10,
+     "fill": "#C9F236",
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 1584,
+     "y": 746,
+     "w": 32,
+     "h": 32,
+     "fill": "#C9F236",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1595,
+     "y": 757,
+     "w": 10,
+     "h": 10,
+     "fill": "#C9F236",
+     "opacity": 0.95
+    },
+    {
+     "kind": "ellipse",
+     "x": 1744,
+     "y": 746,
+     "w": 32,
+     "h": 32,
+     "fill": "#C9F236",
+     "opacity": 0.14
+    },
+    {
+     "kind": "ellipse",
+     "x": 1755,
+     "y": 757,
+     "w": 10,
+     "h": 10,
+     "fill": "#C9F236",
+     "opacity": 0.95
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 798,
+     "w": 1200,
+     "h": 82,
+     "text": "Added in net-new annual revenue from the redesigned checkout.",
+     "family": "Onest",
+     "size": 28,
+     "weight": 400,
+     "color": "#F3F7E8",
+     "lineHeight": 1.4,
+     "align": "center"
+    },
+    {
+     "kind": "button",
+     "x": 820,
+     "y": 896,
+     "w": 280,
+     "h": 48,
+     "label": "+38% on Q1",
+     "fill": "#395f2a",
+     "color": "#C9F236",
+     "family": "Onest",
+     "size": 19,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 968,
+     "w": 1728,
+     "h": 1,
+     "fill": "#24523B"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 992,
+     "w": 900,
+     "h": 26,
+     "text": "Northwind Labs  ·  Q3 business review",
+     "family": "Red Hat Mono",
+     "size": 18,
+     "weight": 500,
+     "color": "#A6BFAD",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 1264,
+     "y": 900,
+     "w": 560,
+     "h": 46,
+     "text": "finance checked it twice",
+     "family": "Just Another Hand",
+     "size": 37,
+     "weight": 400,
+     "color": "#C9F236",
+     "lineHeight": 1.2,
+     "align": "right"
     }
-  ],
-  "fillable": [
-    { "node": "p0-n1", "kind": "text", "label": "Eyebrow", "hint": "What the number measures" },
-    { "node": "p0-n3", "kind": "text", "label": "Stat value", "hint": "The headline number, e.g. $1.2M or +214%" },
-    { "node": "p0-n4", "kind": "text", "label": "Caption", "hint": "One line of context for the number" },
-    { "node": "p0-n5-label", "kind": "text", "label": "Comparison chip", "hint": "Short delta, e.g. +38% vs Q1" }
-  ]
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n8",
+   "kind": "text",
+   "label": "Eyebrow",
+   "hint": "What the figure measures"
+  },
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "Figure",
+   "hint": "The one number"
+  },
+  {
+   "node": "p0-n10",
+   "kind": "text",
+   "label": "Before, label",
+   "hint": "What the earlier figure was"
+  },
+  {
+   "node": "p0-n11",
+   "kind": "text",
+   "label": "Before, figure",
+   "hint": "The earlier figure"
+  },
+  {
+   "node": "p0-n12",
+   "kind": "text",
+   "label": "After, label",
+   "hint": "What the figure is now"
+  },
+  {
+   "node": "p0-n13",
+   "kind": "text",
+   "label": "After, figure",
+   "hint": "The figure now"
+  },
+  {
+   "node": "p0-n38",
+   "kind": "text",
+   "label": "Caption",
+   "hint": "One sentence on what it means"
+  },
+  {
+   "node": "p0-n39-label",
+   "kind": "text",
+   "label": "Comparison",
+   "hint": "Against what"
+  }
+ ],
+ "version": 3,
+ "created": "2026-07-04T00:00:00.000Z",
+ "updated": "2026-09-30T00:00:00.000Z",
+ "rank": 100
 }

@@ -86,3 +86,4 @@ export {
   gpuAvailable,
   type OneShotOptions,
 } from "./renderer";
+export { wrapCellLines, cellLineHeight } from "./tablewrap";
