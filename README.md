@@ -101,7 +101,7 @@ Either way the wizard writes `.env` (secrets like `JWT_SECRET` are generated aut
 
 `npm run deploy` rebuilds the bundle and restarts the running service in one step (`build:dist` + `./dist/hycanvas service restart`).
 
-When writing `.env` by hand for production, set at minimum `NODE_ENV=production`, `DATABASE_URL`, a strong `JWT_SECRET`, `APP_URL` (public base URL used in generated links), and an absolute `LOCAL_STORAGE_PATH` (or `STORAGE_DRIVER=s3` with `S3_*`). AI provider keys are configured per workspace at runtime (stored encrypted), never via env.
+When writing `.env` by hand for production, set at minimum `NODE_ENV=production`, `DATABASE_URL`, a strong `JWT_SECRET`, `APP_URL` (public base URL used in generated links), and an absolute `LOCAL_STORAGE_PATH` (or `STORAGE_DRIVER=s3` with `S3_*`). AI provider keys are configured per workspace at runtime (stored encrypted), never via env. A user can also connect a personal key in Settings, used only in workspaces that have no provider of their own and allow personal keys.
 
 ### Running behind a reverse proxy
 
@@ -270,7 +270,7 @@ All configuration is read from the root `.env` (copy `.env.example`). The most i
 | `ASSET_QUOTA_BYTES` | optional | Per-workspace upload cap in bytes (default 2 GiB). |
 | `USER_STORAGE_QUOTA_BYTES` | optional | Global per-user upload cap across all workspaces; unset/0 = unlimited. For public instances. |
 | `BRAND_STARTER_KIT` | optional | `hycanvas` (default) seeds HyCanvas's own brand kit into workspaces that have none; `off` disables it. See [Branding and theming](#branding-and-theming). |
-| `AI_SECRET` | optional | Encrypts stored per-workspace AI keys; falls back to `JWT_SECRET`. |
+| `AI_SECRET` | optional | Encrypts stored AI keys (workspace and personal); falls back to `JWT_SECRET`. |
 | `OIDC_*` | optional | OIDC single sign-on (issuer, client id/secret). |
 | `AUTH_*_ENABLED` | optional | Enable/disable each sign-in method's login and signup (password, magic link, OIDC). Defaults preserve prior behavior. See [Choosing which sign-in methods are allowed](#choosing-which-sign-in-methods-are-allowed). |
 | `CAPTCHA_*` | optional | Turnstile / reCAPTCHA on the auth forms (`CAPTCHA_PROVIDER`, `CAPTCHA_SITE_KEY`, `CAPTCHA_SECRET_KEY`, `CAPTCHA_MIN_SCORE`). Off unless a provider is set. See [CAPTCHA on the auth forms](#captcha-on-the-auth-forms). |
@@ -348,9 +348,10 @@ See `CONTRIBUTING.md` for setup and the pull-request checklist, `CODE_OF_CONDUCT
 
 ## License
 
-HyCanvas is licensed under the Elastic License 2.0 (see `LICENSE`). This is a source-available license: you may use, modify, self-host, and redistribute it freely, but you may not provide it to third parties as a hosted or managed service, circumvent the license-key functionality, or remove the licensing notices. Third-party and bundled-asset notices are in `NOTICE`.
+From v0.3.17 onwards, HyCanvas is open source under the [GNU Affero General Public License v3](LICENSE) (`AGPL-3.0-only`). You may use, modify, self-host, and redistribute it freely; if you distribute it, or let people use a modified version over a network, you must offer them the complete source of your version under the same license. Releases up to and including v0.3.16 were published under the Elastic License 2.0 and remain under those terms. Third-party and bundled-asset notices are in `NOTICE`.
 
-- **Hosting HyCanvas for your own customers?** That needs a [commercial license](COMMERCIAL.md) from HyScaler; internal use and self-hosting never do.
+- **Need to keep your modifications private, or embed HyCanvas in a proprietary product?** A [commercial license](COMMERCIAL.md) from HyScaler removes the AGPL obligations; internal use and AGPL-compliant hosting never need one.
+- **Using the name or logo?** The HyCanvas and HyScaler marks are not covered by the AGPL; see the [trademark policy](TRADEMARKS.md). A modified version must use its own name.
 - **Contributing?** All contributions require a one-time [Contributor License Agreement](CLA.md), signed with a single comment on your first pull request.
 
 © 2026 HyScaler. HyCanvas is a HyScaler product. HyScaler® is a registered trademark.

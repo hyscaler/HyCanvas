@@ -43,7 +43,9 @@ export function WorkspaceAiPolicy({ workspaceId, presets }: { workspaceId: strin
   if (!workspaceId || !policy) return null;
 
   const blocked = policy.blockedProviders ?? [];
-  const restricted = blocked.length > 0 || !!policy.monthlyTokenCap;
+  // Personal keys are allowed unless the switch says otherwise (#47).
+  const personalAllowed = policy.allowPersonalKeys !== false;
+  const restricted = blocked.length > 0 || !!policy.monthlyTokenCap || !personalAllowed;
 
   async function save(next: AiPolicy) {
     if (!workspaceId || saving) return;
@@ -107,6 +109,20 @@ export function WorkspaceAiPolicy({ workspaceId, presets }: { workspaceId: strin
               className="h-11 rounded-xl border border-neutral-200 bg-surface px-3.5 text-sm tabular-nums outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
             <span className="text-[11px] font-normal text-neutral-500">{tr("dashboard.leave_blank_for_no_cap")}</span>
+          </label>
+
+          <label className="flex max-w-2xl items-start gap-2.5 text-sm text-neutral-700">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4"
+              checked={personalAllowed}
+              disabled={saving}
+              onChange={(e) => void save({ ...latest.current, allowPersonalKeys: e.target.checked })}
+            />
+            <span className="flex flex-col gap-0.5">
+              <span className="font-medium">{tr("dashboard.allow_personal_ai_keys")}</span>
+              <span className="text-[11px] text-neutral-500">{tr("dashboard.allow_personal_ai_keys_hint")}</span>
+            </span>
           </label>
 
           <div className="flex flex-col gap-1.5">

@@ -26,4 +26,4 @@ Everything in HyCanvas is free: no tiers, no paywalls, no watermarks. These page
 
 ## Licensing
 
-HyCanvas is source-available under the [Elastic License 2.0](../LICENSE): free to use, self-host, and modify, with hosted-service resale reserved to [commercial licenses](../COMMERCIAL.md) from HyScaler. Contributions require the one-time [CLA](../CLA.md). © 2026 HyScaler.
+From v0.3.17 onwards HyCanvas is open source under the [GNU AGPL v3](../LICENSE) (`AGPL-3.0-only`): free to use, self-host, modify, and redistribute, with [commercial licenses](../COMMERCIAL.md) from HyScaler for use without the AGPL obligations and a [trademark policy](../TRADEMARKS.md) for the name and logos. Releases up to v0.3.16 are under the Elastic License 2.0. Contributions require the one-time [CLA](../CLA.md). © 2026 HyScaler.

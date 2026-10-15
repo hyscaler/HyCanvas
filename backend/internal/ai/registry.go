@@ -161,6 +161,10 @@ type OrgPolicy struct {
 	BlockedProviders []string `json:"blockedProviders,omitempty"`
 	// MonthlyTokenCap > 0 caps total tokens per billing month (0 = unlimited).
 	MonthlyTokenCap int `json:"monthlyTokenCap,omitempty"`
+	// AllowPersonalKeys lets members fall back to their own personal provider
+	// when the workspace has none (#47). Always set on read; nil on a write
+	// keeps the stored value.
+	AllowPersonalKeys *bool `json:"allowPersonalKeys,omitempty"`
 }
 
 // Usage is the current period's accumulated usage (for cap checks).

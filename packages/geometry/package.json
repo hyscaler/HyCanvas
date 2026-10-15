@@ -1,7 +1,7 @@
 {
   "name": "@hc/geometry",
   "version": "0.1.0",
-  "license": "Elastic-2.0",
+  "license": "AGPL-3.0-only",
   "private": true,
   "description": "HyCanvas geometry: shape-to-path, bounds, hit-testing, boolean ops, connector routing (framework-agnostic)",
   "main": "dist/index.js",

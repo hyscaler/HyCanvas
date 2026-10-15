@@ -1,7 +1,7 @@
 {
   "name": "@hc/website",
   "version": "0.1.0",
-  "license": "Elastic-2.0",
+  "license": "AGPL-3.0-only",
   "private": true,
   "description": "HyCanvas website builder: site model, nav, forms, SEO, and the responsive static HTML/CSS exporter (framework-agnostic)",
   "main": "dist/index.js",

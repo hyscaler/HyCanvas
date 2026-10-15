@@ -1,7 +1,8 @@
 // Floating zoom control (bottom-right): zoom in/out, a percentage menu with
 // presets, fit-page, and zoom-to-selection. Shared by the design canvas and the
 // whiteboard surface so both editors have identical zoom affordances. Renders
-// absolutely, so it needs a positioned ancestor.
+// absolutely, so it needs a positioned ancestor. It stacks above the canvas
+// overlays (z-20) so page chrome can never cover its buttons.
 
 import { useEffect, useRef, useState } from "react";
 import { Minus, Plus, ChevronDown, Check } from "lucide-react";
@@ -37,7 +38,7 @@ export function ZoomControl() {
   }, [menuOpen]);
   const run = (fn: () => void) => { setMenuOpen(false); fn(); };
   return (
-    <div className="absolute bottom-4 end-4 flex items-center gap-1 rounded-xl border border-neutral-200 bg-surface px-1.5 py-1 shadow-md">
+    <div data-zoom-control className="absolute bottom-4 end-4 z-30 flex items-center gap-1 rounded-xl border border-neutral-200 bg-surface px-1.5 py-1 shadow-md">
       <IconButton size="sm" aria-label={tr("editor.zoom_out")} onClick={() => by(0.8)}><Minus size={16} /></IconButton>
       <div ref={ref} className="relative">
         <button

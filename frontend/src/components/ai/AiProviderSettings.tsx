@@ -11,9 +11,10 @@
 // editor needs it anyway (to decide what the assistant may offer) and a second
 // fetch for the same data would be waste.
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { ApiError, type AiModelInfo, type AiProviderPreset, type AiConfigView, type AiImageConfigView } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
+import { personalAiApi, workspaceAiApi } from "@/lib/aiConfigApi";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { apiCodeMessage } from "@/lib/errors";
@@ -91,6 +92,7 @@ export function AiProviderSettings({
   onReset,
   onCancel,
   layout = "stack",
+  personal = false,
 }: {
   workspaceId: string | null;
   config: AiConfigView | null;
@@ -109,8 +111,15 @@ export function AiProviderSettings({
    *  A viewport breakpoint cannot tell those apart: the panel is about 288px
    *  wide even on a large screen. */
   layout?: "stack" | "wide";
+  /** Edit the signed-in user's personal provider (#47) instead of a
+   *  workspace's. Same form and test; web search stays a workspace setting. */
+  personal?: boolean;
 }) {
   const toast = useToast();
+  // Whose config this form edits: the workspace, or "me". It keys every
+  // in-flight check so one target's answer never lands on another's form.
+  const scope = personal ? "me" : workspaceId;
+  const api = useMemo(() => (personal ? personalAiApi : workspaceAiApi(workspaceId ?? "")), [personal, workspaceId]);
   const [provider, setProvider] = useState(config?.provider ?? "openai");
   const [model, setModel] = useState(config?.model ?? "");
   const [imageModel, setImageModel] = useState(config?.imageModel ?? "");
@@ -132,7 +141,7 @@ export function AiProviderSettings({
   // a configured search provider. The previous version could not hit this,
   // because one combined fetch gated the whole form.
   const [searchFor, setSearchFor] = useState<string | null>(null);
-  const searchLoaded = !!workspaceId && searchFor === workspaceId;
+  const searchLoaded = !!scope && searchFor === scope;
   // Failing to LOAD is not the same as not having loaded yet. Both hide the
   // fields, because rendering them would offer to save a value we never read,
   // but only one of them should be silent. A section that simply is not there
@@ -162,7 +171,7 @@ export function AiProviderSettings({
   const [imgStoredBaseUrl, setImgStoredBaseUrl] = useState("");
   const [replacingImgKey, setReplacingImgKey] = useState(false);
   const [imgFor, setImgFor] = useState<string | null>(null);
-  const imageLoaded = !!workspaceId && imgFor === workspaceId;
+  const imageLoaded = !!scope && imgFor === scope;
   const [imgFailed, setImgFailed] = useState(false);
   // The image provider's credentials, checked on demand. "unverified" is a real
   // third answer, not a softened failure: the probe lists models, and a provider
@@ -195,7 +204,7 @@ export function AiProviderSettings({
   // Re-arm when the workspace (or its stored config) changes, the render-time
   // adjustment pattern: never show one workspace's provider while another's is
   // loading.
-  const armKey = `${workspaceId ?? ""}:${config?.provider ?? ""}:${config?.hasKey ? 1 : 0}`;
+  const armKey = `${scope ?? ""}:${config?.provider ?? ""}:${config?.hasKey ? 1 : 0}`;
   const [armedFor, setArmedFor] = useState(armKey);
   if (armedFor !== armKey) {
     setArmedFor(armKey);
@@ -216,9 +225,9 @@ export function AiProviderSettings({
   const storedHasKey = !!config?.hasKey;
   const storedBaseUrl = config?.baseUrl ?? "";
   useEffect(() => {
-    if (!workspaceId || !storedHasKey || !storedProvider || !canEdit) return;
+    if (!scope || !storedHasKey || !storedProvider || !canEdit) return;
     let cancelled = false;
-    const ws = workspaceId;
+    const ws = scope;
     // The same signature the form computes for these untouched fields, so
     // the list shows until something is typed. A save that changes the host
     // re-runs this, because the stored host is part of it.
@@ -228,8 +237,8 @@ export function AiProviderSettings({
     // No "loading" mark here: the fetch is quiet and the button stays
     // available; the answer lands when it lands.
     void Promise.all([
-      oc.listAiModels(ws, undefined, "text"),
-      wantsImages ? oc.listAiModels(ws, undefined, "image") : Promise.resolve(null),
+      api.listModels(undefined, "text"),
+      wantsImages ? api.listModels(undefined, "image") : Promise.resolve(null),
     ]).then(
       ([text, images]) => {
         if (cancelled) return;
@@ -243,12 +252,12 @@ export function AiProviderSettings({
     );
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the stored record identifies the fetch; presets only name capabilities
-  }, [workspaceId, storedProvider, storedHasKey, storedBaseUrl, canEdit]);
+  }, [scope, api, storedProvider, storedHasKey, storedBaseUrl, canEdit]);
 
   // The optional web-search grounding provider is a separate record; it is
   // fetched here because only this form edits it.
   useEffect(() => {
-    if (!workspaceId) return;
+    if (!workspaceId || personal) return;
     let cancelled = false;
     void oc.getSearchConfig(workspaceId).then(
       (cfg) => {
@@ -266,14 +275,14 @@ export function AiProviderSettings({
       },
     );
     return () => { cancelled = true; };
-  }, [workspaceId]);
+  }, [workspaceId, personal]);
 
   // The dedicated image provider is its own record, fetched here because only
   // this form edits it.
   useEffect(() => {
-    if (!workspaceId) return;
+    if (!scope) return;
     let cancelled = false;
-    void oc.getAiImageConfig(workspaceId).then(
+    void api.getImageConfig().then(
       (cfg: AiImageConfigView | null) => {
         if (cancelled) return;
         setImgProvider(cfg?.provider ?? "");
@@ -287,7 +296,7 @@ export function AiProviderSettings({
         setImgKey("");
         setImgSecret("");
         setReplacingImgKey(false);
-        setImgFor(workspaceId);
+        setImgFor(scope);
         setImgFailed(false);
         setImgCheck("idle"); // a verdict belongs to the values it was made about
       },
@@ -298,7 +307,7 @@ export function AiProviderSettings({
       },
     );
     return () => { cancelled = true; };
-  }, [workspaceId]);
+  }, [scope, api]);
 
   const selPreset = presets.find((p) => p.id === provider);
   const requiresBaseUrl = !!selPreset?.needsBaseUrl;
@@ -334,16 +343,16 @@ export function AiProviderSettings({
         ...(imgSecret.trim() ? { apiSecret: imgSecret.trim() } : {}),
       }
     : null;
-  const candidateSig = JSON.stringify([workspaceId, mainCandidate, imgCandidate]);
+  const candidateSig = JSON.stringify([scope, mainCandidate, imgCandidate]);
   const shownVerdict = verdict && verdict.sig === candidateSig ? verdict : null;
   const badField = shownVerdict?.state === "failed" ? fieldForCode(shownVerdict.code) : null;
   const testing = shownVerdict?.state === "checking";
 
   // The connection each catalog belongs to: provider, host and credential,
   // stored or typed. Not the model fields, which the catalog exists to fill.
-  const connSig = JSON.stringify([workspaceId, provider, baseUrl.trim(), apiKey, apiSecret, sameProvider && !!config?.hasKey]);
+  const connSig = JSON.stringify([scope, provider, baseUrl.trim(), apiKey, apiSecret, sameProvider && !!config?.hasKey]);
   const shownCatalog = catalog && catalog.sig === connSig ? catalog : null;
-  const imgConnSig = JSON.stringify([workspaceId, imgProvider, imgBaseUrl.trim(), imgKey, imgSecret, imgSameProvider && imgHasKey]);
+  const imgConnSig = JSON.stringify([scope, imgProvider, imgBaseUrl.trim(), imgKey, imgSecret, imgSameProvider && imgHasKey]);
   const shownImgCatalog = imgCatalog && imgCatalog.sig === imgConnSig ? imgCatalog : null;
   const mainHasKey = !!apiKey.trim() || (sameProvider && !!config?.hasKey);
   const imgHasCredential = !!imgKey.trim() || (imgSameProvider && imgHasKey);
@@ -414,14 +423,13 @@ export function AiProviderSettings({
   // Tests the settings as typed, main provider then image provider, and saves
   // nothing. Resolves true only when everything that can be judged passed.
   async function runTests(): Promise<boolean> {
-    if (!workspaceId) return false;
-    const ws = workspaceId;
+    if (!scope) return false;
     const sig = candidateSig;
     const main = mainCandidate;
     const img = imgCandidate;
     setVerdict({ sig, state: "checking" });
     try {
-      await oc.testAiConfig(ws, main);
+      await api.testConfig(main);
     } catch (e) {
       const body = e instanceof ApiError ? (e.body as { code?: string } | null) : null;
       const coded = e instanceof ApiError ? apiCodeMessage(e.body) : null;
@@ -432,7 +440,7 @@ export function AiProviderSettings({
       setImgCheck("checking");
       setImgCheckDetail("");
       try {
-        const r = await oc.testAiImageConfig(ws, img);
+        const r = await api.testImageConfig(img);
         setImgCheck(r.verified ? "ok" : "unverified");
       } catch (e) {
         const coded = e instanceof ApiError ? apiCodeMessage(e.body) : null;
@@ -451,8 +459,7 @@ export function AiProviderSettings({
    *  image model field. Free on every provider, so it can run the moment the
    *  key is in. */
   async function fetchModels() {
-    if (!workspaceId || catalog?.state === "loading") return;
-    const ws = workspaceId;
+    if (!scope || catalog?.state === "loading") return;
     const sig = connSig;
     const empty = { sig, models: [] as AiModelInfo[], imageModels: [] as AiModelInfo[] };
     if (!mainHasKey) {
@@ -468,8 +475,8 @@ export function AiProviderSettings({
     try {
       const wantsImages = mainCanImage && !imgProvider;
       const [text, images] = await Promise.all([
-        oc.listAiModels(ws, candidate, "text"),
-        wantsImages ? oc.listAiModels(ws, candidate, "image") : Promise.resolve(null),
+        api.listModels(candidate, "text"),
+        wantsImages ? api.listModels(candidate, "image") : Promise.resolve(null),
       ]);
       setCatalog({ sig, state: text.supported ? "ok" : "none", models: text.models, imageModels: images?.models ?? [] });
     } catch (e) {
@@ -481,8 +488,7 @@ export function AiProviderSettings({
   /** The same for the dedicated image provider, whose catalog is image
    *  models only. */
   async function fetchImageModels() {
-    if (!workspaceId || !imgProvider || imgCatalog?.state === "loading") return;
-    const ws = workspaceId;
+    if (!scope || !imgProvider || imgCatalog?.state === "loading") return;
     const sig = imgConnSig;
     const empty = { sig, models: [] as AiModelInfo[], imageModels: [] as AiModelInfo[] };
     if (!imgHasCredential) {
@@ -495,7 +501,7 @@ export function AiProviderSettings({
     }
     setImgCatalog({ ...empty, state: "loading" });
     try {
-      const r = await oc.listAiImageModels(ws, {
+      const r = await api.listImageModels({
         provider: imgProvider,
         baseUrl: imgBaseUrl.trim(),
         ...(imgKey.trim() ? { apiKey: imgKey.trim() } : {}),
@@ -509,7 +515,7 @@ export function AiProviderSettings({
   }
 
   async function testConnection() {
-    if (!workspaceId || saving || testing) return;
+    if (!scope || saving || testing) return;
     if (!preflight()) return;
     await runTests();
   }
@@ -518,7 +524,7 @@ export function AiProviderSettings({
    *  explicit "Save anyway" for an endpoint the server cannot reach right now
    *  (a local model that is off, a VPN-only host). */
   async function save(untested = false) {
-    if (!workspaceId || saving || testing) return;
+    if (!scope || saving || testing) return;
     if (!preflight()) return;
     // Say what these settings leave out, once, when the save would introduce
     // it. Skipped on "Save anyway": that follows a save already confirmed.
@@ -539,14 +545,14 @@ export function AiProviderSettings({
       // baseUrl uses PATCH semantics server-side: a rendered field sends its
       // exact value, so emptying a visible field is an explicit clear, and the
       // server drops a stored URL on a provider change.
-      const c = await oc.setAiConfig(workspaceId, mainCandidate);
+      const c = await api.setConfig(mainCandidate);
       setApiKey("");
       setApiSecret("");
       // The optional web-search provider saves in the same gesture (provider
       // "" clears it), but ONLY once its stored value is known - otherwise an
       // early save would clear a provider the user never touched.
       if (searchLoaded) {
-        await oc.setSearchConfig(workspaceId, {
+        await oc.setSearchConfig(workspaceId!, {
           provider: searchProvider,
           ...(searchProvider === "searxng" ? { baseUrl: searchUrl.trim() } : {}),
           ...(searchKey.trim() ? { apiKey: searchKey.trim() } : {}),
@@ -561,7 +567,7 @@ export function AiProviderSettings({
       // every save. Clearing a stored one still goes through, because then the
       // empty provider is a real instruction.
       if (imageLoaded && (imgProvider || imgStoredProvider)) {
-        const img = await oc.setAiImageConfig(workspaceId, imgCandidate ?? { provider: "", baseUrl: "" });
+        const img = await api.setImageConfig(imgCandidate ?? { provider: "", baseUrl: "" });
         setImgStoredProvider(img?.provider ?? "");
         setImgStoredModel(img?.model ?? "");
         setImgStoredBaseUrl(img?.baseUrl ?? "");
@@ -606,15 +612,15 @@ export function AiProviderSettings({
     : "flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500";
 
   async function checkImageProvider() {
-    if (!workspaceId) return;
+    if (!scope) return;
     // The workspace this verdict is about. A check is a live third-party call,
     // and landing one workspace's answer on another's form is how a working
     // provider gets reported as broken.
-    const ws = workspaceId;
+    const ws = scope;
     setImgCheck("checking");
     setImgCheckDetail("");
     try {
-      const r = await oc.testAiImageConfig(ws);
+      const r = await api.testImageConfig();
       if (imgFor === ws) setImgCheck(r.verified ? "ok" : "unverified");
     } catch (e) {
       if (imgFor !== ws) return;
@@ -625,13 +631,13 @@ export function AiProviderSettings({
   }
 
   async function reset() {
-    if (!workspaceId || saving) return;
+    if (!scope || saving) return;
     // Confirmed because it stops AI for everyone in the workspace, and the key
     // cannot be recovered afterwards - the server never gave it back to us.
     // It also sits next to Save, so a misclick has to be cheap to undo.
     const ok = await confirmAction({
       title: tr("editor.reset_provider"),
-      message: tr("editor.reset_provider_confirm"),
+      message: personal ? tr("editor.reset_personal_provider_confirm") : tr("editor.reset_provider_confirm"),
       confirmText: tr("editor.reset_provider"),
       danger: true,
     });
@@ -646,8 +652,8 @@ export function AiProviderSettings({
       // removed, nothing has been removed yet, so the error leaves a coherent
       // configuration rather than a cleared main provider beside a surviving
       // second key that the user believes is gone.
-      await oc.deleteAiImageConfig(workspaceId);
-      await oc.deleteAiConfig(workspaceId);
+      await api.deleteImageConfig();
+      await api.deleteConfig();
       setApiKey("");
       setReplacingKey(false);
       setImgProvider("");
@@ -797,7 +803,7 @@ export function AiProviderSettings({
             <button
               type="button"
               onClick={() => void fetchModels()}
-              disabled={!workspaceId || shownCatalog?.state === "loading"}
+              disabled={!scope || shownCatalog?.state === "loading"}
               className="shrink-0 text-xs font-medium text-brand-ink hover:underline disabled:opacity-40"
             >
               {shownCatalog?.state === "loading" ? tr("editor.fetching_models") : tr("editor.fetch_models")}
@@ -1011,7 +1017,7 @@ export function AiProviderSettings({
                     <button
                       type="button"
                       onClick={() => void fetchImageModels()}
-                      disabled={!workspaceId || shownImgCatalog?.state === "loading"}
+                      disabled={!scope || shownImgCatalog?.state === "loading"}
                       className="shrink-0 text-xs font-medium text-brand-ink hover:underline disabled:opacity-40"
                     >
                       {shownImgCatalog?.state === "loading" ? tr("editor.fetching_models") : tr("editor.fetch_models")}
@@ -1128,14 +1134,14 @@ export function AiProviderSettings({
           )}
           <button
             onClick={() => void testConnection()}
-            disabled={!workspaceId || saving || testing}
+            disabled={!scope || saving || testing}
             className="rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-medium text-neutral-700 transition hover:border-neutral-300 disabled:opacity-40"
           >
             {testing && !saving ? tr("editor.testing_connection") : tr("editor.test_connection")}
           </button>
           <button
             onClick={() => void save()}
-            disabled={!workspaceId || saving || testing}
+            disabled={!scope || saving || testing}
             className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700 disabled:bg-neutral-200 disabled:text-neutral-400"
           >
             {testing ? tr("editor.testing_connection") : saving ? tr("editor.saving") : tr("editor.save_provider")}
@@ -1146,10 +1152,10 @@ export function AiProviderSettings({
         // is the quiet way back underneath it. items-stretch matters: centring
         // would leave the block button sized to its text.
         <div className="mt-0.5 flex flex-col items-stretch gap-2">
-          <Button block onClick={() => void save()} disabled={!workspaceId || saving || testing}>
+          <Button block onClick={() => void save()} disabled={!scope || saving || testing}>
             {testing ? tr("editor.testing_connection") : saving ? tr("editor.saving") : tr("editor.save_provider")}
           </Button>
-          <Button block variant="secondary" onClick={() => void testConnection()} disabled={!workspaceId || saving || testing}>
+          <Button block variant="secondary" onClick={() => void testConnection()} disabled={!scope || saving || testing}>
             {testing && !saving ? tr("editor.testing_connection") : tr("editor.test_connection")}
           </Button>
           {onCancel && (

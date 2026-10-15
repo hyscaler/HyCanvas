@@ -42,6 +42,7 @@ import { lockSelection, unlockSelection } from "@/lib/useRealtime";
 import { CollapsibleSection } from "./EditorPanels";
 import { ColorField } from "./ColorField";
 import { imageAssets } from "@/lib/assetProvider";
+import { imageAssetPalette } from "@/lib/imagePalette";
 import { directUploadWithProgress, oc, resolveAssetUrl } from "@/lib/sdk";
 import { MagicResizeButton } from "./MagicResizeDialog";
 import { useToast } from "@/components/ui/Toast";
@@ -168,26 +169,8 @@ function ImagePalette({ assetId }: { assetId: string }) {
   const [colors, setColors] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
   const extract = () => {
-    const img = imageAssets.image(assetId) as (CanvasImageSource & { naturalWidth?: number; naturalHeight?: number; width?: number; height?: number }) | null;
-    if (!img) return;
     setBusy(true);
-    try {
-      const w = img.naturalWidth || img.width || 0;
-      const h = img.naturalHeight || img.height || 0;
-      if (!w || !h) { setBusy(false); return; }
-      const SAMPLE = 128;
-      const scale = Math.min(1, SAMPLE / Math.max(w, h));
-      const sw = Math.max(1, Math.round(w * scale));
-      const sh = Math.max(1, Math.round(h * scale));
-      const canvas = document.createElement("canvas");
-      canvas.width = sw; canvas.height = sh;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, sw, sh);
-        const bmp = ctx.getImageData(0, 0, sw, sh);
-        setColors([...new Set(extractPalette(bmp, 6).map(toHex))]);
-      }
-    } catch { /* tainted canvas (cross-origin without CORS): leave colors null */ }
+    setColors(imageAssetPalette(assetId, 6));
     setBusy(false);
   };
   return (

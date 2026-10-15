@@ -1,7 +1,7 @@
 {
   "name": "@hc/media",
   "version": "0.1.0",
-  "license": "Elastic-2.0",
+  "license": "AGPL-3.0-only",
   "private": true,
   "description": "HyCanvas media-management core: type sniffing, perceptual hashing/dedupe, quota math, folder trees, fidelity reports, SSRF guard, asset search (framework-agnostic)",
   "main": "dist/index.js",

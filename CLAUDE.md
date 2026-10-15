@@ -23,7 +23,7 @@ For anything already shipped, the code is the source of truth; match the pattern
 - Realtime: a WebSocket relay with presence and locks ships; the full Yjs CRDT / offline-first model is on the roadmap (`docs/roadmap/16-realtime-collaboration.md`).
 - Data: Postgres (metadata), S3-compatible object storage for assets/exports, with a local-filesystem fallback when no S3 is configured.
 - Jobs: long work (export, video render, bulk create) runs through an in-process job registry, polled via `GET /api/v1/jobs/:id`.
-- AI: a provider-adapter layer supporting built-in models and bring-your-own keys/endpoints; keys are stored encrypted per workspace, never via env.
+- AI: a provider-adapter layer supporting built-in models and bring-your-own keys/endpoints; keys are stored encrypted per workspace (or per user, for a personal key used where the workspace has none), never via env.
 - Auth: cookie sessions (httpOnly access + refresh with rotation), OIDC SSO, MFA (TOTP).
 - Packaging: a single self-contained Go binary with the frontend embedded (`go:embed`, built `-tags embed`); the binary self-loads `.env`. Self-host via docker-compose.
 

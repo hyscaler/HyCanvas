@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { parseTransform } from "../svg";
 import { createBlankDesign, createNode, type DesignFile, type Node } from "@hc/schema";
 import {
   assertAppAction,
@@ -281,5 +282,14 @@ describe("QR node (FR-10, AC-5)", () => {
     const rebound = rebindQrValue(node, "https://oc/y");
     expect(qrValue(rebound)).toBe("https://oc/y");
     expect(qrValue(node)).toBe("https://oc/x"); // original unchanged
+  });
+});
+
+describe("parseTransform", () => {
+  it("reads a transform list and stays linear on a run of unclosed parentheses", () => {
+    expect(parseTransform("translate(10, 20) scale(2)")).toEqual([2, 0, 0, 2, 10, 20]);
+    const t0 = performance.now();
+    expect(parseTransform("scale((".repeat(20_000))).toEqual([1, 0, 0, 1, 0, 0]);
+    expect(performance.now() - t0).toBeLessThan(500);
   });
 });

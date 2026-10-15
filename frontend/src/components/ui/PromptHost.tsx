@@ -26,9 +26,13 @@ export function PromptHost() {
 
   const cancel = () => {
     setReq(null);
-    if (req.kind === "prompt") req.resolve(null);
+    if (req.kind === "prompt" || req.kind === "choose") req.resolve(null);
     else if (req.kind === "confirm") req.resolve(false);
     else req.resolve();
+  };
+  const choose = (value: string) => {
+    setReq(null);
+    if (req.kind === "choose") req.resolve(value);
   };
   const confirm = () => {
     // Confirm returns the trimmed value (possibly empty); only Cancel returns
@@ -37,6 +41,7 @@ export function PromptHost() {
     setReq(null);
     if (req.kind === "prompt") req.resolve(value);
     else if (req.kind === "confirm") req.resolve(true);
+    else if (req.kind === "choose") req.resolve(null);
     else req.resolve();
   };
 
@@ -53,6 +58,18 @@ export function PromptHost() {
             <Button size="sm" variant={req.danger ? "danger" : "primary"} onClick={confirm}>
               {req.confirmText ?? tr("ui.ok")}
             </Button>
+          </div>
+        </div>
+      ) : req.kind === "choose" ? (
+        <div className="flex flex-col gap-4">
+          <p className="whitespace-pre-line text-sm leading-relaxed text-neutral-700">{req.message}</p>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={cancel}>{tr("ui.cancel")}</Button>
+            {req.choices.map((c) => (
+              <Button key={c.value} type="button" size="sm" variant={c.primary ? "primary" : "secondary"} onClick={() => choose(c.value)} autoFocus={!!c.primary}>
+                {c.label}
+              </Button>
+            ))}
           </div>
         </div>
       ) : req.kind === "prompt" ? (

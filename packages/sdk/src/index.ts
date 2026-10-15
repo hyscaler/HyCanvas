@@ -542,7 +542,27 @@ export interface AiPolicy {
   allowedProviders?: string[];
   blockedProviders?: string[];
   monthlyTokenCap?: number;
+  /** Whether members may fall back to their own personal provider when the
+   *  workspace has none. Always present on read (default true); omitted on a
+   *  write, the stored value is kept. */
+  allowPersonalKeys?: boolean;
 }
+
+/** Which provider serves the caller in a workspace (#47): the workspace's own,
+ *  the caller's personal one, or none. The configs never carry a key, and the
+ *  personal ones are the caller's own. */
+export interface AiEffectiveView {
+  source: "workspace" | "personal" | "none";
+  config: AiConfigView | null;
+  imageConfig: AiImageConfigView | null;
+  personalKeysAllowed: boolean;
+  hasPersonal: boolean;
+}
+
+/** A candidate main provider config, as the settings form sends it. */
+export type AiConfigInput = { provider: string; model?: string; imageModel?: string; baseUrl?: string; apiKey?: string; apiSecret?: string };
+/** A candidate dedicated image provider config. */
+export type AiImageConfigInput = { provider: string; model?: string; baseUrl?: string; apiKey?: string; apiSecret?: string };
 
 // --- sharing + permissions --------------------------------------
 
@@ -1957,6 +1977,49 @@ export class HyCanvasClient {
   }
   getAiUsage(workspaceId: string): Promise<{ tokensThisMonth: number }> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/ai-usage`);
+  }
+  /** Which provider serves the signed-in user in this workspace. */
+  getAiEffective(workspaceId: string): Promise<AiEffectiveView> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/ai-effective`);
+  }
+  // --- personal AI provider (#47): the signed-in user's own key ----------
+  // The same contract as the workspace calls above (PATCH semantics, tested
+  // before saving, keys never returned), scoped to the caller. It serves any
+  // workspace that has no provider of its own and allows personal keys.
+  getMyAiConfig(): Promise<AiConfigView | null> {
+    return this.request("GET", "/v1/me/ai-config");
+  }
+  setMyAiConfig(input: AiConfigInput): Promise<AiConfigView> {
+    return this.request("PUT", "/v1/me/ai-config", input);
+  }
+  /** Remove the personal provider; the encrypted key is deleted outright. */
+  deleteMyAiConfig(): Promise<void> {
+    return this.request("DELETE", "/v1/me/ai-config");
+  }
+  testMyAiConfig(candidate?: AiConfigInput): Promise<void> {
+    return this.request("POST", "/v1/me/ai-config/test", candidate);
+  }
+  listMyAiModels(candidate?: Omit<AiConfigInput, "model" | "imageModel">, purpose?: "text" | "image"): Promise<AiModelList> {
+    return this.request("POST", "/v1/me/ai-config/models", candidate ? { ...candidate, purpose } : purpose ? { purpose } : undefined);
+  }
+  getMyAiImageConfig(): Promise<AiImageConfigView | null> {
+    return this.request("GET", "/v1/me/ai-image-config");
+  }
+  setMyAiImageConfig(input: AiImageConfigInput): Promise<AiImageConfigView | null> {
+    return this.request("PUT", "/v1/me/ai-image-config", input);
+  }
+  deleteMyAiImageConfig(): Promise<void> {
+    return this.request("DELETE", "/v1/me/ai-image-config");
+  }
+  testMyAiImageConfig(candidate?: AiImageConfigInput): Promise<{ verified: boolean }> {
+    return this.request("POST", "/v1/me/ai-image-config/test", candidate);
+  }
+  listMyAiImageModels(candidate: Omit<AiImageConfigInput, "model">): Promise<AiModelList> {
+    return this.request("POST", "/v1/me/ai-image-config/models", candidate);
+  }
+  /** Tokens the personal key spent this month, across every workspace. */
+  getMyAiUsage(): Promise<{ tokensThisMonth: number }> {
+    return this.request("GET", "/v1/me/ai-usage");
   }
   // --- live audience (doc 28): share-link viewers <-> presenter -------------
   /** Audience state (visible questions + polls), personalized by voterKey.

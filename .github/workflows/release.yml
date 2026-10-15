@@ -126,6 +126,9 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           BASE="${BINARY_NAME}_${VERSION}_${GOOS}_${GOARCH}"
+          # The license and notices travel with every distributed binary, as
+          # the AGPL asks; the Docker job copies them into the image too.
+          cp LICENSE NOTICE COMMERCIAL.md TRADEMARKS.md out/
           mkdir -p archives
           if [ "$GOOS" = "windows" ]; then
             (cd out && zip -qr "../archives/${BASE}.zip" .)

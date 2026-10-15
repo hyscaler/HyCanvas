@@ -106,7 +106,7 @@ func TestEnforceMonthlyCap(t *testing.T) {
 func TestRecordUsageUpserts(t *testing.T) {
 	db := &fakeDB{}
 	s := &Service{db: db}
-	s.meter(context.Background(), "ws", 123)
+	s.meter(context.Background(), "ws", CallConfig{}, 123)
 	if len(db.execSQL) != 1 || !strings.Contains(db.execSQL[0], `"ai_usages"`) {
 		t.Fatalf("meter should INSERT into AiUsage, got %v", db.execSQL)
 	}
@@ -116,7 +116,7 @@ func TestRecordUsageUpserts(t *testing.T) {
 		t.Fatalf("unexpected usage args: %v", args)
 	}
 	// meter(0) is a no-op.
-	s.meter(context.Background(), "ws", 0)
+	s.meter(context.Background(), "ws", CallConfig{}, 0)
 	if len(db.execSQL) != 1 {
 		t.Fatalf("meter(0) should not write")
 	}

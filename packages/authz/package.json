@@ -1,7 +1,7 @@
 {
   "name": "@hc/authz",
   "version": "0.1.0",
-  "license": "Elastic-2.0",
+  "license": "AGPL-3.0-only",
   "private": true,
   "description": "HyCanvas authorization core: workspace roles + isolation, identity linking, session rotation/reuse, invitations, workspace rules, search (framework-agnostic)",
   "main": "dist/index.js",

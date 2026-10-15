@@ -8,7 +8,7 @@ import { contrastRatio, toHex } from "@hc/color";
 import { themeCatalogEntry } from "../themeCatalog";
 import { composeDeckFileWithReport } from "../compose";
 import { layoutDeck } from "../deck";
-import { normalizeOutline } from "../outline";
+import { bareFigure, normalizeOutline, undashTitle } from "../outline";
 import { deckThemes } from "../theme";
 import { KIT_STYLES, kitStyleNames } from "../kit/looks";
 import { applyBrand, makeLook, mark, resolveKitStyle, slotsFromThemeRecord, styleForMood } from "../kit/look";
@@ -207,5 +207,20 @@ describe("the organization mark beside the logo", () => {
       expect(prims.some((p) => p.kind === "logo")).toBe(true);
       expect(names(prims)).not.toContain("Mark");
     }
+  });
+});
+
+describe("the figure and headline helpers stay linear on hostile input", () => {
+  it("finish at once on long runs of spaces and arrows", () => {
+    const spaces = " ".repeat(60_000);
+    const t0 = performance.now();
+    expect(leadingFigure(`0${spaces}`)).toEqual([null, "0"]);
+    expect(leadingFigure(`0%${spaces}`)).toEqual([null, "0%"]);
+    expect(leadingFigure("$4.2M expansion revenue")).toEqual(["$4.2M", "expansion revenue"]);
+    expect(leadingFigure("20%: of the fleet")).toEqual(["20%", "of the fleet"]);
+    expect(undashTitle(`Plan${spaces}ahead`)).toBe(`Plan${spaces}ahead`);
+    expect(undashTitle("Plan - ahead")).toBe("Plan: ahead");
+    expect(bareFigure(`↓67%${"\t".repeat(60_000)}`)).toBe("67%");
+    expect(performance.now() - t0).toBeLessThan(500);
   });
 });

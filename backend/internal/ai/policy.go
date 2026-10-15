@@ -37,11 +37,13 @@ const imageTokenCost = 1000
 func currentPeriod() string { return time.Now().UTC().Format("2006-01") }
 
 func (s *Service) loadPolicy(ctx context.Context, workspaceID string) (OrgPolicy, error) {
-	const q = `SELECT "allowed_providers","blocked_providers","monthly_token_cap" FROM "ai_policies" WHERE "workspace_id" = $1`
+	const q = `SELECT "allowed_providers","blocked_providers","monthly_token_cap","allow_personal_keys" FROM "ai_policies" WHERE "workspace_id" = $1`
 	var p OrgPolicy
-	err := s.db.QueryRow(ctx, q, workspaceID).Scan(&p.AllowedProviders, &p.BlockedProviders, &p.MonthlyTokenCap)
+	allowPersonal := true
+	err := s.db.QueryRow(ctx, q, workspaceID).Scan(&p.AllowedProviders, &p.BlockedProviders, &p.MonthlyTokenCap, &allowPersonal)
+	p.AllowPersonalKeys = &allowPersonal
 	if errors.Is(err, pgx.ErrNoRows) {
-		return OrgPolicy{}, nil // no policy set => unrestricted
+		return OrgPolicy{AllowPersonalKeys: &allowPersonal}, nil // no policy set => unrestricted
 	}
 	if err != nil {
 		return OrgPolicy{}, err
@@ -89,12 +91,41 @@ func (s *Service) enforce(ctx context.Context, workspaceID, providerID string, e
 }
 
 // meter records consumed tokens (best effort: a metering write failure must not
-// fail an otherwise-successful AI call).
-func (s *Service) meter(ctx context.Context, workspaceID string, tokens int) {
+// fail an otherwise-successful AI call). The workspace is always charged, so
+// its monthly cap limits all AI work done in it; a call a personal key paid
+// for is also recorded against that user (#47). workspaceID is empty for a
+// personal connection test, which happens outside any workspace.
+func (s *Service) meter(ctx context.Context, workspaceID string, cfg CallConfig, tokens int) {
 	if tokens <= 0 {
 		return
 	}
-	_ = s.recordUsage(ctx, workspaceID, currentPeriod(), tokens)
+	period := currentPeriod()
+	if workspaceID != "" {
+		_ = s.recordUsage(ctx, workspaceID, period, tokens)
+	}
+	if cfg.personalUser != "" {
+		_ = s.recordUserUsage(ctx, cfg.personalUser, period, tokens)
+	}
+}
+
+func (s *Service) recordUserUsage(ctx context.Context, userID, period string, tokens int) error {
+	const q = `INSERT INTO "user_ai_usages" ("user_id","period","tokens","updated_at")
+		VALUES ($1,$2,$3,CURRENT_TIMESTAMP)
+		ON CONFLICT ("user_id","period")
+		DO UPDATE SET "tokens" = "user_ai_usages"."tokens" + EXCLUDED."tokens", "updated_at" = CURRENT_TIMESTAMP`
+	_, err := s.db.Exec(ctx, q, userID, period, tokens)
+	return err
+}
+
+// GetUserUsage returns the tokens the user's personal key spent this month,
+// across every workspace.
+func (s *Service) GetUserUsage(ctx context.Context, userID string) (Usage, error) {
+	var u Usage
+	err := s.db.QueryRow(ctx, `SELECT "tokens" FROM "user_ai_usages" WHERE "user_id" = $1 AND "period" = $2`, userID, currentPeriod()).Scan(&u.TokensThisMonth)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Usage{}, nil
+	}
+	return u, err
 }
 
 // GetPolicy returns the workspace's AI policy (empty/unrestricted when none set).
@@ -113,14 +144,18 @@ func (s *Service) SetPolicy(ctx context.Context, workspaceID string, p OrgPolicy
 	if p.MonthlyTokenCap < 0 {
 		p.MonthlyTokenCap = 0
 	}
-	const q = `INSERT INTO "ai_policies" ("workspace_id","allowed_providers","blocked_providers","monthly_token_cap","updated_at")
-		VALUES ($1,$2,$3,$4,CURRENT_TIMESTAMP)
+	// An omitted allowPersonalKeys keeps the stored switch (true for a new
+	// row), so a client that predates it cannot turn personal keys back on or
+	// off by saving the other fields.
+	const q = `INSERT INTO "ai_policies" ("workspace_id","allowed_providers","blocked_providers","monthly_token_cap","allow_personal_keys","updated_at")
+		VALUES ($1,$2,$3,$4,COALESCE($5::boolean, true),CURRENT_TIMESTAMP)
 		ON CONFLICT ("workspace_id")
 		DO UPDATE SET "allowed_providers" = EXCLUDED."allowed_providers",
 			"blocked_providers" = EXCLUDED."blocked_providers",
 			"monthly_token_cap" = EXCLUDED."monthly_token_cap",
+			"allow_personal_keys" = COALESCE($5::boolean, "ai_policies"."allow_personal_keys"),
 			"updated_at" = CURRENT_TIMESTAMP`
-	_, err := s.db.Exec(ctx, q, workspaceID, p.AllowedProviders, p.BlockedProviders, p.MonthlyTokenCap)
+	_, err := s.db.Exec(ctx, q, workspaceID, p.AllowedProviders, p.BlockedProviders, p.MonthlyTokenCap, p.AllowPersonalKeys)
 	return err
 }
 

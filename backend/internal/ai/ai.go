@@ -221,12 +221,12 @@ type configRow struct {
 	secretTag    *string
 }
 
-func (s *Service) getRow(ctx context.Context, workspaceID string) (*configRow, error) {
-	const q = `SELECT provider, model, "image_model", "base_url", "key_cipher", "key_iv", "key_tag",
+func (s *Service) getRow(ctx context.Context, o Owner) (*configRow, error) {
+	q := o.sqlFor(`SELECT provider, model, "image_model", "base_url", "key_cipher", "key_iv", "key_tag",
 		"secret_cipher", "secret_iv", "secret_tag"
-		FROM "ai_configs" WHERE "workspace_id" = $1`
+		FROM "ai_configs" WHERE "workspace_id" = $1`)
 	var r configRow
-	err := s.db.QueryRow(ctx, q, workspaceID).Scan(&r.provider, &r.model, &r.imageModel, &r.baseURL,
+	err := s.db.QueryRow(ctx, q, o.ID).Scan(&r.provider, &r.model, &r.imageModel, &r.baseURL,
 		&r.keyCipher, &r.keyIV, &r.keyTag, &r.secretCipher, &r.secretIV, &r.secretTag)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -255,7 +255,16 @@ func toConfigView(r *configRow) *ConfigView {
 
 // GetConfig returns the workspace's provider config, or nil when none is set.
 func (s *Service) GetConfig(ctx context.Context, workspaceID string) (*ConfigView, error) {
-	r, err := s.getRow(ctx, workspaceID)
+	return s.getConfig(ctx, WorkspaceOwner(workspaceID))
+}
+
+// GetUserConfig returns the user's personal provider config, or nil.
+func (s *Service) GetUserConfig(ctx context.Context, userID string) (*ConfigView, error) {
+	return s.getConfig(ctx, UserOwner(userID))
+}
+
+func (s *Service) getConfig(ctx context.Context, o Owner) (*ConfigView, error) {
+	r, err := s.getRow(ctx, o)
 	if err != nil || r == nil {
 		return nil, err
 	}
@@ -289,7 +298,7 @@ type resolvedConfig struct {
 
 // resolveConfig applies SetConfig's validation and PATCH semantics to a
 // candidate without writing it.
-func (s *Service) resolveConfig(ctx context.Context, workspaceID string, in ConfigInput) (resolvedConfig, error) {
+func (s *Service) resolveConfig(ctx context.Context, o Owner, in ConfigInput) (resolvedConfig, error) {
 	if !providerSet[in.Provider] {
 		return resolvedConfig{}, ErrBadRequest
 	}
@@ -307,7 +316,7 @@ func (s *Service) resolveConfig(ctx context.Context, workspaceID string, in Conf
 			return resolvedConfig{}, ErrBaseURLRequired
 		}
 	}
-	existing, err := s.getRow(ctx, workspaceID)
+	existing, err := s.getRow(ctx, o)
 	if err != nil {
 		return resolvedConfig{}, err
 	}
@@ -363,7 +372,20 @@ func (s *Service) resolveConfig(ctx context.Context, workspaceID string, in Conf
 // changing the provider without a new key clears the stored key (so an old
 // vendor's key is never sent to a different vendor).
 func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigInput) (*ConfigView, error) {
-	rc, err := s.resolveConfig(ctx, workspaceID, in)
+	return s.setConfig(ctx, WorkspaceOwner(workspaceID), in)
+}
+
+// SetUserConfig upserts the user's personal provider config, under exactly the
+// rules of SetConfig.
+func (s *Service) SetUserConfig(ctx context.Context, userID string, in ConfigInput) (*ConfigView, error) {
+	if userID == "" {
+		return nil, errNoUser
+	}
+	return s.setConfig(ctx, UserOwner(userID), in)
+}
+
+func (s *Service) setConfig(ctx context.Context, o Owner, in ConfigInput) (*ConfigView, error) {
+	rc, err := s.resolveConfig(ctx, o, in)
 	if err != nil {
 		return nil, err
 	}
@@ -407,7 +429,7 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 	// rewrites the secret to whatever came with it, including NULL, so a
 	// previous vendor's secret cannot outlive its key; a secret on its own is a
 	// rotation and leaves the key alone. Neither means keep both.
-	const q = `INSERT INTO "ai_configs" ("workspace_id",provider,model,"image_model","base_url","key_cipher","key_iv","key_tag","secret_cipher","secret_iv","secret_tag","updated_at")
+	q := o.sqlFor(`INSERT INTO "ai_configs" ("workspace_id",provider,model,"image_model","base_url","key_cipher","key_iv","key_tag","secret_cipher","secret_iv","secret_tag","updated_at")
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now())
 		ON CONFLICT ("workspace_id") DO UPDATE SET
 			provider = EXCLUDED.provider,
@@ -420,11 +442,11 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 			"secret_cipher" = CASE WHEN $6 IS NOT NULL OR $12 THEN $9  ELSE "ai_configs"."secret_cipher" END,
 			"secret_iv"     = CASE WHEN $6 IS NOT NULL OR $12 THEN $10 ELSE "ai_configs"."secret_iv" END,
 			"secret_tag"    = CASE WHEN $6 IS NOT NULL OR $12 THEN $11 ELSE "ai_configs"."secret_tag" END,
-			"updated_at" = now()`
-	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, model, imageModel, baseURL, cipher, iv, tag, sCipher, sIV, sTag, in.APISecret != ""); err != nil {
+			"updated_at" = now()`)
+	if _, err := s.db.Exec(ctx, q, o.ID, in.Provider, model, imageModel, baseURL, cipher, iv, tag, sCipher, sIV, sTag, in.APISecret != ""); err != nil {
 		return nil, err
 	}
-	return s.GetConfig(ctx, workspaceID)
+	return s.getConfig(ctx, o)
 }
 
 // testPrompt is the whole of a connection test: the shortest reply that
@@ -442,7 +464,7 @@ const testPrompt = "Reply with the single word: ok"
 // host. Nothing here writes to ai_configs; usage is metered like any call,
 // because the tokens were really spent.
 func (s *Service) TestConfig(ctx context.Context, workspaceID string, in ConfigInput) error {
-	rc, err := s.resolveConfig(ctx, workspaceID, in)
+	rc, err := s.resolveConfig(ctx, WorkspaceOwner(workspaceID), in)
 	if err != nil {
 		return err
 	}
@@ -457,7 +479,38 @@ func (s *Service) TestConfig(ctx context.Context, workspaceID string, in ConfigI
 	if err != nil {
 		return badGateway(cfg, err)
 	}
-	s.meter(ctx, workspaceID, countTokens(testPrompt)+countTokens(out))
+	s.meter(ctx, workspaceID, cfg, countTokens(testPrompt)+countTokens(out))
+	return nil
+}
+
+// TestUserConfig is TestConfig for a personal provider: a candidate when
+// in.Provider is set, else the stored config. There is no workspace, so no
+// workspace policy applies; the tokens are metered to the user.
+func (s *Service) TestUserConfig(ctx context.Context, userID string, in *ConfigInput) error {
+	if userID == "" {
+		return errNoUser
+	}
+	o := UserOwner(userID)
+	var cfg CallConfig
+	var err error
+	if in != nil && in.Provider != "" {
+		var rc resolvedConfig
+		if rc, err = s.resolveConfig(ctx, o, *in); err != nil {
+			return err
+		}
+		cfg, err = s.candidateCallConfig(rc)
+	} else {
+		cfg, err = s.ownerCallConfig(ctx, o)
+	}
+	if err != nil {
+		return err
+	}
+	cfg.personalUser = userID
+	out, err := s.generateText(cfg, testPrompt, "")
+	if err != nil {
+		return badGateway(cfg, err)
+	}
+	s.meter(ctx, "", cfg, countTokens(testPrompt)+countTokens(out))
 	return nil
 }
 
@@ -524,13 +577,37 @@ func (s *Service) candidateCallConfig(rc resolvedConfig) (CallConfig, error) {
 // provider" and a second key surviving that would be a surprise; an API client
 // removing one and keeping the other is a legitimate thing to want.
 func (s *Service) DeleteConfig(ctx context.Context, workspaceID string) error {
-	_, err := s.db.Exec(ctx, `DELETE FROM "ai_configs" WHERE "workspace_id" = $1`, workspaceID)
+	return s.deleteConfig(ctx, WorkspaceOwner(workspaceID))
+}
+
+// DeleteUserConfig removes the user's personal provider, and with it the
+// encrypted key, outright (#47 AC-6).
+func (s *Service) DeleteUserConfig(ctx context.Context, userID string) error {
+	if userID == "" {
+		return errNoUser
+	}
+	return s.deleteConfig(ctx, UserOwner(userID))
+}
+
+func (s *Service) deleteConfig(ctx context.Context, o Owner) error {
+	_, err := s.db.Exec(ctx, o.sqlFor(`DELETE FROM "ai_configs" WHERE "workspace_id" = $1`), o.ID)
 	return err
 }
 
-// callConfig resolves + decrypts the provider config for an outbound call.
+// callConfig resolves + decrypts the provider config for an outbound call in a
+// workspace: its own provider, or the signed-in user's personal one when the
+// workspace has none and allows it (see effectiveOwner).
 func (s *Service) callConfig(ctx context.Context, workspaceID string) (CallConfig, error) {
-	r, err := s.getRow(ctx, workspaceID)
+	o, err := s.effectiveOwner(ctx, workspaceID)
+	if err != nil {
+		return CallConfig{}, err
+	}
+	return s.ownerCallConfig(ctx, o)
+}
+
+// ownerCallConfig decrypts one owner's main provider config.
+func (s *Service) ownerCallConfig(ctx context.Context, o Owner) (CallConfig, error) {
+	r, err := s.getRow(ctx, o)
 	if err != nil {
 		return CallConfig{}, err
 	}
@@ -568,10 +645,14 @@ func (s *Service) callConfig(ctx context.Context, workspaceID string) (CallConfi
 		}
 		secret = v
 	}
-	return CallConfig{
+	cfg := CallConfig{
 		Provider: Provider(r.provider), APIKey: key, APISecret: secret,
 		BaseURL: baseURL, Model: model, ImageModel: imageModel,
-	}, nil
+	}
+	if o.Personal() {
+		cfg.personalUser = o.ID
+	}
+	return cfg, nil
 }
 
 // Text runs a text-generation call.
@@ -587,7 +668,7 @@ func (s *Service) Text(ctx context.Context, workspaceID, prompt, system string) 
 	if err != nil {
 		return "", badGateway(cfg, err)
 	}
-	s.meter(ctx, workspaceID, countTokens(prompt)+countTokens(system)+countTokens(out))
+	s.meter(ctx, workspaceID, cfg, countTokens(prompt)+countTokens(system)+countTokens(out))
 	return out, nil
 }
 
@@ -611,7 +692,7 @@ func (s *Service) TextStructured(ctx context.Context, workspaceID, prompt, syste
 	if err != nil {
 		return "", badGateway(cfg, err)
 	}
-	s.meter(ctx, workspaceID, countTokens(prompt)+countTokens(system)+countTokens(out))
+	s.meter(ctx, workspaceID, cfg, countTokens(prompt)+countTokens(system)+countTokens(out))
 	return out, nil
 }
 
@@ -654,7 +735,7 @@ func (s *Service) Image(ctx context.Context, workspaceID, prompt, size string) (
 	if err != nil {
 		return "", badGateway(cfg, err)
 	}
-	s.meter(ctx, workspaceID, countTokens(prompt)+imageTokenCost)
+	s.meter(ctx, workspaceID, cfg, countTokens(prompt)+imageTokenCost)
 	return out, nil
 }
 
@@ -691,7 +772,7 @@ func (s *Service) DescribeImage(ctx context.Context, workspaceID, imageBase64, i
 	if err != nil {
 		return "", badGateway(cfg, err)
 	}
-	s.meter(ctx, workspaceID, countTokens(instr)+countTokens(out))
+	s.meter(ctx, workspaceID, cfg, countTokens(instr)+countTokens(out))
 	return out, nil
 }
 
@@ -717,7 +798,7 @@ func (s *Service) EditImage(ctx context.Context, workspaceID, imageBase64, promp
 	if err != nil {
 		return "", badGateway(cfg, err)
 	}
-	s.meter(ctx, workspaceID, countTokens(prompt)+imageTokenCost)
+	s.meter(ctx, workspaceID, cfg, countTokens(prompt)+imageTokenCost)
 	return out, nil
 }
 

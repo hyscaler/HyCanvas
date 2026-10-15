@@ -4,9 +4,22 @@ reserved where not expressly licensed.
 HyCanvas is a product of HyScaler, the trading name of NetTantra Technologies
 (India) Private Limited. HyScaler(R) is a registered trademark of that company.
 
-This software is made available under the Elastic License 2.0 (see LICENSE).
-Commercial licenses for hosted offerings are available (see COMMERCIAL.md).
-Contributions are accepted under the Contributor License Agreement (CLA.md).
+From v0.3.17 onwards, HyCanvas is licensed under the GNU Affero General Public
+License, version 3 only (AGPL-3.0-only).
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License, version 3 only, as
+published by the Free Software Foundation (see LICENSE). SPDX-License-Identifier:
+AGPL-3.0-only. It is distributed WITHOUT ANY WARRANTY; without even the implied
+warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+Releases up to and including v0.3.16 were published under the Elastic License
+2.0 and remain available under those terms.
+
+Commercial licenses, for use without the AGPL obligations, are available from
+HyScaler (see COMMERCIAL.md). The HyCanvas and HyScaler names and logos are not
+licensed by the AGPL; see TRADEMARKS.md. Contributions are accepted under the
+Contributor License Agreement (CLA.md).
 
 This product bundles third-party open-source software, each under its own
 license. Notable runtime and build dependencies include (non-exhaustive):
@@ -16,6 +29,9 @@ license. Notable runtime and build dependencies include (non-exhaustive):
 - npm dependencies listed in package-lock.json and each workspace's
   package.json (e.g. Next.js, React, Yjs, Zustand, pdf.js, Zod) - see their
   respective repositories for license terms.
+- @imgly/background-removal (AGPL-3.0), used for in-browser background
+  removal. It is not covered by a HyScaler commercial license; commercial
+  licensees need their own license from IMG.LY or must disable the feature.
 - Fonts are loaded at runtime from Google Fonts; none are redistributed in this
   repository.
 

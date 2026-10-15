@@ -34442,7 +34442,7 @@ ${err.toString()}`);
         return (Array.isArray(v) ? v : []).map((x) => clipToBudget(x, maxChars)).filter(Boolean).slice(0, maxItems);
       }
       function bareFigure(v) {
-        return clipToBudget(v, exports.archetypeBudgets.statValue).replace(/^[\s\u2190-\u21FF\u25B2-\u25BF\u2B05-\u2B0D]+|[\s\u2190-\u21FF\u25B2-\u25BF\u2B05-\u2B0D]+$/g, "").trim();
+        return clipToBudget(v, exports.archetypeBudgets.statValue).replace(new RegExp("^[\\s\\u2190-\\u21FF\\u25B2-\\u25BF\\u2B05-\\u2B0D]+|(?<![\\s\\u2190-\\u21FF\\u25B2-\\u25BF\\u2B05-\\u2B0D])[\\s\\u2190-\\u21FF\\u25B2-\\u25BF\\u2B05-\\u2B0D]+$", "g"), "").trim();
       }
       function splitFigure(value, unit) {
         const v = bareFigure(value).split(/\s+/u).join(" ");
@@ -34455,7 +34455,7 @@ ${err.toString()}`);
         return { value: m[1], unit: u };
       }
       function undashTitle(title) {
-        return title.replace(/\s+[\u2013\u2014]\s+|\s+-\s+/g, ": ");
+        return title.replace(new RegExp("(?<!\\s)\\s+[\\u2013\\u2014-]\\s+", "g"), ": ");
       }
       function iconKeyword(v) {
         return clipToBudget(v, exports.archetypeBudgets.columnIcon).toLowerCase();
@@ -43564,10 +43564,10 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
         return [s, ""];
       }
       function leadingFigure(p) {
-        const m = /^([$€£¥]?\s?[\d][\d.,]*\s?(?:%|[kKmMbB]n?|x|pts?|pp|bps)?)\s+(.+)$/.exec(p.trim());
+        const m = /^([$€£¥]?\s?\d[\d.,]*(?:\s?(?:%|[kKmMbB]n?|x|pts?|pp|bps))?)\s+(\S.*)$/.exec(p.trim());
         if (m && m[1].length <= 12)
           return [m[1].replace(/\s+/g, ""), m[2]];
-        const m2 = /^(\d+(?:\.\d+)?\s?(?:%|percent|x))\s*[:,-]?\s+(.+)$/i.exec(p.trim());
+        const m2 = /^(\d+(?:\.\d+)?\s?(?:%|percent|x))(?:\s*[:,-])?\s+(\S.*)$/i.exec(p.trim());
         if (m2)
           return [m2[1].replace(/\s+/g, ""), m2[2]];
         return [null, p.trim()];

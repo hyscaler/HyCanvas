@@ -1,12 +1,12 @@
 // Account settings page (replaces the old Security modal). One destination with
-// three sections: Account (profile + your data), Security (2FA + sessions), and
-// Notifications (email/push preferences). Reached from the avatar menu's single
+// four sections: Account (profile + your data), Security (2FA + sessions),
+// Notifications (email/push preferences), and AI provider (a personal key). Reached from the avatar menu's single
 // "Settings" entry.
 
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/router";
 import QRCode from "qrcode";
-import { Bell, BellRing, Check, ChevronLeft, Contrast, Copy, Download, Gauge, KeyRound, LogOut, Moon, MonitorSmartphone, ShieldCheck, Sun, Trash2, User as UserIcon } from "lucide-react";
+import { Bell, BellRing, Check, ChevronLeft, Contrast, Copy, Download, Gauge, KeyRound, LogOut, Moon, MonitorSmartphone, ShieldCheck, Sparkles, Sun, Trash2, User as UserIcon } from "lucide-react";
 import { ApiError, type MfaEnrollment, type NotificationType, type SessionInfo, type TimeFormat, type WeekStart } from "@hc/sdk";
 import { oc, ssoLinkUrl } from "@/lib/sdk";
 import { browserTimezone } from "@/lib/datetime";
@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { settingsPath, type SettingsTab } from "./tabs";
+import { PersonalAiSettings } from "./PersonalAiSettings";
 import { tr } from "@/lib/i18n";
 import { apiCodeMessage, CodedError, userMessage } from "@/lib/errors";
 
@@ -35,6 +36,7 @@ const tabs = (): { id: Tab; label: string; icon: typeof UserIcon }[] => [
   { id: "account", label: tr("settings.account"), icon: UserIcon },
   { id: "security", label: tr("settings.security"), icon: ShieldCheck },
   { id: "notifications", label: tr("settings.notifications"), icon: Bell },
+  { id: "ai", label: tr("settings.ai_provider"), icon: Sparkles },
 ];
 
 // A small, friendly set of UI languages. The user's current locale is added if
@@ -731,6 +733,8 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
               </div>
             </Card>
           )}
+
+          {tab === "ai" && <PersonalAiSettings />}
         </main>
       </div>
 

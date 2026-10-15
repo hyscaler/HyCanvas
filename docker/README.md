@@ -115,4 +115,4 @@ Prebuilt self-contained binaries for Linux (amd64/arm64), macOS (Intel/Apple Sil
 ## Links
 
 - Source and docs: https://github.com/hyscaler/HyCanvas
-- License: Elastic License 2.0 (source-available).
+- License: GNU AGPL v3 (`AGPL-3.0-only`), open source, from v0.3.17 onwards; commercial licenses available. Releases up to v0.3.16 are under the Elastic License 2.0.

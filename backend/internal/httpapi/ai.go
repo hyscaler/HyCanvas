@@ -70,6 +70,12 @@ func mountAI(api chi.Router, svc *ai.Service, acct *accounts.Service, up *upload
 		r.Get("/workspaces/{id}/ai-policy", aiGetPolicyHandler(svc, acct))
 		r.Put("/workspaces/{id}/ai-policy", aiSetPolicyHandler(svc, acct))
 		r.Get("/workspaces/{id}/ai-usage", aiGetUsageHandler(svc, acct))
+		// Which provider serves the caller in a workspace, and the caller's own
+		// personal provider (#47). The personal routes act only on the
+		// signed-in user's records, so a workspace admin can never read or
+		// change someone else's key.
+		r.Get("/workspaces/{id}/ai-effective", aiEffectiveHandler(svc, acct))
+		mountPersonalAI(r, svc)
 		r.Post("/ai/text", aiTextHandler(svc, acct))
 		r.Post("/ai/text-structured", aiTextStructuredHandler(svc, acct))
 		r.Post("/ai/image", aiImageHandler(svc, acct, up))

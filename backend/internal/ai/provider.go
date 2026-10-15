@@ -73,6 +73,9 @@ type CallConfig struct {
 	BaseURL    string
 	Model      string
 	ImageModel string
+	// personalUser is set when a user's personal provider serves the call, so
+	// the tokens are also metered to that user. Never serialized.
+	personalUser string
 }
 
 const maxResponseBytes = 25 * 1024 * 1024 // cap inline image/base64 responses

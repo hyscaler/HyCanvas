@@ -1,10 +1,10 @@
 # HyCanvas Contributor License Agreement
 
-Version 1.0
+Version 1.1
 
 Thank you for contributing to HyCanvas, a product of HyScaler, the trading name of NetTantra Technologies (India) Private Limited ("HyScaler", "we", "us"). HyScaler is a trading name, not a separate legal entity, so this Agreement and every right granted below run to NetTantra Technologies (India) Private Limited itself.
 
-This Contributor License Agreement ("Agreement") clarifies the intellectual-property rights in your contributions. It protects you, HyScaler, and users of HyCanvas, and it is what allows HyScaler to keep HyCanvas freely available under the Elastic License 2.0 while also offering separate commercial licenses.
+This Contributor License Agreement ("Agreement") clarifies the intellectual-property rights in your contributions. It protects you, HyScaler, and users of HyCanvas, and it is what allows HyScaler to keep HyCanvas freely available as open source under the GNU Affero General Public License v3 while also offering separate commercial licenses.
 
 By commenting `I have read the CLA Document and I hereby sign the CLA` on a HyCanvas pull request (or otherwise signing as we direct), you accept this Agreement for your present and future contributions to HyCanvas.
 
@@ -15,7 +15,7 @@ By commenting `I have read the CLA Document and I hereby sign the CLA` on a HyCa
 
 ## 2. Copyright license
 
-You grant HyScaler and recipients of software distributed by HyScaler a perpetual, worldwide, non-exclusive, irrevocable, royalty-free copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, distribute, and sublicense your Contributions and derivative works, and to license and relicense the foregoing under any license terms of HyScaler's choosing, including the Elastic License 2.0, commercial licenses, and open-source licenses.
+You grant HyScaler and recipients of software distributed by HyScaler a perpetual, worldwide, non-exclusive, irrevocable, royalty-free copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, distribute, and sublicense your Contributions and derivative works, and to license and relicense the foregoing under any license terms of HyScaler's choosing, including the GNU Affero General Public License v3, the Elastic License 2.0, commercial licenses, and other open-source licenses.
 
 You retain ownership of your Contributions; this is a license, not an assignment. You retain the right to use your own Contributions for any other purpose.
 

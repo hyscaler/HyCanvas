@@ -27,7 +27,19 @@ export type DialogReq =
        *  default focus, for actions that cannot be undone. */
       danger?: boolean;
       resolve: (ok: boolean) => void;
+    }
+  | {
+      kind: "choose";
+      id: number;
+      title: string;
+      message: string;
+      /** Rendered end-aligned after Cancel; the `primary` choice takes the
+       *  default focus, so make it the safe one. */
+      choices: DialogChoice[];
+      resolve: (value: string | null) => void;
     };
+
+export interface DialogChoice { value: string; label: string; primary?: boolean }
 
 let seq = 0;
 
@@ -67,6 +79,14 @@ export function confirmAction(opts: {
 }): Promise<boolean> {
   return new Promise((resolve) => {
     useDialog.getState().setReq({ kind: "confirm", id: ++seq, ...opts, resolve });
+  });
+}
+
+/** Ask the user to pick one of several actions. Resolves to the chosen
+ *  `value`, or null on Cancel, Escape or a click outside. */
+export function chooseAction(opts: { title: string; message: string; choices: DialogChoice[] }): Promise<string | null> {
+  return new Promise((resolve) => {
+    useDialog.getState().setReq({ kind: "choose", id: ++seq, ...opts, resolve });
   });
 }
 

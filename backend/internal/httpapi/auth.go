@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"hycanvas/backend/internal/accounts"
+	"hycanvas/backend/internal/ai"
 	"hycanvas/backend/internal/apikeys"
 	"hycanvas/backend/internal/captcha"
 	"hycanvas/backend/internal/platform/config"
@@ -498,6 +499,9 @@ func requireAuth(svc *accounts.Service) func(http.Handler) http.Handler {
 				return
 			}
 			ctx := context.WithValue(r.Context(), userKey, &authedUser{ID: uid, SessionID: sid})
+			// The AI layer falls back to the user's personal provider in a
+			// workspace without one (#47), so it needs to know who is asking.
+			ctx = ai.WithUser(ctx, uid)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

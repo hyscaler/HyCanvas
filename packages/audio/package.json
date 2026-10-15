@@ -1,7 +1,7 @@
 {
   "name": "@hc/audio",
   "version": "0.1.0",
-  "license": "Elastic-2.0",
+  "license": "AGPL-3.0-only",
   "private": true,
   "description": "HyCanvas audio: pure mixing math, fades, per-track gain/pan/mute/solo, and the ducking automation solver for the video editor (framework-agnostic, no DSP/decoding) (doc 29)",
   "main": "dist/index.js",

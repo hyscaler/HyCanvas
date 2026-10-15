@@ -1,7 +1,7 @@
 {
   "name": "@hc/templates",
   "version": "0.1.0",
-  "license": "Elastic-2.0",
+  "license": "AGPL-3.0-only",
   "private": true,
   "description": "HyCanvas template system core: deep-copy/apply, style extract/swap, fillable fields, attribution merge, search (framework-agnostic)",
   "main": "dist/index.js",

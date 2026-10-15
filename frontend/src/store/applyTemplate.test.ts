@@ -133,4 +133,57 @@ describe("applyTemplateFile", () => {
     expect(st.applyTemplateFile({ schemaVersion: 1, pages: [] } as unknown as DesignFile, "Empty")).toBe(false);
     expect(useEditor.getState().doc.pages.length).toBe(1);
   });
+
+  it("replaces only the active page when asked, and one undo restores it untouched", () => {
+    useEditor.getState().loadDoc(createBlankDesign({ width: 800, height: 600 }));
+    const st = useEditor.getState();
+    st.addPage();
+    st.addPage();
+    // Mark the middle page so the restore can be checked by identity and content,
+    // including a key this build does not know (it must survive the round trip).
+    const doc0 = useEditor.getState().doc;
+    const middle = doc0.pages[1] as unknown as Record<string, unknown>;
+    middle.name = "Keep me";
+    middle.futureKey = { kept: true };
+    const ids0 = doc0.pages.map((p) => p.id);
+    st.setActivePage(1);
+
+    expect(st.applyTemplateFile(templateFile(["r1", "r2"]), "Tpl", { replaceActive: true })).toBe(true);
+    let doc = useEditor.getState().doc;
+    expect(doc.pages.length).toBe(3);
+    expect(doc.pages[0].id).toBe(ids0[0]);
+    expect(doc.pages[2].id).toBe(ids0[2]);
+    expect(doc.pages[1].id).not.toBe(ids0[1]);
+    expect(doc.pages[1].children.length).toBe(2);
+    expect(useEditor.getState().activePage).toBe(1);
+
+    useEditor.getState().undo();
+    doc = useEditor.getState().doc;
+    expect(doc.pages.map((p) => p.id)).toEqual(ids0);
+    const back = doc.pages[1] as unknown as Record<string, unknown>;
+    expect(back.name).toBe("Keep me");
+    expect(back.futureKey).toEqual({ kept: true });
+    expect(doc.assets.some((a) => a.id === "asset-tpl-1")).toBe(false);
+
+    // Redo swaps it out again.
+    useEditor.getState().redo();
+    expect(useEditor.getState().doc.pages[1].children.length).toBe(2);
+    expect(useEditor.getState().doc.pages.length).toBe(3);
+  });
+
+  it("puts every page of a multi-page template in the replaced page's slot", () => {
+    useEditor.getState().loadDoc(createBlankDesign({ width: 800, height: 600 }));
+    const st = useEditor.getState();
+    st.addPage();
+    const ids0 = useEditor.getState().doc.pages.map((p) => p.id);
+    st.setActivePage(0);
+    const two = templateFile(["m1"]);
+    two.pages.push({ ...structuredClone(two.pages[0]), id: "tpl-page-2", children: [] } as never);
+    expect(st.applyTemplateFile(two, "Deck", { replaceActive: true })).toBe(true);
+    const doc = useEditor.getState().doc;
+    expect(doc.pages.length).toBe(3);
+    expect(doc.pages[2].id).toBe(ids0[1]); // the untouched page follows the template's pages
+    expect((doc.pages[0] as unknown as { name?: string }).name).toBe("Deck 1");
+    expect((doc.pages[1] as unknown as { name?: string }).name).toBe("Deck 2");
+  });
 });

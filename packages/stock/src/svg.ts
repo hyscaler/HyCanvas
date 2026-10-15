@@ -308,7 +308,10 @@ const matIsAxisAligned = (m: Mat) => m[1] === 0 && m[2] === 0 && m[0] > 0 && m[3
 export function parseTransform(v: string | undefined): Mat {
   let m: Mat = IDENTITY;
   if (!v) return m;
-  for (const t of v.matchAll(/(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^)]*)\)/g)) {
+  // The argument list excludes "(" as well as ")": with only ")" excluded, a
+  // run of "scale((" made the engine re-scan from every "(" (CodeQL
+  // js/polynomial-redos); a transform never nests parentheses.
+  for (const t of v.matchAll(/(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^()]*)\)/g)) {
     const a = t[2].trim().split(/[\s,]+/).filter(Boolean).map(Number);
     let n: Mat = IDENTITY;
     switch (t[1]) {

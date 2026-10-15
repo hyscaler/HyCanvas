@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Keep `next dev` from rewriting frontend/AGENTS.md: the repository owns
+  // that file, and the generated block breaks its house style.
+  agentRules: false,
   output: "export",
   trailingSlash: true,
   // yjs must load as ONE module instance (two copies break instanceof checks

@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"hycanvas/backend/internal/ai"
 	"hycanvas/backend/internal/apikeys"
 )
 
@@ -169,5 +170,6 @@ func authenticateAPIKey(w http.ResponseWriter, r *http.Request, token string) *h
 	}
 	ctx := context.WithValue(r.Context(), userKey, &authedUser{ID: info.UserID})
 	ctx = context.WithValue(ctx, apiKeyCtx{}, &info)
+	ctx = ai.WithUser(ctx, info.UserID)
 	return r.WithContext(ctx)
 }

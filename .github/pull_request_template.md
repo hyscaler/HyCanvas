@@ -12,4 +12,4 @@ Closes #
 - [ ] `npm run test` passes (package + Go backend tests)
 - [ ] `npm run build:dist` succeeds (for build-affecting changes)
 - [ ] No secrets committed; docs/roadmap updated if scope changed
-- [ ] I agree my contribution is licensed under the Elastic License 2.0
+- [ ] I agree my contribution is licensed under the AGPL-3.0-only and the CLA

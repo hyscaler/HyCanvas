@@ -71,12 +71,12 @@ type imageRow struct {
 	secretTag    *string
 }
 
-func (s *Service) getImageRow(ctx context.Context, workspaceID string) (*imageRow, error) {
-	const q = `SELECT provider, model, "base_url", "key_cipher", "key_iv", "key_tag",
+func (s *Service) getImageRow(ctx context.Context, o Owner) (*imageRow, error) {
+	q := o.sqlFor(`SELECT provider, model, "base_url", "key_cipher", "key_iv", "key_tag",
 		"secret_cipher", "secret_iv", "secret_tag"
-		FROM "ai_image_configs" WHERE "workspace_id" = $1`
+		FROM "ai_image_configs" WHERE "workspace_id" = $1`)
 	var r imageRow
-	err := s.db.QueryRow(ctx, q, workspaceID).Scan(&r.provider, &r.model, &r.baseURL,
+	err := s.db.QueryRow(ctx, q, o.ID).Scan(&r.provider, &r.model, &r.baseURL,
 		&r.keyCipher, &r.keyIV, &r.keyTag, &r.secretCipher, &r.secretIV, &r.secretTag)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -90,7 +90,16 @@ func (s *Service) getImageRow(ctx context.Context, workspaceID string) (*imageRo
 // GetImageConfig returns the workspace's dedicated image provider, or nil when
 // none is set (images then run on the main provider).
 func (s *Service) GetImageConfig(ctx context.Context, workspaceID string) (*ImageConfigView, error) {
-	r, err := s.getImageRow(ctx, workspaceID)
+	return s.getImageConfig(ctx, WorkspaceOwner(workspaceID))
+}
+
+// GetUserImageConfig returns the user's personal image provider, or nil.
+func (s *Service) GetUserImageConfig(ctx context.Context, userID string) (*ImageConfigView, error) {
+	return s.getImageConfig(ctx, UserOwner(userID))
+}
+
+func (s *Service) getImageConfig(ctx context.Context, o Owner) (*ImageConfigView, error) {
+	r, err := s.getImageRow(ctx, o)
 	if err != nil || r == nil {
 		return nil, err
 	}
@@ -118,7 +127,7 @@ type resolvedImageConfig struct {
 
 // resolveImageConfig applies SetImageConfig's validation and PATCH semantics to
 // a non-empty candidate without writing it.
-func (s *Service) resolveImageConfig(ctx context.Context, workspaceID string, in ImageConfigInput) (resolvedImageConfig, error) {
+func (s *Service) resolveImageConfig(ctx context.Context, o Owner, in ImageConfigInput) (resolvedImageConfig, error) {
 	if !providerSet[in.Provider] {
 		return resolvedImageConfig{}, ErrBadRequest
 	}
@@ -132,7 +141,7 @@ func (s *Service) resolveImageConfig(ctx context.Context, workspaceID string, in
 			return resolvedImageConfig{}, ErrBadRequest
 		}
 	}
-	existing, err := s.getImageRow(ctx, workspaceID)
+	existing, err := s.getImageRow(ctx, o)
 	if err != nil {
 		return resolvedImageConfig{}, err
 	}
@@ -187,14 +196,25 @@ func (s *Service) resolveImageConfig(ctx context.Context, workspaceID string, in
 // actually be able to generate images. Accepting a text-only provider here
 // would store a configuration whose only possible outcome is a failed call.
 func (s *Service) SetImageConfig(ctx context.Context, workspaceID string, in ImageConfigInput) (*ImageConfigView, error) {
+	return s.setImageConfig(ctx, WorkspaceOwner(workspaceID), in)
+}
+
+// SetUserImageConfig is SetImageConfig for the user's personal image provider.
+func (s *Service) SetUserImageConfig(ctx context.Context, userID string, in ImageConfigInput) (*ImageConfigView, error) {
+	if userID == "" {
+		return nil, errNoUser
+	}
+	return s.setImageConfig(ctx, UserOwner(userID), in)
+}
+
+func (s *Service) setImageConfig(ctx context.Context, o Owner, in ImageConfigInput) (*ImageConfigView, error) {
 	if in.Provider == "" {
-		const del = `DELETE FROM "ai_image_configs" WHERE "workspace_id" = $1`
-		if _, err := s.db.Exec(ctx, del, workspaceID); err != nil {
+		if err := s.deleteImageConfig(ctx, o); err != nil {
 			return nil, err
 		}
 		return nil, nil
 	}
-	rc, err := s.resolveImageConfig(ctx, workspaceID, in)
+	rc, err := s.resolveImageConfig(ctx, o, in)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +249,7 @@ func (s *Service) SetImageConfig(ctx context.Context, workspaceID string, in Ima
 		}
 		sCipher, sIV, sTag = &senc.Cipher, &senc.IV, &senc.Tag
 	}
-	const q = `INSERT INTO "ai_image_configs" ("workspace_id",provider,model,"base_url","key_cipher","key_iv","key_tag","secret_cipher","secret_iv","secret_tag","updated_at")
+	q := o.sqlFor(`INSERT INTO "ai_image_configs" ("workspace_id",provider,model,"base_url","key_cipher","key_iv","key_tag","secret_cipher","secret_iv","secret_tag","updated_at")
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now())
 		ON CONFLICT ("workspace_id") DO UPDATE SET
 			provider = EXCLUDED.provider,
@@ -241,17 +261,29 @@ func (s *Service) SetImageConfig(ctx context.Context, workspaceID string, in Ima
 			"secret_cipher" = CASE WHEN $5 IS NOT NULL OR $11 THEN $8  ELSE "ai_image_configs"."secret_cipher" END,
 			"secret_iv"     = CASE WHEN $5 IS NOT NULL OR $11 THEN $9  ELSE "ai_image_configs"."secret_iv" END,
 			"secret_tag"    = CASE WHEN $5 IS NOT NULL OR $11 THEN $10 ELSE "ai_image_configs"."secret_tag" END,
-			"updated_at" = now()`
-	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, model, baseURL, cipher, iv, tag, sCipher, sIV, sTag, in.APISecret != ""); err != nil {
+			"updated_at" = now()`)
+	if _, err := s.db.Exec(ctx, q, o.ID, in.Provider, model, baseURL, cipher, iv, tag, sCipher, sIV, sTag, in.APISecret != ""); err != nil {
 		return nil, err
 	}
-	return s.GetImageConfig(ctx, workspaceID)
+	return s.getImageConfig(ctx, o)
 }
 
 // DeleteImageConfig removes the dedicated image provider. Images fall back to
 // the main provider, exactly as for a workspace that never set one.
 func (s *Service) DeleteImageConfig(ctx context.Context, workspaceID string) error {
-	_, err := s.db.Exec(ctx, `DELETE FROM "ai_image_configs" WHERE "workspace_id" = $1`, workspaceID)
+	return s.deleteImageConfig(ctx, WorkspaceOwner(workspaceID))
+}
+
+// DeleteUserImageConfig removes the user's personal image provider and its key.
+func (s *Service) DeleteUserImageConfig(ctx context.Context, userID string) error {
+	if userID == "" {
+		return errNoUser
+	}
+	return s.deleteImageConfig(ctx, UserOwner(userID))
+}
+
+func (s *Service) deleteImageConfig(ctx context.Context, o Owner) error {
+	_, err := s.db.Exec(ctx, o.sqlFor(`DELETE FROM "ai_image_configs" WHERE "workspace_id" = $1`), o.ID)
 	return err
 }
 
@@ -279,14 +311,26 @@ type ImageCheck struct {
 // generation. Saying "could not verify" would be the alternative, and claiming
 // less than we checked is worse than checking less than everything.
 func (s *Service) VerifyImageConfig(ctx context.Context, workspaceID string) (ImageCheck, error) {
-	r, err := s.getImageRow(ctx, workspaceID)
+	return s.verifyImageConfig(ctx, WorkspaceOwner(workspaceID))
+}
+
+// VerifyUserImageConfig checks the user's stored personal image provider.
+func (s *Service) VerifyUserImageConfig(ctx context.Context, userID string) (ImageCheck, error) {
+	if userID == "" {
+		return ImageCheck{}, errNoUser
+	}
+	return s.verifyImageConfig(ctx, UserOwner(userID))
+}
+
+func (s *Service) verifyImageConfig(ctx context.Context, o Owner) (ImageCheck, error) {
+	r, err := s.getImageRow(ctx, o)
 	if err != nil {
 		return ImageCheck{}, err
 	}
 	if r == nil {
 		return ImageCheck{}, ErrBadRequest // nothing of its own to check
 	}
-	cfg, err := s.imageCallConfig(ctx, workspaceID)
+	cfg, err := s.ownerImageCallConfig(ctx, o)
 	if err != nil {
 		return ImageCheck{}, err
 	}
@@ -297,10 +341,22 @@ func (s *Service) VerifyImageConfig(ctx context.Context, workspaceID string) (Im
 // (#46), so a wrong key or host is caught before it replaces a working one.
 // An untouched key or secret is the stored one, as on a save.
 func (s *Service) VerifyImageCandidate(ctx context.Context, workspaceID string, in ImageConfigInput) (ImageCheck, error) {
+	return s.verifyImageCandidate(ctx, WorkspaceOwner(workspaceID), in)
+}
+
+// VerifyUserImageCandidate probes a candidate personal image provider.
+func (s *Service) VerifyUserImageCandidate(ctx context.Context, userID string, in ImageConfigInput) (ImageCheck, error) {
+	if userID == "" {
+		return ImageCheck{}, errNoUser
+	}
+	return s.verifyImageCandidate(ctx, UserOwner(userID), in)
+}
+
+func (s *Service) verifyImageCandidate(ctx context.Context, o Owner, in ImageConfigInput) (ImageCheck, error) {
 	if in.Provider == "" {
 		return ImageCheck{}, ErrBadRequest // clearing it has nothing to test
 	}
-	rc, err := s.resolveImageConfig(ctx, workspaceID, in)
+	rc, err := s.resolveImageConfig(ctx, o, in)
 	if err != nil {
 		return ImageCheck{}, err
 	}
@@ -387,12 +443,23 @@ func (s *Service) probeImageCredentials(ctx context.Context, cfg CallConfig) (Im
 // images on one vendor and nothing else, and demanding a text provider it does
 // not use would be a rule with no purpose.
 func (s *Service) imageCallConfig(ctx context.Context, workspaceID string) (CallConfig, error) {
-	r, err := s.getImageRow(ctx, workspaceID)
+	o, err := s.effectiveOwner(ctx, workspaceID)
+	if err != nil {
+		return CallConfig{}, err
+	}
+	return s.ownerImageCallConfig(ctx, o)
+}
+
+// ownerImageCallConfig is one owner's image provider, falling back to that
+// same owner's main provider. The fallback never crosses owners: a workspace
+// image call never borrows a personal key, nor the other way round.
+func (s *Service) ownerImageCallConfig(ctx context.Context, o Owner) (CallConfig, error) {
+	r, err := s.getImageRow(ctx, o)
 	if err != nil {
 		return CallConfig{}, err
 	}
 	if r == nil || r.keyCipher == nil || r.keyIV == nil || r.keyTag == nil {
-		return s.callConfig(ctx, workspaceID)
+		return s.ownerCallConfig(ctx, o)
 	}
 	if r.baseURL != nil && !isSafeBaseURL(*r.baseURL, s.allowLocal) {
 		return CallConfig{}, ErrBadRequest
@@ -421,10 +488,14 @@ func (s *Service) imageCallConfig(ctx context.Context, workspaceID string) (Call
 		}
 		secret = v
 	}
-	return CallConfig{
+	cfg := CallConfig{
 		Provider: Provider(r.provider), APIKey: key, APISecret: secret,
 		BaseURL: baseURL, Model: model, ImageModel: model,
-	}, nil
+	}
+	if o.Personal() {
+		cfg.personalUser = o.ID
+	}
+	return cfg, nil
 }
 
 // visionCallConfig resolves the config for reading an image (alt text,
@@ -437,11 +508,15 @@ func (s *Service) imageCallConfig(ctx context.Context, workspaceID string) (Call
 // text work at all for those workspaces. When neither can see, the main config
 // is returned so the caller reports the same unsupported error as before.
 func (s *Service) visionCallConfig(ctx context.Context, workspaceID string) (CallConfig, error) {
-	main, mainErr := s.callConfig(ctx, workspaceID)
+	o, err := s.effectiveOwner(ctx, workspaceID)
+	if err != nil {
+		return CallConfig{}, err
+	}
+	main, mainErr := s.ownerCallConfig(ctx, o)
 	if mainErr == nil && ResolveRoute(string(main.Provider), main.Model, main.ImageModel, FeatureDescribeImage).Supported {
 		return main, nil
 	}
-	alt, altErr := s.imageCallConfig(ctx, workspaceID)
+	alt, altErr := s.ownerImageCallConfig(ctx, o)
 	if altErr == nil && alt.Provider != main.Provider &&
 		ResolveRoute(string(alt.Provider), alt.Model, alt.ImageModel, FeatureDescribeImage).Supported {
 		return alt, nil

@@ -2,7 +2,7 @@
 # Agreement (CLA.md) before merge. Signatures are recorded on the dedicated
 # `cla-signatures` branch by CLA Assistant Lite; contributors sign by posting
 # the acceptance comment on their PR. Required so HyScaler can dual-license
-# (Elastic License 2.0 + commercial) with clear rights in every contribution.
+# (AGPL-3.0-only + commercial) with clear rights in every contribution.
 name: CLA
 
 on:

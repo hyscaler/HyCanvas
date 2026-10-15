@@ -291,7 +291,10 @@ function strList(v: unknown, maxItems: number, maxChars: number): string[] {
  *  at display scale rises into the rule above the figure. Mirrored in
  *  specs.go. */
 export function bareFigure(v: unknown): string {
-  return clipToBudget(v, archetypeBudgets.statValue).replace(/^[\s\u2190-\u21FF\u25B2-\u25BF\u2B05-\u2B0D]+|[\s\u2190-\u21FF\u25B2-\u25BF\u2B05-\u2B0D]+$/g, "").trim();
+  // The trailing run may only start where no arrow or space precedes it, so a
+  // long run is scanned once, not once per character (CodeQL
+  // js/polynomial-redos).
+  return clipToBudget(v, archetypeBudgets.statValue).replace(/^[\s\u2190-\u21FF\u25B2-\u25BF\u2B05-\u2B0D]+|(?<![\s\u2190-\u21FF\u25B2-\u25BF\u2B05-\u2B0D])[\s\u2190-\u21FF\u25B2-\u25BF\u2B05-\u2B0D]+$/g, "").trim();
 }
 
 /** A figure is one token, so it can never wrap inside the numeral. A word
@@ -314,7 +317,9 @@ export function splitFigure(value: unknown, unit: unknown): { value: string; uni
 /** A headline never carries a dash as a separator; the house style has none,
  *  and a colon says the same thing. Mirrored in specs.go. */
 export function undashTitle(title: string): string {
-  return title.replace(/\s+[\u2013\u2014]\s+|\s+-\s+/g, ": ");
+  // The space run before a dash may only start where no space precedes it,
+  // so a run without a dash is scanned once (CodeQL js/polynomial-redos).
+  return title.replace(/(?<!\s)\s+[\u2013\u2014-]\s+/g, ": ");
 }
 
 /** An icon keyword, lower-cased and clipped; empty when there is none. */

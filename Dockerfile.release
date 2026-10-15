@@ -18,6 +18,10 @@ RUN apt-get update \
 # TARGETARCH is set by buildx per platform (amd64 / arm64).
 ARG TARGETARCH
 COPY binaries/${TARGETARCH}/hycanvas /app/hycanvas
+# The license and notices from the release archive (AGPL-3.0-only).
+COPY binaries/${TARGETARCH}/LICENSE binaries/${TARGETARCH}/NOTICE binaries/${TARGETARCH}/COMMERCIAL.md binaries/${TARGETARCH}/TRADEMARKS.md /app/
+LABEL org.opencontainers.image.licenses="AGPL-3.0-only" \
+      org.opencontainers.image.source="https://github.com/hyscaler/HyCanvas"
 
 ENV PORT=8005 \
     DB_AUTO_MIGRATE=true \

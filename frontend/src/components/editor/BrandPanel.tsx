@@ -18,6 +18,7 @@ import { extractPalette, toHex, type Bitmap } from "@hc/color";
 import { locate } from "@hc/editor";
 import { PanelShell, CollapsibleSection } from "./EditorPanels";
 import { collectPageColors, collectSelectionColors } from "@/lib/pageColors";
+import { imageAssetIds, imageAssetPalette } from "@/lib/imagePalette";
 import { useEditor, type ReskinResult, type ReskinOverrides, type BrandFixTarget } from "@/store/editor";
 import { useBrand, brandHexColors, brandFontFamilies } from "@/store/brand";
 import { fonts } from "@/lib/fontProvider";
@@ -403,7 +404,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
             {/* Adding colours, where the colours are looked at: a picker and a
                 hex field, the selection's colours, or the page's. Managers only,
                 as with every kit edit. */}
-            {canManage && <AddBrandColors onAdd={(hexes) => void addColors(hexes)} />}
+            {canManage && <AddBrandColors existing={swatches} onAdd={(hexes) => void addColors(hexes)} />}
           </CollapsibleSection>
 
           {/* Fonts (FR-1, FR-4). */}
@@ -1399,18 +1400,32 @@ function BrandFromWebsite({
 
 // --- color helpers ----------------------------------------------------------
 /** The add-colour row of the Colors section: pick or type a colour and add
- *  it, or take the selection's colours or the whole page's. */
-function AddBrandColors({ onAdd }: { onAdd: (hexes: string[]) => void }) {
+ *  it, take the selection's colours or the whole page's, or pick from the
+ *  colours present in a selected image. */
+function AddBrandColors({ existing, onAdd }: { existing: string[]; onAdd: (hexes: string[]) => void }) {
   const [hex, setHex] = useState("#9b2c72");
   const selection = useEditor((s) => s.selection);
-  useEditor((s) => s.rev);
+  const rev = useEditor((s) => s.rev);
   const toast = useToast();
+  // A selected photo or logo suggests its own colours: the dominant ones the
+  // palette does not hold yet, each a click to add. Recomputed as the
+  // selection or document changes (an image that was still loading counts
+  // once it has decoded and the canvas repainted).
+  const imageColors = useMemo(() => {
+    void rev; // the document's revision: recompute after edits and image decode
+    const st = useEditor.getState();
+    const nodes = selection.map((id) => locate(st.doc, id)?.node).filter((n): n is NonNullable<typeof n> => !!n);
+    const have = new Set(existing.map((h) => h.toLowerCase()));
+    const out = new Set<string>();
+    for (const id of imageAssetIds(nodes)) for (const c of imageAssetPalette(id, 6)) if (!have.has(c)) out.add(c);
+    return [...out].slice(0, 8);
+  }, [selection, rev, existing]);
   const clean = hex.trim().toLowerCase();
   const valid = /^#[0-9a-f]{6}$/.test(clean);
   const fromSelection = () => {
     const st = useEditor.getState();
     const nodes = st.selection.map((id) => locate(st.doc, id)?.node).filter((n): n is NonNullable<typeof n> => !!n);
-    const colors = collectSelectionColors(nodes);
+    const colors = [...collectSelectionColors(nodes), ...imageColors];
     if (!colors.length) { toast.toast(tr("editor.select_an_element_to_take_its_color")); return; }
     onAdd(colors);
   };
@@ -1467,6 +1482,31 @@ function AddBrandColors({ onAdd }: { onAdd: (hexes: string[]) => void }) {
           {tr("editor.add_from_this_page")}
         </button>
       </div>
+      {imageColors.length > 0 && (
+        <div className="flex flex-col gap-1.5 rounded-lg border border-neutral-200 p-2" data-testid="brand-image-colors">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold text-neutral-500">{tr("editor.colors_in_this_image")}</span>
+            <button type="button" onClick={() => onAdd(imageColors)} className="text-[11px] font-medium text-brand-ink hover:underline">
+              {tr("editor.add_all")}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {imageColors.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => onAdd([c])}
+                title={tr("editor.add_color_hex", { hex: c.toUpperCase() })}
+                aria-label={tr("editor.add_color_hex", { hex: c.toUpperCase() })}
+                className="group grid h-7 w-7 place-items-center rounded-md ring-1 ring-black/10 transition hover:scale-110"
+                style={{ background: c }}
+              >
+                <Plus size={12} className="text-white opacity-0 mix-blend-difference group-hover:opacity-100" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

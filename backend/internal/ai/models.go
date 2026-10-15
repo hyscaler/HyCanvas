@@ -58,7 +58,19 @@ const maxListedModels = 500
 // on a connection test. purpose is PurposeText, PurposeImage or "" for every
 // model the provider lists.
 func (s *Service) ListModels(ctx context.Context, workspaceID string, in ConfigInput, purpose string) (ModelList, error) {
-	rc, err := s.resolveConfig(ctx, workspaceID, in)
+	return s.listCandidateModels(ctx, WorkspaceOwner(workspaceID), in, purpose)
+}
+
+// ListUserModels is ListModels against the user's personal provider.
+func (s *Service) ListUserModels(ctx context.Context, userID string, in ConfigInput, purpose string) (ModelList, error) {
+	if userID == "" {
+		return ModelList{}, errNoUser
+	}
+	return s.listCandidateModels(ctx, UserOwner(userID), in, purpose)
+}
+
+func (s *Service) listCandidateModels(ctx context.Context, o Owner, in ConfigInput, purpose string) (ModelList, error) {
+	rc, err := s.resolveConfig(ctx, o, in)
 	if err != nil {
 		return ModelList{}, err
 	}
@@ -72,7 +84,19 @@ func (s *Service) ListModels(ctx context.Context, workspaceID string, in ConfigI
 // ListStoredModels lists the models the workspace's saved main provider can
 // reach.
 func (s *Service) ListStoredModels(ctx context.Context, workspaceID, purpose string) (ModelList, error) {
-	cfg, err := s.callConfig(ctx, workspaceID)
+	return s.listStoredModels(ctx, WorkspaceOwner(workspaceID), purpose)
+}
+
+// ListUserStoredModels lists what the user's saved personal provider serves.
+func (s *Service) ListUserStoredModels(ctx context.Context, userID, purpose string) (ModelList, error) {
+	if userID == "" {
+		return ModelList{}, errNoUser
+	}
+	return s.listStoredModels(ctx, UserOwner(userID), purpose)
+}
+
+func (s *Service) listStoredModels(ctx context.Context, o Owner, purpose string) (ModelList, error) {
+	cfg, err := s.ownerCallConfig(ctx, o)
 	if err != nil {
 		return ModelList{}, err
 	}
@@ -82,10 +106,22 @@ func (s *Service) ListStoredModels(ctx context.Context, workspaceID, purpose str
 // ListImageModels lists the image models a CANDIDATE dedicated image provider
 // can reach, without saving it.
 func (s *Service) ListImageModels(ctx context.Context, workspaceID string, in ImageConfigInput) (ModelList, error) {
+	return s.listImageModels(ctx, WorkspaceOwner(workspaceID), in)
+}
+
+// ListUserImageModels lists a candidate personal image provider's models.
+func (s *Service) ListUserImageModels(ctx context.Context, userID string, in ImageConfigInput) (ModelList, error) {
+	if userID == "" {
+		return ModelList{}, errNoUser
+	}
+	return s.listImageModels(ctx, UserOwner(userID), in)
+}
+
+func (s *Service) listImageModels(ctx context.Context, o Owner, in ImageConfigInput) (ModelList, error) {
 	if in.Provider == "" {
 		return ModelList{}, ErrBadRequest
 	}
-	rc, err := s.resolveImageConfig(ctx, workspaceID, in)
+	rc, err := s.resolveImageConfig(ctx, o, in)
 	if err != nil {
 		return ModelList{}, err
 	}

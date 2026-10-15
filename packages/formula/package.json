@@ -1,7 +1,7 @@
 {
   "name": "@hc/formula",
   "version": "0.1.0",
-  "license": "Elastic-2.0",
+  "license": "AGPL-3.0-only",
   "private": true,
   "description": "HyCanvas spreadsheet formula engine: A1 refs, tokenizer, parser, function library, evaluator, dependency graph recompute (framework-agnostic, pure)",
   "main": "dist/index.js",

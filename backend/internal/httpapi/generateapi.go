@@ -273,7 +273,7 @@ func startGenerationJob(svc *aistudio.Service, aiSvc *ai.Service, up *uploads.Se
 		}()
 		// The request context dies with the caller's response; the job runs
 		// on its own bounded clock.
-		ctx, cancel := context.WithTimeout(context.Background(), generateTimeout)
+		ctx, cancel := context.WithTimeout(ai.WithUser(context.Background(), userID), generateTimeout)
 		defer cancel()
 		// The workspace's brand kit grounds the deck the way it grounds the
 		// editor's: voice into the outline, palette into the theme unless the

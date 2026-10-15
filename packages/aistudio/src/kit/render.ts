@@ -51,9 +51,13 @@ export function splitPoint(p: string): [string, string] {
 /** The leading figure of a line ("$4.2M expansion revenue" gives $4.2M),
  *  or null when the line does not begin with one. */
 export function leadingFigure(p: string): [string | null, string] {
-  const m = /^([$€£¥]?\s?[\d][\d.,]*\s?(?:%|[kKmMbB]n?|x|pts?|pp|bps)?)\s+(.+)$/.exec(p.trim());
+  // The space before a unit belongs to the unit, the rest of the line starts
+  // on a non-space, and the punctuation after a percentage carries its own
+  // spaces: no two repetitions overlap, so a long run of spaces is scanned
+  // once (CodeQL js/polynomial-redos). Same matches as before.
+  const m = /^([$€£¥]?\s?\d[\d.,]*(?:\s?(?:%|[kKmMbB]n?|x|pts?|pp|bps))?)\s+(\S.*)$/.exec(p.trim());
   if (m && m[1].length <= 12) return [m[1].replace(/\s+/g, ""), m[2]];
-  const m2 = /^(\d+(?:\.\d+)?\s?(?:%|percent|x))\s*[:,-]?\s+(.+)$/i.exec(p.trim());
+  const m2 = /^(\d+(?:\.\d+)?\s?(?:%|percent|x))(?:\s*[:,-])?\s+(\S.*)$/i.exec(p.trim());
   if (m2) return [m2[1].replace(/\s+/g, ""), m2[2]];
   return [null, p.trim()];
 }

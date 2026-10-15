@@ -2,6 +2,7 @@
 // (F12), and Stock (F13). Each inserts nodes through the editor store so edits
 // are undoable. Uploads/stock images are placed via the image asset provider.
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type FormEvent } from "react";
 import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, MonitorUp, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw, FileDown, FileText, Paperclip, Layers, Copy, ArrowDown } from "lucide-react";
 import { migrate, type AssetRef, type ChartType, type Node, type Fill, type Color, type Theme } from "@hc/schema";
@@ -27,7 +28,7 @@ import {
   isComposedSlide, slideItemOf, slideTextDump, reviseSlideSystemPrompt, reviseSlideSchema, reviseSlideItem, recomposeSlide } from "@hc/aistudio";
 import { builtinMasterAndLayouts, type SlideLayout } from "@hc/schema";
 import { shouldGroundInLayouts } from "@/lib/generationRoute";
-import { promptText } from "@/lib/promptDialog";
+import { chooseAction, promptText } from "@/lib/promptDialog";
 import { downloadHycFile } from "@/lib/hycFile";
 import { generateAltText } from "@/lib/altText";
 import { fonts } from "@/lib/fontProvider";
@@ -189,6 +190,24 @@ export function TemplatesPanel() {
 
   const apply = async (t: TemplateSummary) => {
     if (busyId) return;
+    // Never append silently over the user's head: an empty active page is
+    // simply replaced (nothing to lose), otherwise the user picks.
+    const { doc, activePage } = useEditor.getState();
+    const active = doc.pages[activePage] as (typeof doc.pages)[number] & { notes?: string };
+    const isEmpty = !!active && active.children.length === 0 && !active.notes?.trim();
+    let replaceActive = isEmpty;
+    if (active && !isEmpty) {
+      const choice = await chooseAction({
+        title: tr("editor.use_this_template"),
+        message: tr("editor.page_n_has_content_replace_or_add", { n: activePage + 1 }),
+        choices: [
+          { value: "replace", label: tr("editor.replace_page_n", { n: activePage + 1 }) },
+          { value: "add", label: tr("editor.add_as_new_page"), primary: true },
+        ],
+      });
+      if (!choice) return;
+      replaceActive = choice === "replace";
+    }
     setBusyId(t.id);
     try {
       // The template endpoint serves the stored file verbatim; a user-saved
@@ -197,7 +216,7 @@ export function TemplatesPanel() {
       const file = migrate(await oc.getTemplateFile(t.id));
       // The store refuses in read-only states (viewer/comment access, history
       // preview) and for empty templates; never claim success for a no-op.
-      if (useEditor.getState().applyTemplateFile(file, t.title)) {
+      if (useEditor.getState().applyTemplateFile(file, t.title, { replaceActive })) {
         // The store resizes differently-sized template pages to this design's
         // page size on insert; say so, so the size badge never reads as a
         // warning. A summary without format metadata (0x0) proves nothing, so
@@ -206,9 +225,11 @@ export function TemplatesPanel() {
         const th = Math.round(t.format?.height ?? 0);
         const resized = !!pageSize && tw > 0 && th > 0 && (tw !== pageSize.w || th !== pageSize.h);
         toast.success(
-          resized
-            ? tr("editor.template_added_as_a_new_page_resized_to_fit")
-            : tr("editor.template_added_as_a_new_page_undo_removes_it"),
+          replaceActive
+            ? tr("editor.template_replaced_page_n_undo_restores_it", { n: activePage + 1 })
+            : resized
+              ? tr("editor.template_added_as_a_new_page_resized_to_fit")
+              : tr("editor.template_added_as_a_new_page_undo_removes_it"),
         );
       } else {
         toast.error(tr("editor.templates_cant_be_added_in_a_read_only_view"));
@@ -236,7 +257,7 @@ export function TemplatesPanel() {
         type="button"
         onClick={() => void apply(t)}
         disabled={!!busyId}
-        title={`Add "${t.title}" (${Math.round(t.format?.width ?? 0)}x${Math.round(t.format?.height ?? 0)}) as a new page`}
+        title={`${t.title} (${Math.round(t.format?.width ?? 0)}x${Math.round(t.format?.height ?? 0)})`}
         className="block w-full text-start disabled:opacity-60"
       >
         <div className="relative aspect-[4/3] bg-neutral-100">
@@ -5997,6 +6018,11 @@ export function AiPanel({ workspaceId, designId = null }: { workspaceId: string 
   const [ignoreVoice, setIgnoreVoice] = useState(false);
   const voiceClause = !ignoreVoice ? brandVoiceClause(brandVoice) : "";
   const [config, setConfig] = useState<AiConfigView | null>(null);
+  // The caller's personal provider when it is the one in effect here (#47):
+  // the workspace has none and allows personal keys. Kept apart from
+  // `config`, which the admin form edits and must stay the workspace's own.
+  const [personalConfig, setPersonalConfig] = useState<AiConfigView | null>(null);
+  const [personalAllowed, setPersonalAllowed] = useState(true);
   const [canAdminWorkspace, setCanAdminWorkspace] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
@@ -6030,7 +6056,7 @@ export function AiPanel({ workspaceId, designId = null }: { workspaceId: string 
       // config: settling it afterwards made an admin see the read-only "ask an
       // admin" note flash before their form appeared. A failed lookup leaves
       // the form hidden rather than offering a save that would be refused.
-      const [loaded, role] = await Promise.all([
+      const [loaded, role, eff] = await Promise.all([
         oc.getAiConfig(workspaceId).then(
           (c) => ({ ok: true as const, c }),
           () => ({ ok: false as const, c: null }),
@@ -6039,13 +6065,17 @@ export function AiPanel({ workspaceId, designId = null }: { workspaceId: string 
           (ws) => ws.find((w) => w.id === workspaceId)?.role,
           () => undefined,
         ),
+        oc.getAiEffective(workspaceId).catch(() => null),
       ]);
       if (cancelled) return;
       setLoadFailed(!loaded.ok);
       const c = loaded.c;
+      const mine = eff?.source === "personal" && eff.config?.hasKey ? eff.config : null;
       setConfig(c);
+      setPersonalConfig(mine);
+      setPersonalAllowed(eff?.personalKeysAllowed ?? true);
       setCanAdminWorkspace(role === "owner" || role === "admin");
-      setShowConfig(loaded.ok && !c?.hasKey);
+      setShowConfig(loaded.ok && !c?.hasKey && !mine);
       setLoading(false);
     })();
     // Revalidate the provider catalog WITHOUT gating panel readiness on it
@@ -6063,17 +6093,19 @@ export function AiPanel({ workspaceId, designId = null }: { workspaceId: string 
 
   // The chat view fills the panel height (input pinned, messages scroll); the
   // setup/connect view scrolls normally.
-  const chatView = !!workspaceId && !loading && !showConfig && !!config?.hasKey;
+  // The provider actually serving this workspace: its own, else the caller's.
+  const active = config?.hasKey ? config : personalConfig;
+  const chatView = !!workspaceId && !loading && !showConfig && !!active?.hasKey;
   // A brief waiting for a provider. Read on each render of the setup view (it
   // is not consumed here): the assistant claims it once the chat can serve it.
   const pendingReq = !chatView ? peekPendingAiRequest() : null;
   const waitingBrief = pendingReq?.kind === "prompt" ? pendingReq.text : null;
   // Whether the configured provider can generate images (gates AI imagery in
   // generated designs). DeepSeek/Anthropic are text-only; OpenAI/custom can.
-  const imageCapable = !!config?.capabilities?.image;
-  const editImageCapable = !!config?.capabilities?.editImage;
+  const imageCapable = !!active?.capabilities?.image;
+  const editImageCapable = !!active?.capabilities?.editImage;
   // Whether the provider can read images: gates the look at a fresh deck.
-  const visionCapable = !!config?.capabilities?.describeImage;
+  const visionCapable = !!active?.capabilities?.describeImage;
 
   return (
     <PanelShell title="AI" fill={chatView} roomy>
@@ -6101,7 +6133,7 @@ export function AiPanel({ workspaceId, designId = null }: { workspaceId: string 
             <PolishPanel />
           </CollapsibleSection>
         </div>
-      ) : showConfig || !config?.hasKey ? (
+      ) : showConfig || !active?.hasKey ? (
         <div className="flex flex-col gap-3">
           <div>
             <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-neutral-700">
@@ -6132,8 +6164,15 @@ export function AiPanel({ workspaceId, designId = null }: { workspaceId: string 
               presets={presets}
               canEdit={canAdminWorkspace}
               onSaved={(c) => { setConfig(c); setShowConfig(false); }}
-              onCancel={config?.hasKey ? () => setShowConfig(false) : undefined}
+              onCancel={active?.hasKey ? () => setShowConfig(false) : undefined}
             />
+            {/* A member who cannot set the workspace provider can still bring
+                their own key, when the workspace allows it. */}
+            {!config?.hasKey && personalAllowed && !personalConfig && (
+              <Link href="/settings/ai/" className="mt-2.5 block text-[11px] font-medium text-brand-ink hover:underline">
+                {tr("editor.use_your_own_ai_key_in_settings")}
+              </Link>
+            )}
           </div>
           {/* Deterministic polish tools that work with no provider connected. */}
           <CollapsibleSection title={tr("editor.assist_no_ai_needed")} icon={Stethoscope}>
@@ -6146,7 +6185,8 @@ export function AiPanel({ workspaceId, designId = null }: { workspaceId: string 
           <div className="flex shrink-0 items-center justify-between rounded-lg bg-neutral-50 px-2.5 py-1.5 text-xs">
             <span className="flex items-center gap-1.5 text-neutral-500">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              {tr("editor.provider")} <span className="font-medium text-neutral-700">{config.provider}</span>
+              {active === personalConfig ? tr("editor.your_provider") : tr("editor.workspace_provider")}{" "}
+              <span className="font-medium text-neutral-700">{active?.provider}</span>
             </span>
             <button onClick={() => setShowConfig(true)} title={tr("editor.ai_settings")} aria-label={tr("editor.ai_settings")} className="grid h-6 w-6 place-items-center rounded text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"><Settings2 size={15} /></button>
           </div>

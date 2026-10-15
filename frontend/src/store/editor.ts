@@ -918,8 +918,12 @@ interface EditorState {
    *  template never creates a mixed-size document. Additive by design, so
    *  applying a template never destroys existing pages; one undo step. Returns
    *  false when nothing was applied (read-only session, history preview, or an
-   *  empty template). */
-  applyTemplateFile(file: DesignFile, title: string): boolean;
+   *  empty template).
+   *
+   *  `replaceActive` is the user's explicit choice to swap the ACTIVE page for
+   *  the template instead: the template's pages take its slot, and the same
+   *  one undo step puts the original page back exactly as it was. */
+  applyTemplateFile(file: DesignFile, title: string, opts?: { replaceActive?: boolean }): boolean;
   /** Reuse slides from another deck (F28 completion C38): append copies of the
    *  chosen pages after the active page's run, ids regenerated, assets carried
    *  (colliding ids reminted), and optionally restyled to this document's
@@ -5780,7 +5784,7 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { doc.pages.splice(at, made.length); set({ activePage: Math.min(prevPage, doc.pages.length - 1), selection: prevSel }); },
       );
     },
-    applyTemplateFile: (file, title) => {
+    applyTemplateFile: (file, title, opts) => {
       // Same gate as setDocMeta: read-only (viewer/comment) sessions and the
       // read-only history preview must not mutate the document. The Templates
       // rail stays clickable during a preview, so this is load-bearing.
@@ -5839,18 +5843,24 @@ export const useEditor = create<EditorState>((set, get) => {
       const newFonts = structuredClone(
         ((file.fonts ?? []) as FontRef[]).filter((f) => f?.family && !haveFamily.has(f.family.toLowerCase())),
       );
-      const at = doc.pages.length;
       const prevPage = get().activePage;
       const prevSel = get().selection;
+      // Replace swaps the active page out; the removed page object is held
+      // as-is so undo restores it untouched (ids, unknown keys and all).
+      const replace = !!opts?.replaceActive && !!cur;
+      const at = replace ? doc.pages.indexOf(cur) : doc.pages.length;
+      let removed: Page | null = null;
       perform(
         () => {
           doc.assets.push(...newAssets);
           docFonts.push(...newFonts);
-          doc.pages.push(...(made.map((m) => structuredClone(m)) as never[]));
+          const fresh = made.map((m) => structuredClone(m)) as never[];
+          if (replace) removed = doc.pages.splice(at, 1, ...fresh)[0] as Page;
+          else doc.pages.push(...fresh);
           set({ activePage: at, selection: [] });
         },
         () => {
-          doc.pages.splice(at, made.length);
+          doc.pages.splice(at, made.length, ...(removed ? [removed as never] : []));
           for (const a of newAssets) {
             const i = doc.assets.findIndex((x) => x.id === a.id);
             if (i >= 0) doc.assets.splice(i, 1);

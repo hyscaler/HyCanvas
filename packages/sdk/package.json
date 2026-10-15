@@ -1,7 +1,7 @@
 {
   "name": "@hc/sdk",
   "version": "0.1.0",
-  "license": "Elastic-2.0",
+  "license": "AGPL-3.0-only",
   "private": true,
   "description": "HyCanvas typed REST/WS client used by the web app and the public API",
   "main": "dist/index.js",
