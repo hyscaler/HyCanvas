@@ -12,6 +12,7 @@ import { CanvasFloor } from "@/components/ui/CanvasFloor";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { tr } from "@/lib/i18n";
+import { VIEWPORT } from "@/lib/viewport";
 
 type State = "verifying" | "ok" | "error";
 
@@ -34,6 +35,7 @@ export default function VerifyEmailPage() {
   return (
     <>
       <Head>
+        <meta key="viewport" name="viewport" content={VIEWPORT} />
         <title>{tr("page.verify_email_hycanvas")}</title>
       </Head>
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">

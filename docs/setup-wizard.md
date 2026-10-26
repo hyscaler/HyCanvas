@@ -2,13 +2,13 @@
 
 HyCanvas ships as a single binary with the web app embedded. Point it at a PostgreSQL database and it runs; the first-run wizard collects that configuration for you, validates every answer live, and writes the `.env` itself. This page walks every step with screenshots.
 
-For downloading the binary, Docker, and reverse-proxy details, see the root [README](../README.md#install-a-prebuilt-binary).
+For downloading the binary, Docker, and reverse-proxy details, see [Self-hosting](self-hosting.md#install-a-prebuilt-binary).
 
 ## Before you start
 
 - The `hycanvas` binary for your platform (from the [releases page](https://github.com/hyscaler/HyCanvas/releases)), run as a regular user, never root.
 - A reachable PostgreSQL server and credentials. The database itself must exist; HyCanvas creates all tables.
-- Optional: S3-compatible object storage (local disk works fine and can be [migrated to S3 later](../README.md#moving-from-local-storage-to-s3)).
+- Optional: S3-compatible object storage (local disk works fine and can be [migrated to S3 later](self-hosting.md#moving-from-local-storage-to-s3)).
 - Optional: SMTP credentials for email (verification, invitations, magic links).
 
 ## Start the server
@@ -81,8 +81,8 @@ The freshly started server asks for the first account. It gets its own workspace
 
 ## After the wizard
 
-- The configuration lives in `.env` next to the binary; edit it and `./hycanvas service restart` to change anything. See [Environment Variables](../README.md#environment-variables).
-- Useful next steps: [Google / OIDC sign-in](../README.md#sign-in-with-google-or-any-oidc-provider), storage limits (`ASSET_QUOTA_BYTES` per workspace, `USER_STORAGE_QUOTA_BYTES` per user across workspaces), and [moving local storage to S3](../README.md#moving-from-local-storage-to-s3).
+- The configuration lives in `.env` next to the binary; edit it and `./hycanvas service restart` to change anything. See [Environment Variables](self-hosting.md#environment-variables).
+- Useful next steps: [Google / OIDC sign-in](self-hosting.md#sign-in-with-google-or-any-oidc-provider), storage limits (`ASSET_QUOTA_BYTES` per workspace, `USER_STORAGE_QUOTA_BYTES` per user across workspaces), and [moving local storage to S3](self-hosting.md#moving-from-local-storage-to-s3).
 - Service management: `./hycanvas service status|log|restart|stop`; add an `@reboot` cron entry (or your init system) so it starts on boot.
 
 ## Upgrading

@@ -1,0 +1,13 @@
+# Generated files: collapsed in GitHub diffs and left out of the language
+# stats. Edit the source and rerun the generator instead.
+
+# esbuild bundles embedded in the Go backend
+backend/internal/composer/composer.js linguist-generated=true
+backend/internal/crdt/fold.js linguist-generated=true
+
+# Font catalog, theme tokens and kit vocabulary
+packages/text/src/font-catalog.generated.ts linguist-generated=true
+frontend/src/lib/theme.generated.ts linguist-generated=true
+backend/internal/aistudio/kitvocab_gen.go linguist-generated=true
+backend/internal/realtime/presence_palette_gen.go linguist-generated=true
+backend/internal/platform/brand/brand_gen.go linguist-generated=true

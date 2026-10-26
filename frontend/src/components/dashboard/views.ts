@@ -9,6 +9,7 @@ export const dashboardViews = [
   "favorites",
   "tasks",
   "templates",
+  "brands",
   "members",
   "trash",
 ] as const;
@@ -20,6 +21,7 @@ export const dashboardTitles: Record<DashboardView, string> = {
   favorites: "Favorites",
   tasks: "My tasks",
   templates: "Templates",
+  brands: "Brand kits",
   members: "Members",
   trash: "Trash",
 };

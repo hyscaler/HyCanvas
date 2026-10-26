@@ -103,3 +103,13 @@ func TestScanBrandHTMLDegenerateInputs(t *testing.T) {
 		t.Fatalf("non-http logo ref accepted: %v", scan.LogoURLs)
 	}
 }
+
+func TestScanBrandHTMLCollectsHeadingText(t *testing.T) {
+	base := mustURL(t, "https://acme.example/")
+	page := `<html><body><h1>  Robots for <em>small</em>
+	teams </h1><script>var x = "<h2>not text</h2>";</script><h2>Built <style>.a{}</style>to last</h2><p>skip me</p></body></html>`
+	scan := scanBrandHTML([]byte(page), base)
+	if strings.Join(scan.Headings, "|") != "Robots for small teams|Built to last" {
+		t.Fatalf("headings = %q", scan.Headings)
+	}
+}

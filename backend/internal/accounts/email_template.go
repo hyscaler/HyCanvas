@@ -98,7 +98,7 @@ func renderBodyInner(c emailContent) string {
 	b.WriteString(`</td></tr>`)
 	// Footer.
 	b.WriteString(`<tr><td align="center" style="padding:24px 8px 0;font-family:` + emailFont + `;font-size:12px;line-height:1.6;color:#a1a1aa;">`)
-	b.WriteString(`<p style="margin:0 0 4px;">` + h(brand.Name) + ` is a free, self-hostable design tool.</p>`)
+	b.WriteString(`<p style="margin:0 0 4px;">` + h(brand.Name) + ` is a free, open-source design tool.</p>`)
 	b.WriteString(`<p style="margin:0;">You received this email because of activity on your ` + h(brand.Name) + ` account.</p>`)
 	b.WriteString(`</td></tr></table></td></tr></table>`)
 	return b.String()
@@ -114,7 +114,7 @@ func renderText(c emailContent) string {
 	if strings.TrimSpace(c.Footnote) != "" {
 		b.WriteString("\n" + c.Footnote + "\n")
 	}
-	b.WriteString("\n" + brand.Name + " is a free, self-hostable design tool.\n")
+	b.WriteString("\n" + brand.Name + " is a free, open-source design tool.\n")
 	b.WriteString("You received this email because of activity on your " + brand.Name + " account.\n")
 	return b.String()
 }

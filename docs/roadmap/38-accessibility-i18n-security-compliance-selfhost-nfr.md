@@ -40,7 +40,7 @@ In scope:
 - Self-host and private cloud: the deployment topology, configuration, and operations for running the whole platform (the whole product) on customer infrastructure via docker-compose and Helm (extending the architecture baseline).
 - Non-functional requirements: availability/SLA, scalability, reliability (autosave/no data loss), observability, and backups/disaster recovery with defined RPO/RTO targets.
 
-Deliberately out of scope, decided August 2026. These were in the original enterprise-governance sweep and are being dropped rather than deferred, because they target a buyer a free, self-hostable product is not pursuing, and each carries permanent cost:
+Deliberately out of scope, decided August 2026. These were in the original enterprise-governance sweep and are being dropped rather than deferred, because they target a buyer a free, open-source product is not pursuing, and each carries permanent cost:
 
 - **SAML 2.0.** OIDC ships and covers every modern identity provider (Okta, Entra, Google, Auth0, Keycloak). SAML serves legacy IdPs and is expensive in the worst way: XML signature validation is one of the most reliably vulnerable surfaces in enterprise auth, and adopting it means owning that risk permanently. An operator who must have SAML can put an OIDC-speaking gateway in front.
 - **SCIM 2.0.** Its real value is automated DEPROVISIONING. Without it an admin removes a departed user by hand, which is a genuine security gap rather than a mere inconvenience, and it is recorded here as a known one. For self-hosted teams whose admin knows their users, manual removal plus the API is enough.

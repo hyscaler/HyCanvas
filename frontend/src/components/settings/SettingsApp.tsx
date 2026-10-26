@@ -461,14 +461,14 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
         <h1 className="text-sm font-semibold text-neutral-800">{tr("settings.settings")}</h1>
       </header>
 
-      <div className="mx-auto grid max-w-4xl gap-8 px-6 py-10 md:grid-cols-[12rem_1fr]">
+      <div className="mx-auto grid max-w-4xl grid-cols-[minmax(0,1fr)] gap-8 px-4 py-8 sm:px-6 sm:py-10 md:grid-cols-[12rem_minmax(0,1fr)]">
         {/* Sub-nav */}
-        <nav className="flex gap-1 md:flex-col">
+        <nav className="oc-scroll-none -mx-1 flex gap-1 overflow-x-auto px-1 md:mx-0 md:flex-col md:overflow-visible md:px-0">
           {tabs().map((t) => (
             <button
               key={t.id}
               onClick={() => gotoTab(t.id)}
-              className={`flex flex-1 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition md:flex-none ${tab === t.id ? "bg-brand-50 text-brand-ink" : "text-neutral-600 hover:bg-neutral-100"}`}
+              className={`flex flex-none items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${tab === t.id ? "bg-brand-50 text-brand-ink" : "text-neutral-600 hover:bg-neutral-100"}`}
             >
               <t.icon size={16} className={tab === t.id ? "text-brand-ink" : "text-neutral-400"} />
               {t.label}

@@ -57,35 +57,9 @@ import { usePresence } from "@/store/presence";
 import { useBoardFocus, enterBoardFocus, exitBoardFocus } from "@/store/boardFocus";
 import { designSurfaceDir, mirrorInRtl, documentDirection } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 
 type Status = "loading" | "ready" | "error" | "forbidden" | "notfound";
-
-/**
- * Subscribe to a CSS media query and return whether it currently matches. Uses
- * matchMedia so the overlay-vs-push and very-narrow decisions track real layout
- * breakpoints without polling the viewport on every resize. SSR-safe (returns
- * false until mounted); the listener is added once and cleaned up on unmount,
- * and setState only fires from the change event (never synchronously in render),
- * so it is React-compiler-safe with no update loop.
- */
-function useMediaQuery(query: string): boolean {
-  // Lazy initializer reads the current match on the client (false during SSR),
-  // so the effect never has to setState synchronously in its body. The effect
-  // only subscribes; setState fires from the change-event callback. The query
-  // strings used here are constant per call site, so there is no stale-initial
-  // concern across renders.
-  const [matches, setMatches] = useState(() =>
-    typeof window !== "undefined" && !!window.matchMedia && window.matchMedia(query).matches,
-  );
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const mql = window.matchMedia(query);
-    const onChange = (e: MediaQueryListEvent) => setMatches(e.matches);
-    mql.addEventListener("change", onChange);
-    return () => mql.removeEventListener("change", onChange);
-  }, [query]);
-  return matches;
-}
 
 function ViewToggles() {
   const showRulers = useEditor((s) => s.showRulers);
@@ -935,11 +909,11 @@ export function EditorApp() {
   }
 
   if (status === "loading") {
-    return <div className="grid h-screen place-items-center text-neutral-400"><Spinner className="text-2xl" /></div>;
+    return <div className="grid h-dvh place-items-center text-neutral-400"><Spinner className="text-2xl" /></div>;
   }
   if (status === "error") {
     return (
-      <div className="grid h-screen place-items-center gap-3 text-center">
+      <div className="grid h-dvh place-items-center gap-3 text-center">
         <p className="text-sm text-neutral-600">{tr("editor.could_not_open_this_design")}</p>
         <Button variant="secondary" onClick={() => void router.push("/dashboard")}>{tr("editor.back_to_dashboard")}</Button>
       </div>
@@ -962,7 +936,7 @@ export function EditorApp() {
   return (
     // relative so the whole-editor drop overlay positions against the editor
     // rather than the viewport.
-    <EditorFileDropProvider className="relative flex h-screen w-screen flex-col overflow-hidden bg-neutral-100 text-neutral-900">
+    <EditorFileDropProvider className="relative flex h-dvh w-screen flex-col overflow-hidden bg-neutral-100 text-neutral-900">
       {/* Top bar. flex-nowrap keeps the bar single-line down to ~768px; the
           title input shrinks/truncates and secondary actions live in the
           OverflowMenu so groups overflow gracefully instead of wrapping. In

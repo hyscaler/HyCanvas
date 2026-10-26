@@ -351,6 +351,7 @@ export function DocSurface(props: { workspaceId?: string; designId?: string }): 
   // --- inline AI ------------------------------------------------------------
 
   const [aiBusy, setAiBusy] = useState<string | null>(null); // blockId currently running
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null); // last focused block
 
   const runAi = useCallback(
     async (block: DocBlock, prompt: string) => {
@@ -407,8 +408,8 @@ export function DocSurface(props: { workspaceId?: string; designId?: string }): 
       <div className="flex-1 overflow-y-auto">
         {/* Explicit direction sets the whole page; "auto" lets each block
             resolve from its own first strong character (native dir=auto). */}
-        <div className="mx-auto my-10 w-full max-w-[760px] px-4" dir={direction === "auto" ? undefined : direction}>
-          <div className="rounded-2xl bg-surface px-12 py-14 shadow-sm ring-1 ring-neutral-200">
+        <div className="mx-auto my-4 w-full max-w-[760px] px-3 sm:my-10 sm:px-4" dir={direction === "auto" ? undefined : direction}>
+          <div className="rounded-2xl bg-surface px-5 py-8 shadow-sm ring-1 ring-neutral-200 sm:px-12 sm:py-14">
             {blocks.length === 0 ? (
               <p className="text-sm text-neutral-400">{tr("editor.loading_document")}</p>
             ) : (
@@ -421,6 +422,8 @@ export function DocSurface(props: { workspaceId?: string; designId?: string }): 
                     count={blocks.length}
                     aiEnabled={aiEnabled}
                     aiBusy={aiBusy === block.id}
+                    active={activeBlockId === block.id}
+                    onActivate={() => setActiveBlockId(block.id)}
                     onChange={(next) => replaceBlock(block.id, next)}
                     onInsertAfter={(b) => insertAfter(i, b)}
                     onDelete={() => deleteBlock(block.id)}
@@ -459,7 +462,7 @@ function DocToolbar({
   onDirectionChange: (d: "ltr" | "rtl" | "auto") => void;
 }): React.ReactElement {
   return (
-    <div className="flex shrink-0 items-center gap-2 border-b border-neutral-200 bg-surface px-4 py-2">
+    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-neutral-200 bg-surface px-4 py-2">
       <span className="text-sm font-semibold text-neutral-700">{tr("editor.document")}</span>
       <div className="flex-1" />
       <button
@@ -523,6 +526,8 @@ function BlockRow({
   count,
   aiEnabled,
   aiBusy,
+  active,
+  onActivate,
   onChange,
   onInsertAfter,
   onDelete,
@@ -535,6 +540,9 @@ function BlockRow({
   count: number;
   aiEnabled: boolean;
   aiBusy: boolean;
+  /** The block last focused; on phones only its controls are shown. */
+  active: boolean;
+  onActivate: () => void;
   onChange: (next: DocBlock) => void;
   onInsertAfter: (b: DocBlock) => void;
   onDelete: () => void;
@@ -549,9 +557,13 @@ function BlockRow({
   const supportsText = blockSupportsText(block);
 
   return (
-    <div className="group relative">
-      {/* Left gutter controls (visible on hover) */}
-      <div className="absolute -left-11 top-0 flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+    <div className="group relative" onFocusCapture={onActivate}>
+      {/* Left gutter controls (visible on hover). Phones have no hover and no
+          room for a gutter, so there the active block's controls sit inline
+          above it. State, not :focus-within, decides which block is active:
+          iOS does not focus a tapped button, so focus-gated controls would
+          vanish before the tap lands. */}
+      <div className={`absolute -left-11 top-0 flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100 max-md:static max-md:opacity-100 ${active ? "max-md:inline-flex" : "max-md:hidden"}`}>
         <IconButton
           size="sm"
           aria-label={tr("editor.insert_block_below")}
@@ -576,7 +588,7 @@ function BlockRow({
       )}
 
       {/* Right per-block controls */}
-      <div className="absolute -right-2 top-0 z-10 flex translate-x-full items-center gap-0.5 pl-1 opacity-0 transition group-hover:opacity-100">
+      <div className={`absolute -right-2 top-0 z-10 flex translate-x-full items-center gap-0.5 pl-1 opacity-0 transition group-hover:opacity-100 max-md:static max-md:translate-x-0 max-md:pl-0 max-md:opacity-100 ${active ? "max-md:inline-flex" : "max-md:hidden"}`}>
         {supportsText && aiEnabled && (
           <div className="relative">
             <IconButton

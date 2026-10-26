@@ -1299,10 +1299,12 @@ export function WhiteboardSurface(props: {
 
       {/* Floating toolbar. Absolutely positioned so it only captures pointer
           events on its own controls; draggable by the grip handle (defaults to
-          the top-left until moved). */}
+          the top-left until moved). On phones it wraps onto more rows rather
+          than running off the screen; wrapping, unlike a scroll box, does not
+          clip the toolbar's own popovers. */}
       <div
         ref={toolbarRef}
-        className="absolute z-10 flex items-center gap-1 rounded-2xl border border-neutral-200 bg-surface/95 p-1.5 shadow-lg backdrop-blur"
+        className="absolute z-10 flex items-center gap-1 rounded-2xl border border-neutral-200 bg-surface/95 p-1.5 shadow-lg backdrop-blur max-md:max-w-[calc(100%-1.5rem)] max-md:flex-wrap"
         style={toolbarPos ? { left: toolbarPos.x, top: toolbarPos.y } : { left: 12, top: 12 }}
       >
         <button

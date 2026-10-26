@@ -39,7 +39,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       aria-label={ariaLabel ?? tooltip}
       className={cn(
         "inline-grid place-items-center rounded-lg text-neutral-600 transition hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 disabled:opacity-40",
-        size === "sm" ? "h-8 w-8" : "h-9 w-9",
+        size === "sm" ? "h-8 w-8 pointer-coarse:h-10 pointer-coarse:w-10" : "h-9 w-9 pointer-coarse:h-10 pointer-coarse:w-10",
         active && "bg-brand-50 text-brand-ink hover:bg-brand-50",
         className,
       )}

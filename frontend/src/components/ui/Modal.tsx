@@ -97,7 +97,11 @@ export function Modal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-neutral-900/40 p-4 backdrop-blur-sm" onClick={onClose}>
+    // The single minmax(0,1fr) track bounds the panel to the viewport, so a
+    // fixed-width dialog shrinks to fit a phone instead of overflowing it. On
+    // narrow screens the panel also scrolls rather than running off the bottom;
+    // wider screens keep overflow visible so in-dialog popovers are not clipped.
+    <div className="fixed inset-0 z-50 grid grid-cols-[minmax(0,1fr)] place-items-center bg-neutral-900/40 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
         ref={panelRef}
         role="dialog"
@@ -105,7 +109,7 @@ export function Modal({
         aria-labelledby={title ? titleId : undefined}
         aria-label={title ? undefined : (ariaLabel ?? tr("ui.dialog"))}
         tabIndex={-1}
-        className={`${width} rounded-2xl bg-surface p-5 shadow-2xl outline-none`}
+        className={`${width} max-w-full rounded-2xl bg-surface p-5 shadow-2xl outline-none max-md:max-h-[calc(100dvh-2rem)] max-md:overflow-y-auto`}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={onPanelKeyDown}
       >

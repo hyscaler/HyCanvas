@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Head from "next/head";
 import { RequireAuth } from "@/components/RequireAuth";
 import { tr } from "@/lib/i18n";
+import { VIEWPORT } from "@/lib/viewport";
 
 const EditorApp = dynamic(
   () => import("@/components/editor/EditorApp").then((m) => m.EditorApp),
@@ -15,6 +16,7 @@ export default function EditorPage() {
   return (
     <>
       <Head>
+        <meta key="viewport" name="viewport" content={VIEWPORT} />
         <title>{tr("page.hycanvas_editor")}</title>
       </Head>
       <RequireAuth>

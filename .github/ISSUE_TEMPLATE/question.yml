@@ -1,0 +1,30 @@
+name: Question
+description: Ask how to do something with HyCanvas.
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Most questions get a faster answer in [Discussions > Q&A](https://github.com/hyscaler/HyCanvas/discussions/categories/q-a), where others can find the answer later too. The [docs](https://docs.hycanvas.com) cover setup, the editor, and every document type.
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What you are trying to do, and what you have tried.
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How do you run HyCanvas?
+      options:
+        - hycanvas.art (hosted)
+        - Docker (published image)
+        - Prebuilt binary
+        - Built from source
+        - Other
+  - type: input
+    id: version
+    attributes:
+      label: HyCanvas version
+      placeholder: v0.3.17

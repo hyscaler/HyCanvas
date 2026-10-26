@@ -1,0 +1,11 @@
+# Generated files. Edit the source and rerun the generator instead of
+# formatting the output.
+
+# esbuild bundles embedded in the Go backend
+# (scripts/build-composer.mjs, scripts/build-crdt-fold.mjs)
+backend/internal/composer/composer.js
+backend/internal/crdt/fold.js
+
+# Font catalog and theme tokens
+packages/text/src/font-catalog.generated.ts
+frontend/src/lib/theme.generated.ts

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and help
+    url: https://github.com/hyscaler/HyCanvas/discussions/categories/q-a
+    about: Ask how to do something, or help someone else.
+  - name: Report a security vulnerability
+    url: https://github.com/hyscaler/HyCanvas/security/advisories/new
+    about: Please report vulnerabilities privately, not as a public issue.
+  - name: Documentation
+    url: https://docs.hycanvas.com
+    about: Guides for using, self-hosting, and operating HyCanvas.

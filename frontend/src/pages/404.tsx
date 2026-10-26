@@ -5,11 +5,13 @@
 import Head from "next/head";
 import { NotFoundScreen } from "@/components/ui/NotFound";
 import { tr } from "@/lib/i18n";
+import { VIEWPORT } from "@/lib/viewport";
 
 export default function NotFound() {
   return (
     <>
       <Head>
+        <meta key="viewport" name="viewport" content={VIEWPORT} />
         <title>{tr("page.page_not_found_hycanvas")}</title>
         <meta name="robots" content="noindex" />
       </Head>

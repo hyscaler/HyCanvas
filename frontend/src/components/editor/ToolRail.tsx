@@ -88,7 +88,7 @@ export function ToolRail({ workspaceId, designId = null, overlay = false, defaul
         role="toolbar"
         aria-label={tr("editor.editor_tools")}
         aria-orientation="vertical"
-        className="flex w-[68px] shrink-0 flex-col items-center gap-1 border-e border-neutral-200 bg-surface py-3"
+        className="flex w-[68px] shrink-0 flex-col items-center gap-1 border-e max-lg:overflow-y-auto border-neutral-200 bg-surface py-3"
       >
         {tools().filter((t) => kind === "design" || t.id !== "templates").map((t) => {
           const isActive = active === t.id;

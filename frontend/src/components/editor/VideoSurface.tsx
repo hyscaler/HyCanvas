@@ -181,6 +181,14 @@ const MEDIA_W_KEY = "oc-video-media-w";
 const INSPECTOR_W_KEY = "oc-video-inspector-w";
 const MEDIA_W_DEFAULT = 208;
 const INSPECTOR_W_DEFAULT = 240;
+// A side panel with no stored choice starts open only on a wide screen: on a
+// phone or small tablet the two sidebars would leave the stage no room.
+const storedPanelOpen = (key: string): boolean => {
+  if (typeof window === "undefined") return true;
+  const v = window.localStorage.getItem(key);
+  if (v !== null) return v !== "0";
+  return !window.matchMedia || window.matchMedia("(min-width: 1024px)").matches;
+};
 const clampSidebarW = (w: number) => Math.max(170, Math.min(480, Math.round(w)));
 const storedSidebarW = (key: string, fallback: number): number => {
   if (typeof window === "undefined") return fallback;
@@ -822,10 +830,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
   // Right clip-inspector open/closed state, persisted per-user in localStorage.
   // Lazy initializer reads the stored value once on mount; we write on every
   // toggle (NOT via a setState-in-effect), so the panel state survives reloads.
-  const [inspectorOpen, setInspectorOpen] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
-    return window.localStorage.getItem(INSPECTOR_OPEN_KEY) !== "0";
-  });
+  const [inspectorOpen, setInspectorOpen] = useState<boolean>(() => storedPanelOpen(INSPECTOR_OPEN_KEY));
   const toggleInspector = useCallback(() => {
     setInspectorOpen((prev) => {
       const next = !prev;
@@ -836,10 +841,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
     });
   }, []);
   // The media panel and the bottom timeline collapse the same way (persisted).
-  const [mediaOpen, setMediaOpen] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.localStorage.getItem(MEDIA_OPEN_KEY) !== "0";
-  });
+  const [mediaOpen, setMediaOpen] = useState(() => storedPanelOpen(MEDIA_OPEN_KEY));
   const toggleMedia = useCallback(() => {
     setMediaOpen((prev) => {
       const next = !prev;
@@ -6461,7 +6463,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       {replaceTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setReplaceTarget(null)}>
           <div
-            className="max-h-[70vh] w-[24rem] overflow-y-auto rounded-xl border border-neutral-300 bg-neutral-100 p-4 shadow-2xl"
+            className="max-h-[70vh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-neutral-300 bg-neutral-100 p-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-2 text-sm font-semibold text-neutral-900">{tr("editor.replace_media")}</div>
@@ -6606,7 +6608,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       {(pickerTrackId || pickingImage) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => { setPickerTrackId(null); setPickingImage(false); }}>
           <div
-            className="max-h-[70vh] w-[28rem] overflow-y-auto rounded-xl border border-neutral-300 bg-neutral-100 p-4 shadow-2xl"
+            className="max-h-[70vh] w-[min(28rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-neutral-300 bg-neutral-100 p-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-2 flex items-center justify-between">

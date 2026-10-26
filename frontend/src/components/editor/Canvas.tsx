@@ -1170,6 +1170,19 @@ export function Canvas() {
   // two-finger pinch-zoom + pan about the fingers' midpoint.
   const pointers = useRef<Map<number, { clientX: number; clientY: number; type: string }>>(new Map());
   const pinch = useRef<{ startDist: number; startZoom: number; anchor: { x: number; y: number } } | null>(null);
+  // Set once a stylus touches the canvas this session. Only then does a single
+  // finger pan under a drawing tool; on a phone with no stylus the finger draws.
+  const penSeen = useRef(false);
+  // Touch long-press opens the context menu: iOS never fires contextmenu for a
+  // finger, so without this a phone has no way to reach the menu's actions.
+  const longPress = useRef<{ timer: number; x: number; y: number } | null>(null);
+  const clearLongPress = () => {
+    if (longPress.current) window.clearTimeout(longPress.current.timer);
+    longPress.current = null;
+  };
+  useEffect(() => () => {
+    if (longPress.current) window.clearTimeout(longPress.current.timer);
+  }, []);
   // Coalesce move-drag updates to one apply per animation frame: pointermove can
   // fire several times per frame (esp. on 120Hz trackpads), and each apply bumps
   // the store rev (re-rendering the gizmo, panels, and canvas), so processing
@@ -1511,6 +1524,7 @@ export function Canvas() {
 
     // --- Touch / stylus input (FR-31) -------------------------------------
     pointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY, type: e.pointerType });
+    if (e.pointerType === "pen") penSeen.current = true;
     const touchPts = [...pointers.current.values()].filter((p) => p.type === "touch");
     const penDown = [...pointers.current.values()].some((p) => p.type === "pen");
     // Palm rejection: ignore touch contacts while a pen is down (pen draws, the
@@ -1523,6 +1537,7 @@ export function Canvas() {
     // single-pointer gesture (move/marquee/erase/draw/pan) so a leftover finger
     // can't resume it after the pinch ends, and clears the grab cursor.
     if (touchPts.length >= 2) {
+      clearLongPress();
       const [a, b] = touchPts;
       const mid = localPoint({ clientX: (a.clientX + b.clientX) / 2, clientY: (a.clientY + b.clientY) / 2 });
       pinch.current = {
@@ -1536,11 +1551,25 @@ export function Canvas() {
       e.preventDefault();
       return;
     }
-    // One finger while a DRAW/create tool is active: pan instead of drawing, so a
-    // finger repositions the board while the pen draws (FR-31). Direct-manipulation
-    // tools (select/comment/eraser/laser) still act on a single finger; two fingers
-    // always navigate.
-    if (e.pointerType === "touch" && touchPts.length === 1) {
+    // One finger while a DRAW/create tool is active on a stylus device: pan
+    // instead of drawing, so a finger repositions the board while the pen draws
+    // (FR-31). Without a stylus (a phone) the finger is the only way to draw, so
+    // it draws. Direct-manipulation tools (select/comment/eraser/laser) always
+    // act on a single finger; two fingers always navigate.
+    if (e.pointerType === "touch" && touchPts.length === 1 && useEditor.getState().tool === "select") {
+      clearLongPress();
+      const { clientX, clientY } = e;
+      longPress.current = {
+        x: clientX,
+        y: clientY,
+        timer: window.setTimeout(() => {
+          longPress.current = null;
+          cancelInteraction();
+          onContextMenu({ preventDefault() {}, clientX, clientY } as React.MouseEvent);
+        }, 550),
+      };
+    }
+    if (e.pointerType === "touch" && touchPts.length === 1 && penSeen.current) {
       const dt = useEditor.getState().tool;
       const drawTool = dt === "pen" || dt === "pencil" || dt === "ink" || dt === "line" || dt === "arrow" || dt === "rect" || dt === "ellipse";
       if (drawTool) {
@@ -1957,6 +1986,7 @@ export function Canvas() {
     // Keep the multi-touch tracker current, then drive an active pinch (FR-31):
     // zoom by the finger-distance ratio and pan so the start page-anchor stays
     // under the moving midpoint (the wheel-zoom-about-cursor math).
+    if (longPress.current && Math.hypot(e.clientX - longPress.current.x, e.clientY - longPress.current.y) > 8) clearLongPress();
     if (pointers.current.has(e.pointerId)) {
       pointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY, type: e.pointerType });
     }
@@ -2075,6 +2105,7 @@ export function Canvas() {
   // down EVERY in-progress interaction (pinch, pan, and any draw/select/erase
   // draft) and release capture, so nothing is left half-built or stuck (FR-31).
   function onPointerCancel(e: React.PointerEvent) {
+    clearLongPress();
     pointers.current.delete(e.pointerId);
     if ([...pointers.current.values()].filter((p) => p.type === "touch").length < 2) pinch.current = null;
     panning.current = null;
@@ -2085,6 +2116,7 @@ export function Canvas() {
   }
 
   function onPointerUp(e: React.PointerEvent) {
+    clearLongPress();
     // Apply any move frame still queued from the last pointermove, so the commit
     // below records the exact final position (not one frame behind the cursor).
     flushMove();

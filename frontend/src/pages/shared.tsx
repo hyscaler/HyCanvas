@@ -26,6 +26,7 @@ import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { tr } from "@/lib/i18n";
+import { VIEWPORT } from "@/lib/viewport";
 
 const SharedViewer = dynamic(
   () => import("@/components/SharedViewer").then((m) => m.SharedViewer),
@@ -221,6 +222,7 @@ export default function SharedLinkPage() {
       return (
         <>
           <Head>
+            <meta key="viewport" name="viewport" content={VIEWPORT} />
             <title>{designTitle} · HyCanvas</title>
           </Head>
           <RemoteControlScreen token={token} password={password || undefined} title={designTitle} />
@@ -235,9 +237,10 @@ export default function SharedLinkPage() {
       return (
         <>
           <Head>
+            <meta key="viewport" name="viewport" content={VIEWPORT} />
             <title>{designTitle}</title>
           </Head>
-          <div className="flex h-screen flex-col bg-neutral-100">
+          <div className="flex h-dvh flex-col bg-neutral-100">
             <SharedViewer doc={state.file} token={embedToken || undefined} password={password || undefined} />
           </div>
         </>
@@ -251,6 +254,7 @@ export default function SharedLinkPage() {
     return (
       <>
         <Head>
+          <meta key="viewport" name="viewport" content={VIEWPORT} />
           <title>{designTitle} · HyCanvas</title>
         </Head>
         {/* A column flex screen so the deck player can fill the space under the
@@ -287,6 +291,7 @@ export default function SharedLinkPage() {
   return (
     <>
       <Head>
+        <meta key="viewport" name="viewport" content={VIEWPORT} />
         <title>{tr("page.shared_design_hycanvas")}</title>
       </Head>
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">

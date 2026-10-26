@@ -14,6 +14,7 @@ import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { tr } from "@/lib/i18n";
+import { VIEWPORT } from "@/lib/viewport";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -53,6 +54,7 @@ export default function ResetPasswordPage() {
   return (
     <>
       <Head>
+        <meta key="viewport" name="viewport" content={VIEWPORT} />
         <title>{tr("page.reset_password_hycanvas")}</title>
       </Head>
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">

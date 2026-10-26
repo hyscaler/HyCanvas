@@ -103,7 +103,7 @@ export function PagesBar() {
 
   return (
     // A navigation landmark: this strip is how a user moves between pages.
-    <nav aria-label={tr("editor.pages")} className="flex shrink-0 items-center gap-2 border-t border-neutral-200 bg-surface px-3">
+    <nav aria-label={tr("editor.pages")} className="flex shrink-0 items-center gap-2 border-t border-neutral-200 bg-surface px-3 pb-[env(safe-area-inset-bottom)]">
       {/* Vertical padding lives INSIDE the scroll strip: the thumbs' hover
           buttons overhang the tile tops, and top overflow in a scroll
           container is clipped, not scrollable. */}

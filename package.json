@@ -54,11 +54,12 @@
     "concurrently": "^9.1.0",
     "dotenv-cli": "^8.0.0",
     "puppeteer-core": "^25.5.0",
-    "shx": "^0.3.4"
+    "shx": "^0.3.4",
+    "vite": "7.3.7"
   },
   "overrides": {
-    "dompurify": "^3.4.16",
-    "vite": "^7.3.6",
+    "dompurify": "^3.4.17",
+    "vite": "7.3.7",
     "esbuild": ">=0.28.1",
     "shell-quote": "^1.12.0",
     "postcss": ">=8.5.18",
@@ -66,7 +67,7 @@
     "js-yaml": "^4.3.1",
     "protobufjs": ">=7.6.5",
     "sharp": "^0.35.5",
-    "fast-uri": "^4.2.1",
+    "fast-uri": "^3.1.9",
     "brace-expansion": "^5.0.12",
     "source-map-js": "^1.2.2",
     "minimatch@3": {

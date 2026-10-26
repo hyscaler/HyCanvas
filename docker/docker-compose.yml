@@ -1,0 +1,55 @@
+# HyCanvas quick start: the published image plus a bundled Postgres.
+#
+#   mkdir hycanvas && cd hycanvas
+#   curl -fsSLO https://raw.githubusercontent.com/hyscaler/HyCanvas/development/docker/docker-compose.yml
+#   echo "JWT_SECRET=$(openssl rand -hex 32)" > .env
+#   docker compose up -d
+#
+# Then open http://localhost:8005 and create the first account. The app applies
+# its database migrations on boot. Update later with
+# `docker compose pull && docker compose up -d`.
+#
+# This file is for trying HyCanvas on one machine. For a managed Postgres, a
+# reverse proxy with TLS, or S3 storage, see DOCKER_SETUP.md and the root
+# docker-compose.yml (bring-your-own Postgres).
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hycanvas
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hycanvas}
+      POSTGRES_DB: hycanvas
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hycanvas -d hycanvas"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    image: hycanvas/hycanvas:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${HYCANVAS_PORT:-8005}:8005"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://hycanvas:${POSTGRES_PASSWORD:-hycanvas}@db:5432/hycanvas?schema=public
+      # Required: the app refuses to start without it. The quick start writes
+      # one into .env; keep it stable, or every session is signed out.
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env, for example with openssl rand -hex 32}
+      # Served over plain http://localhost here, so cookies must not be Secure or
+      # the browser drops the session. Behind a TLS proxy, set this to "true"
+      # and APP_URL to your https origin.
+      COOKIE_SECURE: "false"
+    volumes:
+      - storage:/app/.data/storage
+
+volumes:
+  pgdata:
+  storage:

@@ -8,6 +8,7 @@ import {
   type SettingsTab,
 } from "@/components/settings/tabs";
 import { tr } from "@/lib/i18n";
+import { VIEWPORT } from "@/lib/viewport";
 
 // Client-only: depends on auth state and live API calls.
 const SettingsApp = dynamic(() => import("@/components/settings/SettingsApp").then((m) => m.SettingsApp), {
@@ -38,6 +39,7 @@ export default function SettingsPage({ tab }: SettingsPageProps) {
   return (
     <>
       <Head>
+        <meta key="viewport" name="viewport" content={VIEWPORT} />
         <title>{`${settingsTabTitles[tab ?? "account"]} · HyCanvas`}</title>
       </Head>
       <RequireAuth>

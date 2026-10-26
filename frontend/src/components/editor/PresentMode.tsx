@@ -1881,18 +1881,25 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         />
         {/* Presenter tools overlay (FR-8): laser / spotlight / pen ink. Always
             mounted so the paint loop can size it; only intercepts the pointer
-            (and hides the OS cursor) while a pointer tool is active. */}
+            (and hides the OS cursor) while a pointer tool is active. Pointer
+            events, not mouse events, so a finger or stylus draws and points
+            too; touch-action none keeps the browser from scrolling instead. */}
         <canvas
           ref={overlayRef}
           className="pointer-events-none absolute inset-0 z-[105]"
           style={{
             pointerEvents: tool === "none" ? "none" : "auto",
             cursor: tool === "laser" || tool === "spotlight" ? "none" : tool === "pen" ? "crosshair" : "default",
+            touchAction: tool === "none" ? undefined : "none",
           }}
-          onMouseDown={onOverlayDown}
-          onMouseMove={onOverlayMove}
-          onMouseUp={commitStroke}
-          onMouseLeave={() => {
+          onPointerDown={(e) => {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            onOverlayDown(e);
+          }}
+          onPointerMove={onOverlayMove}
+          onPointerUp={commitStroke}
+          onPointerCancel={commitStroke}
+          onPointerLeave={() => {
             // Pointer left the slide: commit any in-progress stroke AND drop the
             // laser/spotlight cursor so its indicator does not freeze on-screen.
             commitStroke();
@@ -1948,7 +1955,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         )}
         {!coachOn && coachReport && (
           <div className="absolute inset-0 z-[108] flex items-center justify-center bg-black/60" onClick={() => setCoachReport(null)}>
-            <div className="w-80 rounded-xl bg-surface p-5 text-sm text-neutral-800 shadow-2xl" onClick={(e) => e.stopPropagation()} data-testid="coach-report">
+            <div className="w-[min(20rem,calc(100vw-2rem))] rounded-xl bg-surface p-5 text-sm text-neutral-800 shadow-2xl" onClick={(e) => e.stopPropagation()} data-testid="coach-report">
               <div className="mb-2 text-base font-semibold">{tr("editor.rehearsal_report")}</div>
               <div className="flex flex-col gap-1">
                 <div>{tr("editor.duration_colon", { count: Math.round(coachReport.elapsedMs / 1000) })}</div>
@@ -1979,7 +1986,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
           the pen is active. Ephemeral ink ops; never touch the design/undo stack. */}
       {tool === "pen" && (
         <div
-          className="absolute bottom-16 left-1/2 z-[108] flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-neutral-950/85 px-3 py-2 text-white shadow-xl backdrop-blur"
+          className="absolute bottom-16 left-1/2 z-[108] flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-neutral-950/85 px-3 py-2 text-white shadow-xl backdrop-blur max-md:w-max max-md:max-w-[calc(100vw-1rem)] max-md:flex-wrap max-md:justify-center max-md:rounded-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {PEN_COLORS.map((c) => (
@@ -2012,7 +2019,9 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         </div>
       )}
 
-      <div className="flex items-center justify-center gap-3 py-3 text-white" onClick={(e) => e.stopPropagation()}>
+      {/* Control bar. On phones the row is wider than the screen, so it scrolls
+          sideways (prev/next first, so they stay in view) instead of clipping. */}
+      <div className="flex items-center justify-center gap-3 py-3 text-white max-md:justify-start max-md:overflow-x-auto max-md:px-3 [&>*]:shrink-0" onClick={(e) => e.stopPropagation()}>
         <button onClick={guardedPrev} disabled={!hasPrev} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30" title={tr("editor.previous_left_arrow")}>
           <ChevronLeft size={18} />
         </button>
@@ -2501,7 +2510,7 @@ function PresenterHud(props: {
   const targetMin = Math.round(targetMs / 60000);
   return (
     <div
-      className="absolute right-4 top-16 bottom-20 z-[110] flex w-[360px] flex-col gap-3 overflow-y-auto rounded-2xl border border-white/10 bg-neutral-950/90 p-4 text-white shadow-2xl backdrop-blur"
+      className="absolute right-4 top-16 bottom-20 z-[110] flex w-[min(360px,calc(100vw-2rem))] flex-col gap-3 overflow-y-auto rounded-2xl border border-white/10 bg-neutral-950/90 p-4 text-white shadow-2xl backdrop-blur"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between">
@@ -2702,7 +2711,7 @@ function PresenterAudience({ designId, state, onRefresh, onClose }: {
   const questions = state?.questions ?? [];
   const polls = state?.polls ?? [];
   return (
-    <aside className="light pointer-events-auto absolute bottom-16 right-4 top-4 z-50 flex w-80 flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl">
+    <aside className="light pointer-events-auto absolute bottom-16 right-4 top-4 z-50 flex w-[min(20rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl">
       <header className="flex items-center justify-between border-b border-neutral-100 px-3 py-2">
         <span className="text-sm font-semibold text-neutral-800">{tr("editor.audience")}</span>
         <span className="flex items-center gap-1">

@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 import { useAuth } from "@/store/auth";
 import { FullScreenLoader } from "@/components/ui/BrandLoader";
 import { tr } from "@/lib/i18n";
+import { VIEWPORT } from "@/lib/viewport";
 
 export default function Home() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function Home() {
   return (
     <>
       <Head>
+        <meta key="viewport" name="viewport" content={VIEWPORT} />
         <title>{tr("page.hycanvas_2")}</title>
         <meta name="description" content={tr("page.a_free_ai_native_visual_design_platform")} />
       </Head>

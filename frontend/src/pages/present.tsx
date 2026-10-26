@@ -14,6 +14,7 @@ import Head from "next/head";
 import dynamic from "next/dynamic";
 import { RequireAuth } from "@/components/RequireAuth";
 import { tr } from "@/lib/i18n";
+import { VIEWPORT } from "@/lib/viewport";
 
 const AudienceStage = dynamic(() => import("@/components/editor/AudienceStage").then((m) => m.AudienceStage), {
   ssr: false,
@@ -44,6 +45,7 @@ export default function PresentPage() {
   return (
     <>
       <Head>
+        <meta key="viewport" name="viewport" content={VIEWPORT} />
         <title>{tr("page.presenting_hycanvas")}</title>
       </Head>
       <RequireAuth>

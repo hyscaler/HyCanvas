@@ -1,0 +1,74 @@
+name: Bug report
+description: Something in HyCanvas is not working as it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Please search [existing issues](https://github.com/hyscaler/HyCanvas/issues) first. Security problems go to the [Security tab](https://github.com/hyscaler/HyCanvas/security/advisories/new), not here.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected to see instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a presentation
+        2. Add a chart
+        3. Export as PDF
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: HyCanvas version
+      description: Returned by `/healthz` and printed in the server startup log. Write "hycanvas.art" if you use the hosted app.
+      placeholder: v0.3.17
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How do you run HyCanvas?
+      options:
+        - hycanvas.art (hosted)
+        - Docker (published image)
+        - Prebuilt binary
+        - Built from source
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Editor (graphics)
+        - Presentations
+        - Video
+        - Whiteboard
+        - Docs or sheets
+        - Export
+        - AI
+        - Collaboration
+        - Dashboard or settings
+        - Self-hosting or install
+        - API or MCP
+        - Other
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Chrome 141 on macOS 15
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and screenshots
+      description: Browser console errors, server log lines, or a screenshot. Remove any keys or personal data first.
+      render: text

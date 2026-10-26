@@ -1,0 +1,50 @@
+name: Feature request
+description: Suggest something HyCanvas should do.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas still taking shape are welcome in [Discussions > Ideas](https://github.com/hyscaler/HyCanvas/discussions/categories/ideas). Check the [feature checklist](https://docs.hycanvas.com/guides/features/) and [`docs/roadmap/`](https://github.com/hyscaler/HyCanvas/tree/development/docs/roadmap) too; it may already be shipped or planned.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what is missing or hard today?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What you would like to see. Mockups and examples help.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Editor (graphics)
+        - Presentations
+        - Video
+        - Whiteboard
+        - Docs or sheets
+        - Export
+        - AI
+        - Collaboration
+        - Templates
+        - Self-hosting or install
+        - API or MCP
+        - Other
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I would like to work on this myself.

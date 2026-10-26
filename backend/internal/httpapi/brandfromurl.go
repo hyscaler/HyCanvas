@@ -30,6 +30,7 @@ import (
 
 func mountBrandFromURL(api chi.Router, studio *aistudio.Service, acct *accounts.Service) {
 	api.With(requireAuth(acct)).Post("/ai/brand-from-url", brandFromURLHandler(studio, acct))
+	api.With(requireAuth(acct)).Post("/ai/brand-suggest", brandSuggestHandler(studio, acct))
 }
 
 // brandScan is the deterministic part of the draft: everything observed on
@@ -38,6 +39,7 @@ type brandScan struct {
 	Title       string
 	Description string
 	ThemeColor  string
+	Headings    []string // the page's own h1/h2 text, for the voice suggestion
 	LogoURLs    []string
 	Colors      []string // frequency-ranked candidate hexes (theme-color first)
 	Fonts       []string
@@ -150,6 +152,35 @@ func resolveHTTP(base *url.URL, ref string) string {
 	return u.String()
 }
 
+// nodeText is the element's visible text, whitespace-collapsed and clipped to
+// max runes. Script and style content is not text.
+func nodeText(n *html.Node, max int) string {
+	var b strings.Builder
+	var walk func(c *html.Node, depth int)
+	walk = func(c *html.Node, depth int) {
+		if depth > 64 || b.Len() > max*4 {
+			return
+		}
+		if c.Type == html.TextNode {
+			b.WriteString(c.Data)
+			b.WriteByte(' ')
+			return
+		}
+		if c.Type == html.ElementNode && (c.Data == "script" || c.Data == "style") {
+			return
+		}
+		for k := c.FirstChild; k != nil; k = k.NextSibling {
+			walk(k, depth+1)
+		}
+	}
+	walk(n, 0)
+	t := []rune(strings.Join(strings.Fields(b.String()), " "))
+	if len(t) > max {
+		t = t[:max]
+	}
+	return string(t)
+}
+
 // scanBrandHTML walks the page once, collecting every deterministic brand
 // signal. Pure: no network, no model.
 func scanBrandHTML(raw []byte, base *url.URL) brandScan {
@@ -234,6 +265,12 @@ func scanBrandHTML(raw []byte, base *url.URL) brandScan {
 								addFont(&webfonts, fam)
 							}
 						}
+					}
+				}
+			case "h1", "h2":
+				if len(scan.Headings) < 6 {
+					if t := nodeText(n, 120); t != "" {
+						scan.Headings = append(scan.Headings, t)
 					}
 				}
 			case "img":
@@ -398,11 +435,19 @@ func brandFromURLHandler(studio *aistudio.Service, acct *accounts.Service) http.
 		if scan.Fonts == nil {
 			scan.Fonts = []string{}
 		}
+		if scan.Headings == nil {
+			scan.Headings = []string{}
+		}
+		// description and headings are the page's own words, returned so the
+		// brand wizard can ground a voice suggestion (/ai/brand-suggest) in
+		// them without a second fetch.
 		writeJSON(w, http.StatusOK, map[string]any{
-			"name":     name,
-			"logoUrls": scan.LogoURLs,
-			"colors":   colors,
-			"fonts":    scan.Fonts,
+			"name":        name,
+			"description": clipText(scan.Description, 300),
+			"headings":    scan.Headings,
+			"logoUrls":    scan.LogoURLs,
+			"colors":      colors,
+			"fonts":       scan.Fonts,
 		})
 	}
 }

@@ -234,7 +234,7 @@ export function CommandMenu({ onExport, onShortcuts, workspaceId }: { onExport: 
         role="dialog"
         aria-modal="true"
         aria-label={tr("editor.command_palette")}
-        className="mx-auto w-[28rem] overflow-hidden rounded-lg bg-surface shadow-xl"
+        className="mx-auto w-[min(28rem,calc(100vw-2rem))] overflow-hidden rounded-lg bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
         // The palette is a single tab stop by design (the input owns the
         // list via aria-activedescendant), so Tab is contained rather than

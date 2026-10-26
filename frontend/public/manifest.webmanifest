@@ -1,7 +1,7 @@
 {
   "name": "HyCanvas",
   "short_name": "HyCanvas",
-  "description": "Free, self-hostable, AI-native design tool.",
+  "description": "Free, open-source, AI-native design tool.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FBF7FA",

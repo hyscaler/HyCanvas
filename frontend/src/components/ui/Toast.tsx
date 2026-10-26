@@ -80,7 +80,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               key={t.id}
               role={isError ? "alert" : "status"}
               aria-live={isError ? "assertive" : "polite"}
-              className="pointer-events-auto flex w-80 items-start gap-2.5 rounded-xl border border-neutral-200 bg-surface px-3.5 py-3 text-sm shadow-lg"
+              className="pointer-events-auto flex w-[min(20rem,calc(100vw-2rem))] items-start gap-2.5 rounded-xl border border-neutral-200 bg-surface px-3.5 py-3 text-sm shadow-lg"
             >
               <Icon size={18} className={cn("mt-0.5 shrink-0", TONE[t.kind])} />
               <span className="flex-1 text-neutral-800">{t.message}</span>

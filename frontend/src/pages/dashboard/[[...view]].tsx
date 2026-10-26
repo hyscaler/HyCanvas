@@ -8,6 +8,7 @@ import {
   type DashboardView,
 } from "@/components/dashboard/views";
 import { tr } from "@/lib/i18n";
+import { VIEWPORT } from "@/lib/viewport";
 
 // Client-only: depends on auth state, localStorage, and live API calls.
 const DashboardApp = dynamic(() => import("@/components/dashboard/DashboardApp").then((m) => m.DashboardApp), {
@@ -37,6 +38,7 @@ export default function DashboardPage({ view }: DashboardPageProps) {
   return (
     <>
       <Head>
+        <meta key="viewport" name="viewport" content={VIEWPORT} />
         <title>{`${dashboardTitles[view]} · HyCanvas`}</title>
       </Head>
       <RequireAuth>

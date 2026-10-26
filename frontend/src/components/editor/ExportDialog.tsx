@@ -629,7 +629,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         aria-modal="true"
         aria-label={tr("editor.download")}
         tabIndex={-1}
-        className="fixed end-3 top-14 z-50 max-h-[calc(100vh-5rem)] w-[22rem] overflow-y-auto rounded-2xl border border-neutral-200 bg-surface p-4 shadow-2xl outline-none ring-1 ring-black/5"
+        className="fixed end-3 top-14 z-50 max-h-[calc(100dvh-5rem)] w-[min(22rem,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border border-neutral-200 bg-surface p-4 shadow-2xl outline-none ring-1 ring-black/5"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={onPanelKeyDown}
       >

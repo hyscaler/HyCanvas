@@ -1042,6 +1042,34 @@ export interface BrandLintResult {
   violations: BrandLintViolation[];
 }
 /** Patch for {@link HyCanvasClient.updateBrandKit}. */
+/** The page scan behind a brand-from-website draft (F28 T21, #54).
+ *  `description` and `headings` are the page's own words; older servers omit
+ *  them. */
+export interface BrandWebsiteDraft {
+  name: string;
+  description?: string;
+  headings?: string[];
+  logoUrls: string[];
+  colors: string[];
+  fonts: string[];
+}
+export interface BrandSuggestInput {
+  workspaceId: string;
+  name?: string;
+  description?: string;
+  headings?: string[];
+  colors?: string[];
+  fonts?: string[];
+  /** The logo as a data URL (PNG or JPEG), at most about 1.5 MB. */
+  logo?: string;
+}
+export interface BrandSuggestion {
+  name: string;
+  voice: { tone: string[]; doSay: string[]; dontSay: string[]; sampleCopy: string };
+  fonts: { heading: string; body: string };
+  /** What the provider saw in the logo; empty when it was not read. */
+  logoNotes: string;
+}
 export interface BrandKitPatch {
   name?: string;
   isDefault?: boolean;
@@ -2083,8 +2111,16 @@ export class HyCanvasClient {
   /** Draft a brand kit from a company web page (F28 T21): candidate logo URLs,
    *  3..6 palette colors, and font guesses, scanned behind the SSRF gate. A
    *  DRAFT only - the caller confirms before anything is saved. */
-  aiBrandFromUrl(input: { workspaceId: string; url: string }): Promise<{ name: string; logoUrls: string[]; colors: string[]; fonts: string[] }> {
+  aiBrandFromUrl(input: { workspaceId: string; url: string }): Promise<BrandWebsiteDraft> {
     return this.request("POST", "/v1/ai/brand-from-url", input);
+  }
+  /** #54: a DRAFT brand voice and heading/body font pairing from what is
+   *  known about a brand (name, description, a website scan's own words,
+   *  colors, observed fonts, and optionally the logo as a data URL, which a
+   *  provider that can see images reads). Needs a configured AI provider;
+   *  nothing is saved. */
+  aiBrandSuggest(input: BrandSuggestInput): Promise<BrandSuggestion> {
+    return this.request("POST", "/v1/ai/brand-suggest", input);
   }
   /** The workspace's web-search provider config, or null when unset. */
   getSearchConfig(workspaceId: string): Promise<{ provider: string; baseUrl: string | null; hasKey: boolean } | null> {

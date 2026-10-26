@@ -1,0 +1,62 @@
+{
+  "id": "food-truck-opening-flyer",
+  "title": "Food Truck Grand Opening Flyer",
+  "categories": ["food", "print"],
+  "tags": ["flyer", "food truck", "restaurant", "opening", "menu", "tacos"],
+  "styleTags": ["bold", "playful"],
+  "size": [1080, 1528],
+  "typography": [{"role": "heading", "family": "Bebas Neue", "weight": 400}, {"role": "body", "family": "Inter", "weight": 400}],
+  "pages": [
+    {
+      "name": "Flyer",
+      "bg": "#FFF3E0",
+      "nodes": [
+        {"kind": "rect", "x": 0, "y": 0, "w": 1080, "h": 560, "fill": "#1E2B2F"},
+        {"kind": "ellipse", "x": 760, "y": -160, "w": 520, "h": 520, "fill": "#E8542F", "bleed": true},
+        {"kind": "ellipse", "x": -100, "y": 500, "w": 160, "h": 160, "fill": "#F6B33B", "bleed": true},
+        {"kind": "text", "x": 88, "y": 96, "w": 620, "h": 28, "text": "Grand opening", "family": "Inter", "size": 20, "weight": 600, "color": "#F6B33B", "letterSpacing": 5, "upper": true},
+        {"kind": "text", "x": 88, "y": 140, "w": 700, "h": 270, "text": "Smoke\n& Salt", "family": "Bebas Neue", "size": 150, "weight": 400, "color": "#FFF3E0", "lineHeight": 0.88},
+        {"kind": "text", "x": 88, "y": 424, "w": 620, "h": 76, "text": "Wood-fired street tacos,\nfresh off the truck", "family": "Inter", "size": 28, "weight": 400, "color": "#F3E3CC", "lineHeight": 1.3},
+        {"kind": "ellipse", "x": 800, "y": 250, "w": 200, "h": 200, "fill": "#FFF3E0"},
+        {"kind": "icon", "icon": "truck", "x": 844, "y": 294, "w": 112, "h": 112, "color": "#1E2B2F"},
+        {"kind": "rect", "x": 88, "y": 616, "w": 904, "h": 148, "fill": "#E8542F", "radius": 20},
+        {"kind": "text", "x": 128, "y": 644, "w": 460, "h": 28, "text": "Opening weekend", "family": "Inter", "size": 20, "weight": 600, "color": "#FFF3E0", "letterSpacing": 3, "upper": true},
+        {"kind": "text", "x": 128, "y": 680, "w": 480, "h": 60, "text": "Sat 14 & Sun 15 June", "family": "Bebas Neue", "size": 54, "weight": 400, "color": "#FFFFFF"},
+        {"kind": "text", "x": 608, "y": 646, "w": 344, "h": 34, "text": "11:00 to 22:00", "family": "Inter", "size": 26, "weight": 600, "color": "#FFF3E0", "align": "right"},
+        {"kind": "text", "x": 608, "y": 690, "w": 344, "h": 52, "text": "Then Tuesday to Sunday\n11:00 to 21:00", "family": "Inter", "size": 18, "weight": 400, "color": "#FFE2D6", "align": "right", "lineHeight": 1.3},
+        {"kind": "text", "x": 88, "y": 822, "w": 904, "h": 46, "text": "On the menu", "family": "Bebas Neue", "size": 46, "weight": 400, "color": "#1E2B2F"},
+        {"kind": "rect", "x": 88, "y": 872, "w": 120, "h": 6, "fill": "#F6B33B", "radius": 3},
+        {"kind": "text", "x": 88, "y": 908, "w": 620, "h": 40, "text": "Smoked brisket taco", "family": "DM Sans", "size": 30, "weight": 700, "color": "#1E2B2F"},
+        {"kind": "text", "x": 792, "y": 908, "w": 200, "h": 40, "text": "$4.50", "family": "DM Sans", "size": 30, "weight": 700, "color": "#E8542F", "align": "right"},
+        {"kind": "text", "x": 88, "y": 952, "w": 760, "h": 28, "text": "Twelve-hour brisket, pickled onion, salsa roja", "family": "Inter", "size": 19, "weight": 400, "color": "#5B6B6E"},
+        {"kind": "rect", "x": 88, "y": 992, "w": 904, "h": 2, "fill": "#EAD9BF"},
+        {"kind": "text", "x": 88, "y": 1000, "w": 620, "h": 40, "text": "Charred corn elote", "family": "DM Sans", "size": 30, "weight": 700, "color": "#1E2B2F"},
+        {"kind": "text", "x": 792, "y": 1000, "w": 200, "h": 40, "text": "$5.00", "family": "DM Sans", "size": 30, "weight": 700, "color": "#E8542F", "align": "right"},
+        {"kind": "text", "x": 88, "y": 1044, "w": 760, "h": 28, "text": "Lime crema, cotija, chili salt", "family": "Inter", "size": 19, "weight": 400, "color": "#5B6B6E"},
+        {"kind": "rect", "x": 88, "y": 1084, "w": 904, "h": 2, "fill": "#EAD9BF"},
+        {"kind": "text", "x": 88, "y": 1092, "w": 620, "h": 40, "text": "Crispy fish taco", "family": "DM Sans", "size": 30, "weight": 700, "color": "#1E2B2F"},
+        {"kind": "text", "x": 792, "y": 1092, "w": 200, "h": 40, "text": "$4.75", "family": "DM Sans", "size": 30, "weight": 700, "color": "#E8542F", "align": "right"},
+        {"kind": "text", "x": 88, "y": 1136, "w": 760, "h": 28, "text": "Beer-battered cod, cabbage slaw, chipotle mayo", "family": "Inter", "size": 19, "weight": 400, "color": "#5B6B6E"},
+        {"kind": "rect", "x": 88, "y": 1176, "w": 904, "h": 2, "fill": "#EAD9BF"},
+        {"kind": "text", "x": 88, "y": 1184, "w": 620, "h": 40, "text": "Horchata", "family": "DM Sans", "size": 30, "weight": 700, "color": "#1E2B2F"},
+        {"kind": "text", "x": 792, "y": 1184, "w": 200, "h": 40, "text": "$3.50", "family": "DM Sans", "size": 30, "weight": 700, "color": "#E8542F", "align": "right"},
+        {"kind": "text", "x": 88, "y": 1228, "w": 760, "h": 28, "text": "Cinnamon rice milk, poured over ice", "family": "Inter", "size": 19, "weight": 400, "color": "#5B6B6E"},
+        {"kind": "rect", "x": 0, "y": 1300, "w": 1080, "h": 228, "fill": "#1E2B2F"},
+        {"kind": "icon", "icon": "map-pin", "x": 88, "y": 1354, "w": 36, "h": 36, "color": "#F6B33B"},
+        {"kind": "text", "x": 140, "y": 1350, "w": 540, "h": 40, "text": "Pier 9 at Harbor Road", "family": "Inter", "size": 26, "weight": 600, "color": "#FFF3E0"},
+        {"kind": "text", "x": 140, "y": 1394, "w": 540, "h": 28, "text": "All summer long · @smokeandsalt", "family": "Inter", "size": 19, "weight": 400, "color": "#C9D3D4"},
+        {"kind": "button", "x": 700, "y": 1352, "w": 292, "h": 72, "fill": "#F6B33B", "label": "First 50 tacos free", "family": "DM Sans", "size": 22, "weight": 700, "color": "#1E2B2F", "radius": 36},
+        {"kind": "text", "x": 88, "y": 1462, "w": 904, "h": 26, "text": "Cash and card · Vegetarian options every day", "family": "Inter", "size": 17, "weight": 400, "color": "#8FA0A2"}
+      ]
+    }
+  ],
+  "fillable": [
+    {"node": "p0-n4", "kind": "text", "label": "Business name", "hint": "Your truck or restaurant name"},
+    {"node": "p0-n5", "kind": "text", "label": "Tagline", "hint": "What you serve, in one line"},
+    {"node": "p0-n10", "kind": "text", "label": "Opening dates", "hint": "The opening day or weekend"},
+    {"node": "p0-n11", "kind": "text", "label": "Opening hours", "hint": "Hours on opening day"},
+    {"node": "p0-n15", "kind": "text", "label": "First menu item", "hint": "Your signature dish"},
+    {"node": "p0-n16", "kind": "text", "label": "First item price", "hint": "Price, e.g. $4.50"},
+    {"node": "p0-n32", "kind": "text", "label": "Location", "hint": "Where to find you"}
+  ]
+}

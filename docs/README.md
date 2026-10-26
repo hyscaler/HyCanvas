@@ -1,6 +1,6 @@
 # HyCanvas Documentation
 
-Everything in HyCanvas is free: no tiers, no paywalls, no watermarks. These pages cover using and operating the product. For installing, building, and configuring the server, the root [README](../README.md) is the reference.
+Everything in HyCanvas is free: no tiers, no paywalls, no watermarks. These pages cover using and operating the product. For installing, building, and configuring the server, [Self-hosting](self-hosting.md) is the reference.
 
 ## User guides
 
@@ -12,8 +12,8 @@ Everything in HyCanvas is free: no tiers, no paywalls, no watermarks. These page
 ## Operator guides
 
 - [Installing HyCanvas](setup-wizard.md), the first-run setup wizard, step by step.
-- [Root README, Production](../README.md#production), building, the service commands, reverse proxies, Google sign-in, and storage migration.
-- [Root README, Environment Variables](../README.md#environment-variables), every configuration knob.
+- [Self-hosting, Production](self-hosting.md#production), building, the service commands, reverse proxies, Google sign-in, and storage migration.
+- [Self-hosting, Environment Variables](self-hosting.md#environment-variables), every configuration knob.
 
 ## Status
 

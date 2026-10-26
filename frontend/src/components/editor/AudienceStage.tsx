@@ -202,7 +202,7 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
     // The audience display IS the page's main content: one landmark holding
     // the projected slide, with an offscreen heading so the window announces
     // what it is rather than reading as an unlabelled canvas.
-    <main className="relative h-screen w-screen overflow-hidden bg-black" dir={designSurfaceDir} data-testid="audience-stage">
+    <main className="relative h-dvh w-screen overflow-hidden bg-black" dir={designSurfaceDir} data-testid="audience-stage">
       <h1 className="sr-only">{tr("editor.audience_display")}</h1>
       <div ref={stageRef} className="grid h-full w-full place-items-center">
         <canvas ref={canvasRef} data-testid="audience-canvas" aria-label={tr("editor.presented_slide")} role="img" />

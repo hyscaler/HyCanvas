@@ -407,7 +407,7 @@ export function PanelShell({ title, children, fill, roomy }: { title: string; ch
       // editable outline in it - per-slide titles, points, reorder controls -
       // and at 60vw capped to 16rem that was about 234px on a phone, which is
       // not enough to edit in. Unchanged at lg+, where the panel is resizable.
-      className={`flex h-full shrink-0 lg:w-[var(--oc-left-w)] ${roomy ? "w-[min(24rem,88vw)]" : "w-[min(16rem,60vw)]"}`}
+      className={`flex h-full shrink-0 lg:w-[var(--oc-left-w)] ${roomy ? "w-[min(24rem,calc(100vw-76px))]" : "w-[min(16rem,60vw)]"}`}
       style={{ ["--oc-left-w"]: `${width}px` } as React.CSSProperties}
     >
       {/* Scroll area. Its right border shows below lg; at lg+ the drag handle to

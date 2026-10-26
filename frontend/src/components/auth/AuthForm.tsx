@@ -425,7 +425,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
         <div className="relative z-10">
           <span className="oc-fade-up inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold tracking-wide ring-1 ring-white/20" style={{ animationDelay: "0.05s" }}>
-            <Sparkles size={13} /> {tr("auth.100_free_self_hostable_no_watermarks")}
+            <Sparkles size={13} /> {tr("auth.100_free_open_source_no_watermarks")}
           </span>
           <h1 className="oc-fade-up mt-5 max-w-md text-[2.7rem] font-extrabold leading-[1.05]" style={{ animationDelay: "0.12s" }}>
             {tr("auth.everything_you_need_to_design_anything")}

@@ -44,8 +44,9 @@ import {
   List,
   Users,
   Moon,
-  Sun, Sparkles, Wand2, Paperclip, Loader2, X } from "lucide-react";
+  Sun, Sparkles, Wand2, Paperclip, Loader2, X, Palette, Menu } from "lucide-react";
 import { createBlankDesign, type DesignFile } from "@hc/schema";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import { hycAccept, downloadHycFile, importedTitle, parseHycFile, readFileText } from "@/lib/hycFile";
 import { odpToDesign, pptxToDesign } from "@hc/export";
 import { catalogEntryForMood, deckThemes, dialTones, layoutDeck, parseMarkdownOutline } from "@hc/aistudio";
@@ -78,6 +79,7 @@ import { formatBytes } from "@/lib/format";
 import { useDateFormat } from "@/lib/datetime";
 import { resolvedTheme, setThemePreference } from "@/lib/theme";
 import { oc } from "@/lib/sdk";
+import { BrandsView } from "./brands/BrandsView";
 import { useAuth } from "@/store/auth";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
@@ -328,6 +330,22 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     setRailCollapsed(collapsed);
     window.localStorage.setItem("hc-dash-rail", collapsed ? "collapsed" : "expanded");
   }
+  // Below Tailwind `md` the rail would leave the page no room, so it becomes an
+  // off-canvas drawer opened from the header. The drawer always shows the full
+  // rail; the remembered icon-only collapse applies to wider screens only.
+  const isNarrow = useMediaQuery("(max-width: 767px)");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const railIcons = railCollapsed && !isNarrow;
+  const navTo = (v: DashboardView) => {
+    setDrawerOpen(false);
+    gotoView(v);
+  };
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setDrawerOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
   const [trash, setTrash] = useState<DesignRecord[]>([]);
   const [favorites, setFavorites] = useState<HomeItem[]>([]);
   // Storage usage for the rail meter (workspace + account scopes).
@@ -800,15 +818,18 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-neutral-50 text-neutral-900" onClick={() => setMenuFor(null)}>
+    <div className="flex h-dvh overflow-hidden bg-neutral-50 text-neutral-900" onClick={() => setMenuFor(null)}>
       {/* Left rail: fixed to the viewport; only the main column scrolls.
           Collapsible to an icon-only strip (remembered in localStorage). */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-40 bg-black/30 md:hidden" aria-hidden onClick={() => setDrawerOpen(false)} />
+      )}
       <aside
-        className={`oc-panel-dots relative flex shrink-0 flex-col overflow-y-auto border-e border-neutral-200 bg-surface transition-[width] duration-200 ${
-          railCollapsed ? "w-[4.5rem] p-3" : "w-80 p-4"
-        }`}
+        className={`oc-panel-dots relative flex shrink-0 flex-col overflow-y-auto border-e border-neutral-200 bg-surface transition-[width,translate] duration-200 max-md:fixed max-md:inset-y-0 max-md:start-0 max-md:z-50 max-md:w-[min(20rem,85vw)] max-md:shadow-xl ${
+          railIcons ? "w-[4.5rem] p-3" : "w-80 p-4"
+        } ${drawerOpen ? "" : "max-md:invisible max-md:-translate-x-full max-md:rtl:translate-x-full"}`}
       >
-        {railCollapsed ? (
+        {railIcons ? (
           <>
             <div className="mb-4 flex justify-center">
               <LogoMark size={30} />
@@ -839,47 +860,60 @@ export function DashboardApp({ view }: { view: DashboardView }) {
               <Logo size={32} />
               <button
                 type="button"
-                onClick={() => toggleRail(true)}
-                title={tr("dashboard.collapse_sidebar")}
-                aria-label={tr("dashboard.collapse_sidebar")}
+                onClick={() => (isNarrow ? setDrawerOpen(false) : toggleRail(true))}
+                title={isNarrow ? tr("ui.close") : tr("dashboard.collapse_sidebar")}
+                aria-label={isNarrow ? tr("ui.close") : tr("dashboard.collapse_sidebar")}
                 className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
               >
-                <PanelLeftClose size={18} />
+                {isNarrow ? <X size={18} /> : <PanelLeftClose size={18} />}
               </button>
             </div>
 
             <WorkspaceSwitcher
               workspaces={workspaces}
               activeId={activeWorkspaceId}
-              onSelect={setActiveWorkspace}
+              onSelect={(id) => {
+                setDrawerOpen(false);
+                setActiveWorkspace(id);
+              }}
               onCreate={() => setWsModal(true)}
             />
           </>
         )}
 
         <nav className="mt-5 flex flex-col gap-1 text-sm">
-          <RailItem icon={HomeIcon} label={tr("dashboard.home")} active={view === "home"} collapsed={railCollapsed} onClick={() => gotoView("home")} />
-          <RailItem icon={Star} label={tr("dashboard.favorites")} active={view === "favorites"} collapsed={railCollapsed} onClick={() => gotoView("favorites")} />
-          <RailItem icon={CheckSquare} label={tr("dashboard.my_tasks")} active={view === "tasks"} collapsed={railCollapsed} onClick={() => gotoView("tasks")} />
-          <RailItem icon={LayoutTemplate} label={tr("dashboard.templates")} active={view === "templates"} collapsed={railCollapsed} onClick={() => gotoView("templates")} />
-          <RailItem icon={Users} label={tr("dashboard.members")} active={view === "members"} collapsed={railCollapsed} onClick={() => gotoView("members")} />
-          <RailItem icon={Trash2} label={tr("dashboard.trash")} active={view === "trash"} collapsed={railCollapsed} onClick={() => gotoView("trash")} />
+          <RailItem icon={HomeIcon} label={tr("dashboard.home")} active={view === "home"} collapsed={railIcons} onClick={() => navTo("home")} />
+          <RailItem icon={Star} label={tr("dashboard.favorites")} active={view === "favorites"} collapsed={railIcons} onClick={() => navTo("favorites")} />
+          <RailItem icon={CheckSquare} label={tr("dashboard.my_tasks")} active={view === "tasks"} collapsed={railIcons} onClick={() => navTo("tasks")} />
+          <RailItem icon={LayoutTemplate} label={tr("dashboard.templates")} active={view === "templates"} collapsed={railIcons} onClick={() => navTo("templates")} />
+          <RailItem icon={Palette} label={tr("dashboard.brand_kits")} active={view === "brands"} collapsed={railIcons} onClick={() => navTo("brands")} />
+          <RailItem icon={Users} label={tr("dashboard.members")} active={view === "members"} collapsed={railIcons} onClick={() => navTo("members")} />
+          <RailItem icon={Trash2} label={tr("dashboard.trash")} active={view === "trash"} collapsed={railIcons} onClick={() => navTo("trash")} />
         </nav>
 
         {/* Storage meter pinned to the rail's bottom corner. */}
-        {!railCollapsed && storageUsage && (
+        {!railIcons && storageUsage && (
           <div className="relative z-10 mt-auto pt-4">
             <RailStorage usage={storageUsage} />
           </div>
         )}
-        {!railCollapsed && <RailArt />}
+        {!railIcons && <RailArt />}
       </aside>
 
       {/* Main */}
       <main className="oc-scroll flex-1 overflow-y-auto" style={DASH_BACKDROP}>
         {/* Header: global search, create, notifications, and the user menu. */}
-        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-neutral-200 bg-surface/90 px-6 py-2.5 backdrop-blur">
-          <form onSubmit={onSearch} className="relative max-w-lg flex-1">
+        <div className="sticky top-0 z-30 flex items-center gap-2 border-b border-neutral-200 bg-surface/90 px-4 py-2.5 backdrop-blur sm:gap-3 md:px-6">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label={tr("dashboard.open_navigation")}
+            title={tr("dashboard.open_navigation")}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-neutral-600 hover:bg-neutral-100 md:hidden"
+          >
+            <Menu size={18} />
+          </button>
+          <form onSubmit={onSearch} className="relative min-w-0 max-w-lg flex-1">
             <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
               value={query}
@@ -902,7 +936,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
               </button>
             )}
           </form>
-          <div className="ms-auto flex items-center gap-2">
+          <div className="ms-auto flex shrink-0 items-center gap-2">
             <CreateMenu
               disabled={busy || !activeWorkspaceId}
               onPick={(f) => void createDesign(f.w, f.h, f.label, f.kind)}
@@ -913,7 +947,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
             <UserMenu user={user} onSettings={() => void router.push("/settings")} onSignOut={() => void logout()} />
           </div>
         </div>
-        <div className="mx-auto max-w-[1600px] px-6 py-8">
+        <div className="mx-auto max-w-[1600px] px-4 py-6 md:px-6 md:py-8">
           {view === "home" && (
           <>
           <VerifyEmailBanner />
@@ -1404,6 +1438,14 @@ export function DashboardApp({ view }: { view: DashboardView }) {
             </section>
           )}
 
+          {view === "brands" && activeWorkspaceId && (
+            <BrandsView
+              key={activeWorkspaceId}
+              workspaceId={activeWorkspaceId}
+              canManage={activeWs?.role === "owner" || activeWs?.role === "admin"}
+            />
+          )}
+
           {view === "members" && (
             <section>
               <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">{tr("dashboard.members")}</h2>
@@ -1688,7 +1730,7 @@ function CreateMenu({ disabled, onPick, onCustom, onBulk }: { disabled?: boolean
   useOutsideClose(ref, open, () => setOpen(false));
   return (
     <div className="relative" ref={ref}>
-      <Button onClick={() => setOpen((o) => !o)} disabled={disabled}><Plus size={16} /> {tr("dashboard.create")}</Button>
+      <Button onClick={() => setOpen((o) => !o)} disabled={disabled}><Plus size={16} /> <span className="max-sm:sr-only">{tr("dashboard.create")}</span></Button>
       {open && (
         <div className="absolute end-0 z-40 mt-1.5 max-h-[72vh] w-64 overflow-y-auto rounded-xl border border-neutral-200 bg-surface p-1.5 shadow-xl ring-1 ring-black/5">
           <button onClick={() => { setOpen(false); onCustom(); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-start text-sm font-medium text-neutral-700 hover:bg-neutral-100">

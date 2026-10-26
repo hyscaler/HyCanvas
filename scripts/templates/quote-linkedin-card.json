@@ -1,0 +1,30 @@
+{
+  "id": "quote-linkedin-card",
+  "title": "Quote Card for LinkedIn and X",
+  "categories": ["quotes", "social"],
+  "tags": ["quote", "linkedin", "x", "twitter", "testimonial", "leadership"],
+  "styleTags": ["elegant", "minimal"],
+  "size": [1200, 627],
+  "typography": [{"role": "heading", "family": "DM Serif Display", "weight": 400}, {"role": "body", "family": "Inter", "weight": 400}],
+  "pages": [
+    {
+      "name": "Quote",
+      "bg": "#0E1B2C",
+      "nodes": [
+        {"kind": "rect", "x": 0, "y": 0, "w": 16, "h": 627, "fill": "#F2C14E"},
+        {"kind": "ellipse", "x": 960, "y": -200, "w": 440, "h": 440, "fill": "#16263B", "bleed": true},
+        {"kind": "text", "x": 96, "y": 56, "w": 160, "h": 150, "text": "“", "family": "DM Serif Display", "size": 200, "weight": 400, "color": "#F2C14E", "lineHeight": 0.9},
+        {"kind": "text", "x": 96, "y": 196, "w": 880, "h": 230, "text": "The best brands are built by people who keep their promises, not by the ones who make the most of them.", "family": "DM Serif Display", "size": 44, "weight": 400, "color": "#F5F1E8", "lineHeight": 1.25},
+        {"kind": "rect", "x": 96, "y": 452, "w": 64, "h": 4, "fill": "#F2C14E", "radius": 2},
+        {"kind": "text", "x": 96, "y": 484, "w": 760, "h": 36, "text": "Maya Okonkwo", "family": "Inter", "size": 26, "weight": 700, "color": "#F5F1E8"},
+        {"kind": "text", "x": 96, "y": 524, "w": 760, "h": 28, "text": "Founder and CEO, Northlight Studio", "family": "Inter", "size": 19, "weight": 400, "color": "#A9B7C9"},
+        {"kind": "frame", "name": "Logo", "x": 984, "y": 492, "w": 120, "h": 64, "radius": 10, "fill": "#23364F"}
+      ]
+    }
+  ],
+  "fillable": [
+    {"node": "p0-n3", "kind": "text", "label": "Quote", "hint": "The quote, up to about 120 characters"},
+    {"node": "p0-n5", "kind": "text", "label": "Author", "hint": "Who said it"},
+    {"node": "p0-n6", "kind": "text", "label": "Role", "hint": "Their role and company"}
+  ]
+}

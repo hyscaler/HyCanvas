@@ -29,7 +29,7 @@ The **Templates** section browses the library by category: business, education, 
 
 ![The template library](images/templates.png)
 
-Self-hosters can curate this library; see [Built-in Templates](../README.md#built-in-templates) in the root README.
+Self-hosters can curate this library; see [Built-in Templates](../CONTRIBUTING.md#built-in-templates) in the contributing guide.
 
 ## Storage meters
 
