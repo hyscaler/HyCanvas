@@ -18,6 +18,7 @@ import { CanvasBackdrop } from "@/components/ui/CanvasBackdrop";
 import { CanvasFloor } from "@/components/ui/CanvasFloor";
 import { Logo } from "@/components/ui/Logo";
 import { tr } from "@/lib/i18n";
+import { signInErrorMessage } from "./signInError";
 
 // Capability chips that position the breadth of the product on the brand panel.
 const chips = () => [tr("auth.templates"), tr("auth.photos_video"), tr("auth.ai_magic"), tr("auth.docs"), tr("auth.whiteboards"), tr("auth.brand_kit"), tr("auth.print")];
@@ -216,7 +217,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       ? tr("auth.couldnt_complete_social_sign_in_please_try_a")
       : router.query.error === "sso_exists"
         ? tr("auth.an_account_with_this_email_already_exists_si")
-        : null;
+        : router.query.error === "account_disabled"
+          ? tr("errors.api_account_disabled")
+          : null;
 
   async function sendMagicLink() {
     if (!email) {
@@ -281,9 +284,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     } catch (err) {
       let msg = tr("auth.something_went_wrong_please_try_again");
       if (err instanceof ApiError) {
-        if (err.status === 401) msg = tr("auth.invalid_email_or_password");
-        else if (err.status === 409) msg = tr("auth.an_account_with_this_email_already_exists");
-        else if (err.status === 403) msg = tr("auth.couldnt_verify_the_captcha_please_try_again");
+        const known = signInErrorMessage(err.status, err.body);
+        if (known) msg = known;
         else {
           const body = err.body as { message?: string } | undefined;
           msg = body?.message ?? `Request failed (${err.status}).`;

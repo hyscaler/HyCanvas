@@ -200,6 +200,9 @@ func loginHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 				writeJSON(w, http.StatusOK, map[string]any{"mfaRequired": true, "mfaToken": mfaToken})
 				return
 			}
+			if signInRefused(w, r, err) {
+				return
+			}
 			if !errors.Is(err, accounts.ErrInvalidCredentials) {
 				// The credentials were never the problem (e.g. the database is
 				// unreachable). Answering 401 here tells the user their password
@@ -326,6 +329,9 @@ func mfaVerifyHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 		}
 		user, tokens, err := svc.VerifyMfaLogin(r.Context(), body.MfaToken, body.Code, r.UserAgent(), clientIP(r))
 		if err != nil {
+			if signInRefused(w, r, err) {
+				return
+			}
 			mfaProblem(w, r, err)
 			return
 		}
@@ -435,6 +441,9 @@ func magicLinkHandler(svc *accounts.Service, secure bool, policy config.AuthPoli
 		// magic-link signup is enabled; existing-user links always work.
 		user, tokens, err := svc.LoginWithMagicLink(r.Context(), body.Token, r.UserAgent(), clientIP(r), policy.MagicLinkSignup)
 		if err != nil {
+			if signInRefused(w, r, err) {
+				return
+			}
 			problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "invalid or expired link", "invalid_or_expired_link")
 			return
 		}
@@ -524,4 +533,16 @@ func userFrom(ctx context.Context) *authedUser {
 
 func clientIP(r *http.Request) string {
 	return r.RemoteAddr
+}
+
+// signInRefused answers a sign-in the account's state refuses, and reports
+// whether it did. A deactivated account gets its own 403 code on every sign-in
+// path: left to each handler's generic mapping it read as an outage (password
+// login, 500) or a bad link (magic link, 401).
+func signInRefused(w http.ResponseWriter, r *http.Request, err error) bool {
+	if errors.Is(err, accounts.ErrAccountDisabled) {
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "this account has been disabled", "account_disabled")
+		return true
+	}
+	return false
 }
