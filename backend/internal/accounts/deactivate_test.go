@@ -8,6 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+
+	"hycanvas/backend/internal/auth/jwt"
 )
 
 func deactivateTestTx(t *testing.T) pgx.Tx {
@@ -147,5 +149,64 @@ func TestDeactivatedOidcLogin_DB(t *testing.T) {
 	}
 	if _, _, _, err := svc.LoginWithOidc(ctx, p, "d", "ip", true, true); !errors.Is(err, ErrAccountDisabled) {
 		t.Fatalf("sso login after deactivation: got %v, want ErrAccountDisabled", err)
+	}
+}
+
+// A session that slipped in while the account was deactivated (issued between
+// the check and the insert) must not come back to life on reactivation: the
+// person signs in afresh (FR-18).
+func TestReactivationDoesNotReviveWindowSessions_DB(t *testing.T) {
+	tx := deactivateTestTx(t)
+	ctx := context.Background()
+	svc := NewService(tx, "test-jwt-secret")
+	u, _, _, err := svc.Signup(ctx, "window+"+uuid.NewString()+"@example.com", "a-strong-password", "W")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.DeactivateUser(ctx, u.ID); err != nil {
+		t.Fatal(err)
+	}
+	// The race: a session row written after deactivation revoked the others.
+	sid := uuid.NewString()
+	if _, err := tx.Exec(ctx, `INSERT INTO "sessions" (id, "user_id", "current_token_hash") VALUES ($1, $2, $3)`, sid, u.ID, "h-"+sid); err != nil {
+		t.Fatal(err)
+	}
+	access, err := jwt.Sign(u.ID, sid, "test-jwt-secret", AccessTTL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := svc.VerifyAccess(ctx, access); err == nil {
+		t.Fatal("control: the window session should already be refused while deactivated")
+	}
+	if err := svc.ReactivateUser(ctx, u.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := svc.VerifyAccess(ctx, access); err == nil {
+		t.Fatal("reactivation revived a session issued during the deactivation window")
+	}
+}
+
+// Every sign-in path answers "account disabled" the same way: an MFA account
+// must not get a second-factor challenge first (FR-17).
+func TestDeactivatedMFAAccountIsRefusedBeforeChallenge_DB(t *testing.T) {
+	tx := deactivateTestTx(t)
+	ctx := context.Background()
+	svc := NewService(tx, "test-jwt-secret")
+	email := "mfa+" + uuid.NewString() + "@example.com"
+	u, _, _, err := svc.Signup(ctx, email, "a-strong-password", "M")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE "users" SET "mfa_enabled" = true WHERE id = $1`, u.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, err := svc.Login(ctx, email, "a-strong-password", "d", "ip"); !errors.Is(err, ErrMFARequired) {
+		t.Fatalf("control: an active MFA account should get a challenge, got %v", err)
+	}
+	if err := svc.DeactivateUser(ctx, u.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, err := svc.Login(ctx, email, "a-strong-password", "d", "ip"); !errors.Is(err, ErrAccountDisabled) {
+		t.Fatalf("deactivated MFA account: got %v, want ErrAccountDisabled", err)
 	}
 }
