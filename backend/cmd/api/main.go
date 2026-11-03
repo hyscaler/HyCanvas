@@ -323,16 +323,19 @@ func main() {
 	// after the upgrade for the workspaces that predate it. The default kit
 	// grounds every generation in the workspace, so BRAND_STARTER_KIT="off"
 	// keeps it out on an instance whose users bring their own brands.
+	// seedWorkspace also runs for accounts SCIM creates (wired below).
+	var seedWorkspace func(ctx context.Context, workspaceID, ownerID string)
 	if brand.StarterKitEnabled() {
 		brandSvc.WithStarterAssets(starterAssets{uploadsSvc})
-		acct.WithWorkspaceHook(func(ctx context.Context, workspaceID, ownerID string) {
+		seedWorkspace = func(ctx context.Context, workspaceID, ownerID string) {
 			// Outlives the request that created the workspace, within reason.
 			ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 			defer cancel()
 			if _, err := brandSvc.SeedStarterKit(ctx, workspaceID, ownerID); err != nil {
 				logger.Warn("brand: starter kit not seeded", "workspace", workspaceID, "err", err)
 			}
-		})
+		}
+		acct.WithWorkspaceHook(seedWorkspace)
 		go func() {
 			n, err := brandSvc.SeedStarterKits(rtCtx)
 			if err != nil && rtCtx.Err() == nil {
@@ -414,7 +417,7 @@ func main() {
 	srv := &http.Server{
 		Addr: cfg.BindHost + ":" + cfg.Port,
 		Handler: httpapi.NewRouter(httpapi.Deps{
-			SCIM:          scim.NewServer(scimCfg, pool, cfg.JWTSecret, rtHub.DisconnectUser, logger).Handler(),
+			SCIM:          scim.NewServer(scimCfg, pool, cfg.JWTSecret, rtHub.DisconnectUser, logger).WithWorkspaceHook(seedWorkspace).Handler(),
 			DB:            pool,
 			Logger:        logger,
 			Version:       version,
