@@ -121,3 +121,48 @@ func TestUpdateProvisionedUser_DB(t *testing.T) {
 		t.Fatalf("email collision: got %v, want ErrEmailTaken", err)
 	}
 }
+
+// A deactivated account belongs to someone who left. A different identity that
+// happens to carry the same email (a recycled address) must not inherit it,
+// even on a vouched domain; only the same SSO subject may bring it back.
+func TestAdoptRefusesDeactivatedAccountForNewSubject_DB(t *testing.T) {
+	tx := deactivateTestTx(t)
+	ctx := context.Background()
+	svc := NewService(tx, "test-jwt-secret")
+	t.Setenv("OIDC_ALLOWED_EMAIL_DOMAINS", "example.com")
+	email := "leaver+" + uuid.NewString() + "@example.com"
+	oldSub := "sub-" + uuid.NewString()
+	id, err := svc.CreateProvisionedUser(ctx, email, "Leaver", oldSub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.DeactivateUser(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.AdoptForProvisioning(ctx, email, "sub-"+uuid.NewString()); !errors.Is(err, ErrEmailTaken) {
+		t.Fatalf("a new subject adopted a deactivated account: got %v, want ErrEmailTaken", err)
+	}
+	// Control: the same person (same subject) is still recognised.
+	if got, err := svc.AdoptForProvisioning(ctx, email, oldSub); err != nil || got != id {
+		t.Fatalf("same subject: got %q, %v; want %q", got, err, id)
+	}
+}
+
+// Provisioned emails meet the same bar as sign-up emails.
+func TestProvisionedEmailIsValidated_DB(t *testing.T) {
+	tx := deactivateTestTx(t)
+	ctx := context.Background()
+	svc := NewService(tx, "test-jwt-secret")
+	for _, bad := range []string{"@", "a@", "@b.c", "a b@c.d", "a@b"} {
+		if _, err := svc.CreateProvisionedUser(ctx, bad, "x", ""); !errors.Is(err, ErrBadRequest) {
+			t.Errorf("create %q: got %v, want ErrBadRequest", bad, err)
+		}
+	}
+	id, err := svc.CreateProvisionedUser(ctx, "ok+"+uuid.NewString()+"@example.com", "x", "")
+	if err != nil {
+		t.Fatalf("control: a valid email was refused: %v", err)
+	}
+	if err := svc.UpdateProvisionedUser(ctx, id, "not-an-email@", "x"); !errors.Is(err, ErrBadRequest) {
+		t.Fatalf("update to an invalid email: got %v, want ErrBadRequest", err)
+	}
+}
