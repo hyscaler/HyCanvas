@@ -225,6 +225,11 @@ func (s *Server) accountFor(o *op, in *userIn, ext *string) (userID, how string,
 	}
 	userID, err = o.acct.CreateProvisionedUser(o.ctx, in.email(), in.displayName(), subject)
 	if err == nil {
+		var ws string
+		if err := o.tx.QueryRow(o.ctx, `SELECT id FROM "workspaces" WHERE "owner_id" = $1 AND kind = 'PERSONAL'`, userID).Scan(&ws); err != nil {
+			return "", "", err
+		}
+		o.created = append(o.created, [2]string{ws, userID})
 		return userID, "created", nil
 	}
 	if !errors.Is(err, accounts.ErrEmailTaken) {

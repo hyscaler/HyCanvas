@@ -24,6 +24,16 @@ type Server struct {
 	jwtSecret  string
 	disconnect func(userID string)
 	log        *slog.Logger
+	// workspaceHook sets up a newly created workspace (the starter brand kit),
+	// as accounts.Service.WithWorkspaceHook does for every other new account.
+	workspaceHook func(ctx context.Context, workspaceID, ownerID string)
+}
+
+// WithWorkspaceHook runs fn, after commit, for the personal workspace of each
+// account SCIM creates.
+func (s *Server) WithWorkspaceHook(fn func(ctx context.Context, workspaceID, ownerID string)) *Server {
+	s.workspaceHook = fn
+	return s
 }
 
 // NewServer builds the SCIM server. A nil cfg (SCIM_TOKEN unset) gives a handler
@@ -102,8 +112,9 @@ type op struct {
 	ctx        context.Context
 	tx         pgx.Tx
 	acct       *accounts.Service
-	disconnect []string // user ids whose sockets to close after commit
-	audits     [][]any  // audit lines to write after commit
+	disconnect []string    // user ids whose sockets to close after commit
+	audits     [][]any     // audit lines to write after commit
+	created    [][2]string // {workspace id, owner id} of new personal workspaces
 }
 
 // audit queues the structured line every SCIM write leaves (FR-28). It is
@@ -139,6 +150,11 @@ func (s *Server) run(w http.ResponseWriter, r *http.Request, fn func(o *op) (int
 	}
 	for _, id := range o.disconnect {
 		s.disconnect(id)
+	}
+	if s.workspaceHook != nil {
+		for _, c := range o.created {
+			s.workspaceHook(ctx, c[0], c[1])
+		}
 	}
 	if status == http.StatusNoContent {
 		w.WriteHeader(status)
