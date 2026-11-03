@@ -255,7 +255,7 @@ func (s *Server) createGroup(w http.ResponseWriter, r *http.Request) {
 		if err := setGroupMembers(o, id, members); err != nil {
 			return 0, nil, err
 		}
-		s.audit("group.create", "scim_id", id, "display_name", in.DisplayName, "members", len(members))
+		o.audit("group.create", "scim_id", id, "display_name", in.DisplayName, "members", len(members))
 		if err := s.reconcile(o, members...); err != nil {
 			return 0, nil, err
 		}
@@ -316,7 +316,7 @@ func (s *Server) writeGroup(o *op, g *groupRec, name string, ext *string, member
 	if err := setGroupMembers(o, g.ID, members); err != nil {
 		return err
 	}
-	s.audit("group.update", "scim_id", g.ID, "display_name", name, "members", len(members))
+	o.audit("group.update", "scim_id", g.ID, "display_name", name, "members", len(members))
 	affected := members
 	for _, m := range g.Members {
 		affected = append(affected, m.UserID)
@@ -470,7 +470,7 @@ func (s *Server) deleteGroup(w http.ResponseWriter, r *http.Request) {
 		if _, err := o.tx.Exec(o.ctx, `DELETE FROM "scim_groups" WHERE id = $1`, g.ID); err != nil {
 			return 0, nil, err
 		}
-		s.audit("group.delete", "scim_id", g.ID, "display_name", g.DisplayName)
+		o.audit("group.delete", "scim_id", g.ID, "display_name", g.DisplayName)
 		affected := make([]string, 0, len(g.Members))
 		for _, m := range g.Members {
 			affected = append(affected, m.UserID)

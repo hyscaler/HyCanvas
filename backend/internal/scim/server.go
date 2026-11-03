@@ -103,6 +103,14 @@ type op struct {
 	tx         pgx.Tx
 	acct       *accounts.Service
 	disconnect []string // user ids whose sockets to close after commit
+	audits     [][]any  // audit lines to write after commit
+}
+
+// audit queues the structured line every SCIM write leaves (FR-28). It is
+// written only once the request commits: a rolled-back request did nothing,
+// and its log must not say otherwise.
+func (o *op) audit(event string, attrs ...any) {
+	o.audits = append(o.audits, append([]any{"actor", "scim", "op", event}, attrs...))
 }
 
 // run executes fn in a transaction and writes its result. A *scimErr (or any
@@ -125,6 +133,9 @@ func (s *Server) run(w http.ResponseWriter, r *http.Request, fn func(o *op) (int
 	if err := tx.Commit(ctx); err != nil {
 		s.fail(w, err)
 		return
+	}
+	for _, a := range o.audits {
+		s.log.Info("scim", a...)
 	}
 	for _, id := range o.disconnect {
 		s.disconnect(id)
@@ -149,9 +160,4 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 		s.log.Error("scim request failed", "err", err)
 		writeError(w, http.StatusInternalServerError, "", "internal error")
 	}
-}
-
-// audit writes the one structured line every SCIM write leaves (FR-28).
-func (s *Server) audit(op string, attrs ...any) {
-	s.log.Info("scim", append([]any{"actor", "scim", "op", op}, attrs...)...)
 }
