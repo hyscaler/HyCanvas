@@ -190,7 +190,7 @@ func TestModerateKickBanGating(t *testing.T) {
 	hub.HandleModerate(fac, "kick", "uf")
 
 	// A banned user is refused at the join boundary (joinConn returns nil).
-	if c := hub.joinConn(PeerIdentity{ClientID: "g2", UserID: "ug", Role: RoleEditor}, "d1", 1000, func() {}); c != nil {
+	if c, _ := hub.joinConn(PeerIdentity{ClientID: "g2", UserID: "ug", Role: RoleEditor}, "d1", 1000, func() {}); c != nil {
 		t.Error("a banned user's join must be refused (joinConn should return nil)")
 	}
 	// Unban clears the ban so the user can rejoin.
@@ -198,7 +198,7 @@ func TestModerateKickBanGating(t *testing.T) {
 	if hub.IsBanned("d1", "ug") {
 		t.Error("unban should clear the ban")
 	}
-	if c := hub.joinConn(PeerIdentity{ClientID: "g3", UserID: "ug", Role: RoleEditor}, "d1", 1000, func() {}); c == nil {
+	if c, _ := hub.joinConn(PeerIdentity{ClientID: "g3", UserID: "ug", Role: RoleEditor}, "d1", 1000, func() {}); c == nil {
 		t.Error("after unban, the user should be able to rejoin")
 	}
 }

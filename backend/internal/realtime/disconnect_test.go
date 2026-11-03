@@ -76,3 +76,26 @@ func (c *countingCoord) PublishTo(string, string, string, []byte)            { c
 func (c *countingCoord) InstanceID() string                                  { return "spy" }
 func (c *countingCoord) Start(context.Context, func(string, string, []byte)) {}
 func (c *countingCoord) Close() error                                        { return nil }
+
+// A socket that passed its session check but had not joined yet when the
+// person was deactivated must not join afterwards: DisconnectUser found nothing
+// to close for it. The refusal is short-lived, so a reactivated person can
+// collaborate again.
+func TestJoinRefusedJustAfterDisconnect(t *testing.T) {
+	old := disconnectRefuseTTL
+	disconnectRefuseTTL = 80 * time.Millisecond
+	defer func() { disconnectRefuseTTL = old }()
+
+	h := NewHub(nil)
+	h.DisconnectUser("u")
+	if c, why := h.joinConn(PeerIdentity{ClientID: "late", UserID: "u", Role: RoleEditor}, "d1", 1000, nil); c != nil || why != "deactivated" {
+		t.Fatalf("a join racing the disconnect was let in (refusal %q)", why)
+	}
+	if c := h.Join(PeerIdentity{ClientID: "o", UserID: "other", Role: RoleEditor}, "d1", 1000); c == nil {
+		t.Fatal("someone else was refused")
+	}
+	time.Sleep(120 * time.Millisecond)
+	if c := h.Join(PeerIdentity{ClientID: "back", UserID: "u", Role: RoleEditor}, "d1", 1000); c == nil {
+		t.Fatal("the refusal never expired")
+	}
+}
