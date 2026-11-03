@@ -38,7 +38,7 @@ type ServerFrame =
   | { t: "comment"; op: "changed"; designId: string } // comment mutation signal
   | { t: "vote"; op: "changed"; designId: string } // server-authoritative vote signal (FR-19)
   | { t: "audience"; kind: AudienceEvent["kind"]; emoji?: string; action?: string; code?: string } // live audience event (doc 28) + remote relay (C21)
-  | { t: "moderated"; action: "kick" | "ban" | "unban"; designId: string } // you were removed (FR-32)
+  | { t: "moderated"; action: "kick" | "ban" | "unban" | "deactivated"; designId?: string } // removal or account deactivation
   | { t: "revoked"; designId: string } // your access to the design was removed
   | { t: "notify"; designId: string } // new in-app notification for the caller
   | { t: "role"; role: RealtimeRole; reason?: RoleChangeReason } // live role change
@@ -112,10 +112,10 @@ export function onVoteChanged(fn: (designId: string) => void): () => void {
 // Listeners notified when the server pushes a `{ t: "moderated" }` frame (FR-32):
 // a facilitator kicked or banned this client. The transport stops reconnecting
 // (a ban would otherwise loop); the editor shell surfaces a message.
-const moderatedListeners = new Set<(action: "kick" | "ban" | "unban") => void>();
+const moderatedListeners = new Set<(action: "kick" | "ban" | "unban" | "deactivated") => void>();
 
 /** Subscribe to being kicked/banned from the current board; returns an unsubscribe. */
-export function onModerated(fn: (action: "kick" | "ban" | "unban") => void): () => void {
+export function onModerated(fn: (action: "kick" | "ban" | "unban" | "deactivated") => void): () => void {
   moderatedListeners.add(fn);
   return () => moderatedListeners.delete(fn);
 }
