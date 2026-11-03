@@ -93,8 +93,9 @@ People often sign up through SSO before SCIM is configured. When `POST /Users` c
   3. revokes every API key the person holds, in every workspace;
   4. sets each of their `ACTIVE` memberships to `SUSPENDED`, recording that deactivation did it (`suspended_by_deactivation`).
   After commit it closes every realtime socket the person holds on this instance and publishes the same to other instances.
+  Deactivation applies even to a workspace's only active owner: cutting a departed person off outranks keeping a workspace owned, so FR-7's last-owner guard covers membership changes, not deactivation. The workspace and its data stay intact with no active owner until that person is reactivated. A realtime socket that passed its session check but had not yet joined when deactivation ran is refused for a short window (30 seconds) instead of joining after the disconnect.
 - FR-17 A deactivated account cannot sign in by any path: password, magic link, OIDC (including an existing linked identity), and refresh-token rotation. Each returns the same "account disabled" error.
-- FR-18 `active: true` clears `deactivated_at` and restores to `ACTIVE` exactly the memberships with `suspended_by_deactivation`, then reconciles (group membership may have changed meanwhile). Sessions and API keys stay revoked; the person signs in again.
+- FR-18 `active: true` clears `deactivated_at` and restores to `ACTIVE` exactly the memberships with `suspended_by_deactivation`, then reconciles (group membership may have changed meanwhile). Sessions and API keys stay revoked, including any created in the moment a sign-in raced the deactivation; the person signs in again.
 - FR-19 `DELETE /Users/{id}` deactivates (FR-16) and detaches the SCIM link (`scim_users.deleted_at`); afterwards `GET` on that id is `404`. No data is deleted. A later `POST` for the same person (same `externalId`) re-links and reactivates.
 - FR-20 Every query that grants access through a membership counts only `ACTIVE` memberships. Queries that merely list members may show `SUSPENDED` ones, labelled.
 
