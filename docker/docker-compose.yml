@@ -29,12 +29,26 @@ services:
       timeout: 5s
       retries: 12
 
+  # The app runs as uid 10001, never root. Storage created by an earlier image
+  # (or a bind-mount folder Docker created) is root-owned, so this one-shot step
+  # hands it to that user once, and is a no-op on every later start. It only
+  # changes ownership of the storage directory; the app itself never runs as root.
+  storage-init:
+    image: hycanvas/hycanvas:latest
+    user: "0"
+    entrypoint: ["sh", "-c", "[ \"$$(stat -c %u /app/.data/storage)\" = 10001 ] || chown -R 10001:0 /app/.data/storage"]
+    restart: "no"
+    volumes:
+      - storage:/app/.data/storage
+
   app:
     image: hycanvas/hycanvas:latest
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully
     ports:
       - "${HYCANVAS_PORT:-8005}:8005"
     environment:
