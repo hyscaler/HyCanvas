@@ -161,6 +161,24 @@ With the default local storage driver, uploads, exports, and snapshots are writt
 
 Postgres data persists in its own volume (the `pgdata` volume under compose, or whatever you mount on the `postgres` container).
 
+### The container runs as a non-root user
+
+The server runs as uid `10001` in group `0`, never as root. `/app` (the working directory, where the setup wizard writes `.env`) and `/app/.data/storage` belong to that user and are writable by group `0`, so the image also runs under any other uid in group `0`, such as a Kubernetes `runAsUser` or OpenShift's random uids. The binary is at `/usr/local/bin/hycanvas` (with `/app/hycanvas` linked to it), out of the server's reach.
+
+If the storage directory is not writable, the server refuses to start and logs the command that fixes it, rather than starting and failing every upload.
+
+- **Compose**: the bundled compose files run a one-shot `storage-init` step before the app. It hands the storage directory to uid `10001` the first time and does nothing on later starts, so upgrades and new bind-mount folders need no manual step.
+- **`docker run` with a named volume**: a new volume takes the image's ownership automatically. A volume created by an image from before this change is owned by root; give it to the app user once:
+
+  ```
+  docker run --rm -u 0 -v hycanvas-storage:/data debian:bookworm-slim chown -R 10001:0 /data
+  ```
+
+- **`docker run` with a bind mount**: create the host folder and give it to the app user before the first start: `mkdir -p data/storage && sudo chown -R 10001:0 data/storage`. (Docker Desktop on macOS and Windows does not enforce ownership on bind mounts, so this is not needed there.)
+- **Kubernetes**: set `runAsNonRoot: true`, `runAsUser: 10001` and an `fsGroup` (for example `10001`) in the pod security context, so the storage volume is group-writable for the server. The root filesystem can be read-only with a writable `emptyDir` on `/tmp`.
+
+To check a locally built image against all of these cases, run `sh scripts/check-image.sh <image>`.
+
 ## Environment variable reference
 
 `JWT_SECRET` is the only strictly required value; the API refuses to start without it. Real environment variables always override any `.env` file.
@@ -251,6 +269,7 @@ AI is bring-your-own: providers and API keys are configured per workspace in the
 - Use strong `POSTGRES_PASSWORD` / managed Postgres credentials.
 - Terminate TLS at a reverse proxy in front of the container; set `APP_URL` and `BACKEND_PUBLIC_URL` to the public https URL.
 - Persist `/app/.data/storage` (or move to object storage once the S3 driver lands).
+- Keep the server unprivileged: the image runs as uid `10001`; do not override it with `--user 0` (see [The container runs as a non-root user](#the-container-runs-as-a-non-root-user)).
 - Back up the Postgres volume.
 
 ## Health checks and troubleshooting
