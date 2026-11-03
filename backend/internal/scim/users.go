@@ -196,7 +196,7 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 		if err := s.setActive(o, userID, want); err != nil {
 			return 0, nil, err
 		}
-		s.audit("user.create", "scim_id", id, "user_id", userID, "account", how, "active", want)
+		o.audit("user.create", "scim_id", id, "user_id", userID, "account", how, "active", want)
 		u, err := getUserRec(o.ctx, o.tx, id)
 		if err != nil {
 			return 0, nil, err
@@ -265,12 +265,12 @@ func (s *Server) setActive(o *op, userID string, want bool) error {
 			return err
 		}
 		o.disconnect = append(o.disconnect, userID)
-		s.audit("user.deactivate", "user_id", userID)
+		o.audit("user.deactivate", "user_id", userID)
 	case want && deactivated:
 		if err := o.acct.ReactivateUser(o.ctx, userID); err != nil {
 			return err
 		}
-		s.audit("user.reactivate", "user_id", userID)
+		o.audit("user.reactivate", "user_id", userID)
 	}
 	return s.reconcile(o, userID)
 }
@@ -312,7 +312,7 @@ func (s *Server) applyUser(o *op, u *userRec, userName string, ext *string, emai
 	if err := updateLink(o.ctx, o.tx, u.ID, userName, ext, attrs); err != nil {
 		return err
 	}
-	s.audit("user.update", "scim_id", u.ID, "user_id", u.UserID)
+	o.audit("user.update", "scim_id", u.ID, "user_id", u.UserID)
 	if active != nil {
 		return s.setActive(o, u.UserID, *active)
 	}
@@ -461,7 +461,7 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 		if _, err := o.tx.Exec(o.ctx, `UPDATE "scim_users" SET "deleted_at" = now(), "updated_at" = now() WHERE id = $1`, u.ID); err != nil {
 			return 0, nil, err
 		}
-		s.audit("user.delete", "scim_id", u.ID, "user_id", u.UserID)
+		o.audit("user.delete", "scim_id", u.ID, "user_id", u.UserID)
 		return http.StatusNoContent, nil, nil
 	})
 }

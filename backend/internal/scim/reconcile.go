@@ -82,7 +82,7 @@ func (s *Server) reconcileOne(o *op, wsID, slug string, mode Mode, userID string
 		return err
 	}
 	log := func(change string, extra ...any) {
-		s.audit("membership."+change, append([]any{"workspace", slug, "user_id", userID, "mode", string(mode)}, extra...)...)
+		o.audit("membership."+change, append([]any{"workspace", slug, "user_id", userID, "mode", string(mode)}, extra...)...)
 	}
 	if exists && !managed && mode == ModeAdditive {
 		if desired != "" {
