@@ -163,7 +163,7 @@ Shipped:
 Remaining:
 - i18n and localization; observability beyond structured logs; compliance programs (SOC 2, ISO 27001, GDPR tooling); Helm.
 - A workspace audit trail (widening the existing `activity_events` feed to workspace scope and adding sign-in, permission, sharing, export and admin events) and data residency.
-- Dropped from scope in August 2026, with reasons recorded in the spec: SAML 2.0 (OIDC covers every modern IdP and SAML's XML signature handling is a permanent risk surface), SCIM 2.0 (manual deprovisioning is the accepted gap), DLP policy controls (a single external-sharing toggle survives instead), and CMEK (a self-hoster already owns the keys). WebAuthn and passkeys are deferred, not dropped: TOTP already satisfies MFA.
+- Dropped from scope in August 2026, with reasons recorded in the spec: SAML 2.0 (OIDC covers every modern IdP and SAML's XML signature handling is a permanent risk surface), DLP policy controls (a single external-sharing toggle survives instead), and CMEK (a self-hoster already owns the keys). WebAuthn and passkeys are deferred, not dropped: TOTP already satisfies MFA. SCIM 2.0 was dropped with them and reinstated in November 2026 ([38-scim-provisioning.md](38-scim-provisioning.md)): manual deprovisioning turned out to leave sessions, API keys and live sockets working.
 - Editor accessibility depth: full keyboard model, assistive-technology tree, high-contrast theme.
 
 ## Editor parity backlog
