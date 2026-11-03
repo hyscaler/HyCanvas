@@ -280,12 +280,27 @@ const ctrlRosterRequest = "\x00ctrl:roster-request"
 // there is no fan-out loop.
 const ctrlLocksChanged = "\x00ctrl:locks-changed"
 
+// ctrlDisconnectUser is a sentinel `except` marking a cross-instance signal that
+// a person's account was deactivated: every instance closes that person's local
+// connections (F38 FR-13). The user id rides as a JSON string; the designID is
+// empty because the signal is about a person, not a room. Peers do NOT
+// re-publish, so there is no fan-out loop.
+const ctrlDisconnectUser = "\x00ctrl:disconnect-user"
+
 // deliverRemote handles a message that ORIGINATED on a peer instance. A control
 // signal (sentinel `except`) triggers a local action; any other message is a
 // client frame broadcast into this instance's local room. It never re-publishes
 // (no fan-out loop) and never re-journals (the originating instance owns
 // durability). A frame for a design with no local connections is dropped.
 func (h *Hub) deliverRemote(designID, except string, payload []byte) {
+	// A peer deactivated someone: close their connections here too.
+	if except == ctrlDisconnectUser {
+		var userID string
+		if json.Unmarshal(payload, &userID) == nil && userID != "" {
+			h.disconnectUserLocal(userID)
+		}
+		return
+	}
 	// Cross-instance role refresh: re-resolve THIS instance's connections and push
 	// role frames to them. Run off the delivery goroutine (the resolver hits the
 	// DB); the local path takes no coordinator action, so there is no fan-out loop.
@@ -1191,4 +1206,41 @@ func (h *Hub) broadcastLocked(lr *liveRoom, payload []byte, exceptClientID strin
 func frame(v map[string]any) []byte {
 	b, _ := json.Marshal(v)
 	return b
+}
+
+// DisconnectUser closes every connection a person holds, on this instance and,
+// through the coordinator, on every peer instance. Called after an account is
+// deactivated: revoking its sessions stops new requests, but an editor tab
+// opened before that holds a socket the session check never sees again.
+func (h *Hub) DisconnectUser(userID string) {
+	if userID == "" {
+		return
+	}
+	h.disconnectUserLocal(userID)
+	payload, _ := json.Marshal(userID)
+	h.coord.Publish("", ctrlDisconnectUser, payload)
+}
+
+// disconnectUserLocal notifies and cancels every connection the person holds on
+// THIS instance, in any room. As with a moderation kick, cancel() only signals
+// the connection's pump context; its own goroutine runs Leave, so calling it
+// under h.mu cannot deadlock.
+func (h *Hub) disconnectUserLocal(userID string) {
+	notice := frame(map[string]any{"t": "moderated", "action": "deactivated"})
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for _, room := range h.rooms {
+		for _, c := range room.conns {
+			if c.userID != userID {
+				continue
+			}
+			select {
+			case c.send <- notice:
+			default:
+			}
+			if c.cancel != nil {
+				c.cancel()
+			}
+		}
+	}
 }
