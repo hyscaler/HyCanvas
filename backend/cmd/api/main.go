@@ -47,6 +47,7 @@ import (
 	"hycanvas/backend/internal/push"
 	"hycanvas/backend/internal/realtime"
 	"hycanvas/backend/internal/render"
+	"hycanvas/backend/internal/scim"
 	"hycanvas/backend/internal/setup"
 	"hycanvas/backend/internal/sharing"
 	"hycanvas/backend/internal/stock"
@@ -163,6 +164,17 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Info("storage ready", "kind", store.Kind())
+
+	// SCIM 2.0 provisioning (F38 FR-13): off unless SCIM_TOKEN is set. A
+	// malformed group map stops the server here rather than granting nothing.
+	scimCfg, err := scim.LoadConfig(os.Getenv)
+	if err != nil {
+		logger.Error("scim config invalid", "err", err)
+		os.Exit(1)
+	}
+	if scimCfg != nil {
+		logger.Info("scim enabled", "mapped_groups", len(scimCfg.Groups), "mapped_workspaces", scimCfg.Workspaces())
+	}
 
 	// Export font coverage (F38 FR-10). The embedded fallback covers Latin,
 	// Greek and Cyrillic only, so Hebrew, Arabic, Indic and CJK text exports
@@ -394,6 +406,7 @@ func main() {
 	srv := &http.Server{
 		Addr: cfg.BindHost + ":" + cfg.Port,
 		Handler: httpapi.NewRouter(httpapi.Deps{
+			SCIM:          scim.NewServer(scimCfg, pool, cfg.JWTSecret, rtHub.DisconnectUser, logger).Handler(),
 			DB:            pool,
 			Logger:        logger,
 			Version:       version,
