@@ -71,8 +71,8 @@ func TestDisconnectUserSignalIsNotRepublished(t *testing.T) {
 
 type countingCoord struct{ published atomic.Int64 }
 
-func (c *countingCoord) Publish(string, string, []byte)         { c.published.Add(1) }
-func (c *countingCoord) PublishTo(string, string, string, []byte) { c.published.Add(1) }
-func (c *countingCoord) InstanceID() string                      { return "spy" }
+func (c *countingCoord) Publish(string, string, []byte)                      { c.published.Add(1) }
+func (c *countingCoord) PublishTo(string, string, string, []byte)            { c.published.Add(1) }
+func (c *countingCoord) InstanceID() string                                  { return "spy" }
 func (c *countingCoord) Start(context.Context, func(string, string, []byte)) {}
-func (c *countingCoord) Close() error                            { return nil }
+func (c *countingCoord) Close() error                                        { return nil }

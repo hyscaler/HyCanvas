@@ -83,6 +83,9 @@ type Deps struct {
 	// AllowOrigin gates CORS: it returns true for cross-origin Origins that may
 	// call the API with credentials (dev frontend). Nil disables CORS handling.
 	AllowOrigin func(origin string) bool
+	// SCIM serves /scim/v2 (F38 FR-13). Set even when SCIM is off: that handler
+	// answers 404, where an unmounted path would get the frontend's app shell.
+	SCIM http.Handler
 }
 
 // NewRouter builds the full handler tree.
@@ -122,6 +125,12 @@ func NewRouter(d Deps) http.Handler {
 	// /realtime - it is a protocol surface, not an /api/v1 REST route.
 	if d.APIKeys != nil && d.Accounts != nil && d.AIStudio != nil && d.Persistence != nil && d.Jobs != nil && d.Sharing != nil && d.Templates != nil {
 		mountMCP(r, d.APIKeys, d.Accounts, d.AIStudio, d.AI, d.Uploads, d.Stock, d.Brand, d.Persistence, d.Jobs, d.Sharing, d.Templates)
+	}
+
+	// F38 FR-13: SCIM 2.0 provisioning, authenticated by its own bearer token,
+	// at the root like /mcp.
+	if d.SCIM != nil {
+		r.Mount("/scim/v2", d.SCIM)
 	}
 
 	// The /api/v1 surface. Ported modules register their routes here; until a
