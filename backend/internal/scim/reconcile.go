@@ -160,13 +160,29 @@ func (s *Server) desiredRole(o *op, userID, slug string) (Role, error) {
 }
 
 // isLastOwner reports whether removing or demoting this membership would leave
-// the workspace with no active owner (FR-7).
+// the workspace with no active owner (FR-7). It locks the active owner rows
+// first (as RemoveMember does): two concurrent syncs each removing one of two
+// owners would otherwise each see the other still present, and both succeed.
+// The lock makes the second wait for the first and then count what it left.
 func (s *Server) isLastOwner(o *op, wsID, userID, role, status string) (bool, error) {
 	if role != "OWNER" || status != "ACTIVE" {
 		return false, nil
 	}
-	var others int
-	err := o.tx.QueryRow(o.ctx, `SELECT count(*) FROM "workspace_members" WHERE "workspace_id" = $1 AND "user_id" <> $2 AND role = 'OWNER' AND status = 'ACTIVE'`,
-		wsID, userID).Scan(&others)
-	return others == 0, err
+	rows, err := o.tx.Query(o.ctx, `SELECT "user_id"::text FROM "workspace_members"
+		WHERE "workspace_id" = $1 AND role = 'OWNER' AND status = 'ACTIVE' FOR UPDATE`, wsID)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	others := 0
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return false, err
+		}
+		if id != userID {
+			others++
+		}
+	}
+	return others == 0, rows.Err()
 }
