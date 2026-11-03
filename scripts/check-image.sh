@@ -20,9 +20,16 @@ FAILS=0
 pass() { echo "PASS  $1"; }
 fail() { echo "FAIL  $1"; FAILS=$((FAILS + 1)); }
 
+# The app container joins the database container's network namespace, so the
+# database cannot be removed while the app exists: remove the app first. One
+# `rm -f db app` removed the app and left the database running, silently, on
+# every run. Anything that survives is reported rather than hidden.
 cleanup() {
-  $CLI rm -f "$TAG-db" "$TAG-app" >/dev/null 2>&1 || true
+  $CLI rm -f "$TAG-app" >/dev/null 2>&1 || true
+  $CLI rm -f "$TAG-db" >/dev/null 2>&1 || true
   for v in fresh uid legacy ro; do $CLI volume rm -f "$TAG-$v" >/dev/null 2>&1 || true; done
+  left=$($CLI ps -a --filter "name=$TAG" --format '{{.Names}}' 2>/dev/null)
+  [ -z "$left" ] || echo "WARN  cleanup left containers behind: $left" >&2
 }
 trap cleanup EXIT INT TERM
 
