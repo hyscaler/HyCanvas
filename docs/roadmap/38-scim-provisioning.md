@@ -4,7 +4,7 @@
 | --- | --- |
 | Feature ID | F38, FR-13 |
 | Role | Sub-spec of [`38-accessibility-i18n-security-compliance-selfhost-nfr.md`](38-accessibility-i18n-security-compliance-selfhost-nfr.md) |
-| Status | **In progress** |
+| Status | **Shipped** (November 2026). Verified by unit, database and Authentik request-replay tests; a live sync from a running identity provider is the operator acceptance step in section 12 |
 | Date | 2026-11-03 |
 | Schema version | None. No design-file change; SQL migrations are additive only |
 

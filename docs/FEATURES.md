@@ -118,7 +118,8 @@ A living checklist of what ships today versus what is planned. Shipped items are
 
 ### Accessibility, i18n, enterprise ([spec 38](roadmap/38-accessibility-i18n-security-compliance-selfhost-nfr.md))
 - [ ] UI internationalization/localization; high-contrast theme; full keyboard model + assistive-tech tree
-- [ ] SCIM, audit log, DLP, customer-managed keys (CMEK), data residency
+- [x] SCIM 2.0 provisioning, with account deactivation that revokes sessions, API keys and open editor sockets
+- [ ] Audit log, DLP, customer-managed keys (CMEK), data residency
 - [ ] Observability (metrics/traces), Helm chart, compliance programs (SOC 2/ISO 27001), backup/DR drills
 
 ### Publishing gaps (marked in-product)
