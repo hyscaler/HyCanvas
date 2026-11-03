@@ -4138,6 +4138,7 @@
   "brands.no_text_pairs": "इनमें से कोई भी दो रंग साथ में बॉडी टेक्स्ट के लिए पढ़ने योग्य नहीं हैं (4.5:1)।",
   "brands.contrast_value": "{ratio}:1 कंट्रास्ट",
   "brands.type_sample": "अआ",
+  "errors.api_account_disabled": "यह खाता अक्षम कर दिया गया है। अपने व्यवस्थापक से संपर्क करें।",
   "pwa.update_available": "नया संस्करण उपलब्ध है",
   "pwa.reload": "फिर से लोड करें"
 }

@@ -168,6 +168,8 @@ func oidcCallbackHandler(svc *oidc.Service, acct *accounts.Service, secure bool,
 				http.Redirect(w, r, front+"/login?error=oidc_login_disabled", http.StatusFound)
 			case errors.Is(err, accounts.ErrOidcSignupDisabled):
 				http.Redirect(w, r, front+"/login?error=oidc_signup_disabled", http.StatusFound)
+			case errors.Is(err, accounts.ErrAccountDisabled):
+				http.Redirect(w, r, front+"/login?error=account_disabled", http.StatusFound)
 			default:
 				fail()
 			}

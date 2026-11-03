@@ -107,3 +107,42 @@ func TestAPIKeys_DB(t *testing.T) {
 		t.Fatalf("double revoke must 404, got %v", err)
 	}
 }
+
+// An API key belongs to a person; once that person is deactivated the key must
+// stop working even if nobody revoked it by hand.
+func TestAPIKeyOfDeactivatedUser_DB(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; skipping DB integration test")
+	}
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, stripSchema(dsn))
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer conn.Close(ctx)
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	acct := accounts.NewService(tx, "test-jwt-secret")
+	user, ws, _, err := acct.Signup(ctx, "apikey-deact+"+uuid.NewString()+"@example.com", "a-strong-password", "Owner")
+	if err != nil {
+		t.Fatalf("signup: %v", err)
+	}
+	svc := NewService(tx)
+	raw, _, err := svc.Mint(ctx, ws.ID, user.ID, "bot", []string{"read"})
+	if err != nil {
+		t.Fatalf("mint: %v", err)
+	}
+	if _, err := svc.Verify(ctx, raw); err != nil {
+		t.Fatalf("control: a fresh key should verify: %v", err)
+	}
+	if err := acct.DeactivateUser(ctx, user.ID); err != nil {
+		t.Fatalf("deactivate: %v", err)
+	}
+	if _, err := svc.Verify(ctx, raw); !errors.Is(err, ErrRevoked) {
+		t.Fatalf("key of a deactivated user: got %v, want ErrRevoked", err)
+	}
+}
