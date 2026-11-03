@@ -19,7 +19,7 @@ var ErrSubjectTaken = errors.New("this sign-in identity is already linked to ano
 // account by subject rather than by email.
 func (s *Service) CreateProvisionedUser(ctx context.Context, email, name, oidcSubject string) (string, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
-	if email == "" {
+	if !emailRe.MatchString(email) {
 		return "", ErrBadRequest
 	}
 	if u, err := s.findUserByEmail(ctx, email); err == nil && u != nil {
@@ -79,6 +79,12 @@ func (s *Service) AdoptForProvisioning(ctx context.Context, email, oidcSubject s
 			return "", ErrSubjectTaken
 		}
 	}
+	// A deactivated account belongs to someone who left; a different identity
+	// carrying the same (recycled) email must not inherit it and its data, even
+	// on a vouched domain. Only the same subject (above) brings it back.
+	if s.isDeactivated(ctx, u.ID) {
+		return "", ErrEmailTaken
+	}
 	if allowed, configured := emailDomainAllowed(email); configured && allowed {
 		if oidcSubject != "" {
 			if _, err := s.db.Exec(ctx,
@@ -98,7 +104,7 @@ func (s *Service) AdoptForProvisioning(ctx context.Context, email, oidcSubject s
 func (s *Service) UpdateProvisionedUser(ctx context.Context, userID, email, name string) error {
 	email = strings.ToLower(strings.TrimSpace(email))
 	name = strings.TrimSpace(name)
-	if email == "" {
+	if !emailRe.MatchString(email) {
 		return ErrBadRequest
 	}
 	if u, err := s.findUserByEmail(ctx, email); err == nil && u != nil && u.ID != userID {
