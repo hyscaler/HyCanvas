@@ -508,6 +508,11 @@ func (s *Service) Login(ctx context.Context, email, password, device, ip string)
 	if !secrets.VerifyPassword(password, *u.PasswordHash) {
 		return nil, nil, "", ErrInvalidCredentials
 	}
+	// Refuse a deactivated account before any MFA challenge, so every sign-in
+	// path answers the same way (issueSession is the backstop).
+	if s.isDeactivated(ctx, u.ID) {
+		return nil, nil, "", ErrAccountDisabled
+	}
 	if u.MFAEnabled {
 		mfaToken, err := s.mfaChallengeToken(u.ID)
 		if err != nil {

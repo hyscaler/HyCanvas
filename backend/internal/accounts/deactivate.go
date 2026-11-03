@@ -71,6 +71,17 @@ func (s *Service) ReactivateUser(ctx context.Context, userID string) error {
 		 WHERE "user_id" = $1 AND "suspended_by_deactivation"`, userID); err != nil {
 		return err
 	}
+	// Deactivation revoked every session and key, so any still unrevoked was
+	// created inside the deactivation window (a sign-in racing it). Those were
+	// refused while the account was off; reactivating must not revive them.
+	for _, q := range []string{
+		`UPDATE "sessions" SET "revoked_at" = now() WHERE "user_id" = $1 AND "revoked_at" IS NULL`,
+		`UPDATE "api_keys" SET "revoked_at" = now() WHERE "user_id" = $1 AND "revoked_at" IS NULL`,
+	} {
+		if _, err := tx.Exec(ctx, q, userID); err != nil {
+			return err
+		}
+	}
 	return tx.Commit(ctx)
 }
 

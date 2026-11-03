@@ -126,6 +126,9 @@ func emailDomainAllowed(email string) (allowed, configured bool) {
 // token) when the account has TOTP enabled, so SSO enforces the second factor
 // exactly like the password login path.
 func (s *Service) finishOidcLogin(ctx context.Context, u *UserRow, device, ip string) (*AuthUser, *Tokens, string, error) {
+	if s.isDeactivated(ctx, u.ID) {
+		return nil, nil, "", ErrAccountDisabled
+	}
 	if u.MFAEnabled {
 		tok, err := s.mfaChallengeToken(u.ID)
 		if err != nil {
