@@ -11,6 +11,7 @@
 import { svgToNodes, parseGradients } from "@hc/stock";
 import { decompose, fromTransform, identity, multiply, type Mat2D } from "@hc/engine";
 import type { Node } from "@hc/schema";
+import { sanitizeSvg } from "./sanitizeSvg";
 
 const LEAF = new Set(["path", "rect", "circle", "ellipse", "line", "polygon", "polyline", "text", "image"]);
 const CONTAINER = new Set(["g", "a", "svg"]);
@@ -121,7 +122,9 @@ export function flattenSvgToNodes(svgText: string, opts: { fallbackFill?: boolea
   const host = document.createElement("div");
   host.setAttribute("aria-hidden", "true");
   host.style.cssText = "position:fixed;left:-99999px;top:0;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none";
-  host.innerHTML = svgText;
+  // Untrusted text: parsing it here runs inline handlers (an <image onerror>)
+  // in the app origin even though the host is offscreen, so sanitise first.
+  host.innerHTML = sanitizeSvg(svgText);
   const root = host.querySelector("svg");
   if (!root) {
     const r = svgToNodes(svgText, idGen, { fallbackFill, gradients });

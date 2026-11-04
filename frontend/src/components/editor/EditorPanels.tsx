@@ -73,6 +73,7 @@ import { AiProviderSettings } from "@/components/ai/AiProviderSettings";
 import { RevealingMarkdown } from "@/components/ui/ChatMarkdown";
 import { builtinThemes } from "@/lib/themeCatalog";
 import { cancelAiFills, enqueueAiFills, retryFailedAiFills, subscribeAiFillQueue } from "@/lib/aiFillQueue";
+import { sanitizeSvg } from "@/lib/sanitizeSvg";
 import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
 import { documentDirection } from "@/lib/locale";
 import { apiCodeMessage, CodedError, userMessage } from "@/lib/errors";
@@ -640,7 +641,7 @@ export function ElementsPanel() {
       aria-label={stickerLabel(s)}
       className="grid aspect-square place-items-center rounded-lg bg-neutral-50 p-1.5 transition hover:bg-brand-50 [&>span>svg]:h-full [&>span>svg]:w-full"
     >
-      <span className="block h-full w-full" dangerouslySetInnerHTML={{ __html: s.svg }} />
+      <span className="block h-full w-full" dangerouslySetInnerHTML={{ __html: sanitizeSvg(s.svg) }} />
     </button>
   );
   return (
@@ -762,7 +763,7 @@ export function ElementsPanel() {
                 aria-label={stickerLabel(s)}
                 className="grid aspect-square place-items-center rounded-lg bg-neutral-50 p-1.5 transition hover:bg-brand-50 [&>span>svg]:h-full [&>span>svg]:w-full"
               >
-                <span className="block h-full w-full" dangerouslySetInnerHTML={{ __html: s.svg }} />
+                <span className="block h-full w-full" dangerouslySetInnerHTML={{ __html: sanitizeSvg(s.svg) }} />
               </button>
             ))}
           </div>
@@ -6339,7 +6340,7 @@ function StockTile({ a, onPlace, onToggleStar }: { a: StockAssetSummary; onPlace
           // SVG; render it directly. Preferring it over previewUrl keeps the
           // preview crisp and recolorable, avoids a remote request per tile, and
           // never leaks the viewer's IP to a provider host for a live icon.
-          <span aria-hidden className="block h-full w-full p-2 [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: a.svg }} />
+          <span aria-hidden className="block h-full w-full p-2 [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: sanitizeSvg(a.svg) }} />
         ) : a.previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={a.previewUrl} alt={a.title} className="h-full w-full object-cover" />

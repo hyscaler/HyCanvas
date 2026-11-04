@@ -44,6 +44,7 @@
     "@imgly/background-removal": "^1.7.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dompurify": "^3.4.17",
     "jspdf": "^4.2.1",
     "lib0": "^0.2.99",
     "lucide-react": "^0.561.0",
