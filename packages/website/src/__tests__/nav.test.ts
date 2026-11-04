@@ -17,6 +17,8 @@ describe("kebab + pageSlug", () => {
     expect(kebab("Hello World")).toBe("hello-world");
     expect(kebab("  Foo / Bar! ")).toBe("foo-bar");
     expect(kebab("Already-Kebab")).toBe("already-kebab");
+    expect(kebab("--Edge -- Case--")).toBe("edge-case");
+    expect(kebab("-")).toBe("");
   });
 
   it("falls back to page-N when unnamed", () => {
