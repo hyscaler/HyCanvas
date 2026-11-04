@@ -4138,6 +4138,7 @@
   "brands.no_text_pairs": "Ningún par de estos colores es legible como texto de cuerpo (4,5:1).",
   "brands.contrast_value": "Contraste {ratio}:1",
   "brands.type_sample": "Aa",
+  "errors.api_account_disabled": "Esta cuenta ha sido desactivada. Ponte en contacto con tu administrador.",
   "pwa.update_available": "Hay una nueva versión disponible",
   "pwa.reload": "Recargar"
 }

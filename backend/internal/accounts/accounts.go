@@ -498,6 +498,11 @@ func (s *Service) Login(ctx context.Context, email, password, device, ip string)
 	if !secrets.VerifyPassword(password, *u.PasswordHash) {
 		return nil, nil, "", ErrInvalidCredentials
 	}
+	// Refuse a deactivated account before any MFA challenge, so every sign-in
+	// path answers the same way (issueSession is the backstop).
+	if s.isDeactivated(ctx, u.ID) {
+		return nil, nil, "", ErrAccountDisabled
+	}
 	if u.MFAEnabled {
 		mfaToken, err := s.mfaChallengeToken(u.ID)
 		if err != nil {
@@ -515,6 +520,11 @@ func (s *Service) Login(ctx context.Context, email, password, device, ip string)
 
 // issueSession creates a session row and signs the access/refresh tokens.
 func (s *Service) issueSession(ctx context.Context, u *UserRow, device, ip string) (*AuthUser, *Tokens, error) {
+	// Every sign-in path (password, magic link, OIDC, MFA verify, signup) ends
+	// here, so this one check refuses a deactivated account on all of them.
+	if s.isDeactivated(ctx, u.ID) {
+		return nil, nil, ErrAccountDisabled
+	}
 	refresh := uuid.NewString() + "." + uuid.NewString()
 	sessionID := uuid.NewString()
 	const ins = `INSERT INTO "sessions" (id, "user_id", "current_token_hash", device, ip, "rotated_at", "created_at", "last_seen_at")
@@ -656,8 +666,12 @@ func (s *Service) VerifyAccess(ctx context.Context, token string) (userID, sessi
 func (s *Service) Refresh(ctx context.Context, refreshToken string) (*Tokens, error) {
 	presented := secrets.HashToken(refreshToken)
 
-	const sel = `SELECT id, "user_id", "current_token_hash", "previous_token_hash", "rotated_at", "revoked_at"
-		FROM "sessions" WHERE "current_token_hash" = $1 OR "previous_token_hash" = $1`
+	// A deactivated account's session reads as revoked even if its own row was
+	// not (yet) revoked, so a refresh racing a deactivation cannot mint tokens.
+	const sel = `SELECT s.id, s."user_id", s."current_token_hash", s."previous_token_hash", s."rotated_at",
+		COALESCE(s."revoked_at", u."deactivated_at")
+		FROM "sessions" s JOIN "users" u ON u.id = s."user_id"
+		WHERE s."current_token_hash" = $1 OR s."previous_token_hash" = $1`
 	var (
 		id, userID, currentHash string
 		prevHash                *string
@@ -716,7 +730,11 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (*Tokens, er
 }
 
 func (s *Service) isSessionActive(ctx context.Context, sid string) bool {
-	const q = `SELECT 1 FROM "sessions" WHERE id = $1 AND "revoked_at" IS NULL`
+	// The account must still be active too: deactivation revokes every session,
+	// and this join also closes the window where a session is issued while a
+	// deactivation is committing.
+	const q = `SELECT 1 FROM "sessions" s JOIN "users" u ON u.id = s."user_id"
+		WHERE s.id = $1 AND s."revoked_at" IS NULL AND u."deactivated_at" IS NULL`
 	var one int
 	if err := s.db.QueryRow(ctx, q, sid).Scan(&one); err != nil {
 		return false

@@ -810,13 +810,16 @@ export function WhiteboardSurface(props: {
   // Surface being removed by a facilitator (the transport already stopped reconnecting).
   useEffect(
     () =>
-      onModerated((action) =>
+      onModerated((action) => {
+        // A deactivated account is not a facilitator's doing; the next request
+        // answers "account disabled" and says so.
+        if (action === "deactivated") return;
         toast.error(
           action === "ban"
             ? tr("editor.you_were_banned_from_this_board_by_a_facilit")
             : tr("editor.you_were_removed_from_this_board_by_a_facili"),
-        ),
-      ),
+        );
+      }),
     [toast],
   );
 

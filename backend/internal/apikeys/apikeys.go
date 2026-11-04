@@ -146,7 +146,10 @@ func (s *Service) Verify(ctx context.Context, raw string) (KeyInfo, error) {
 	if !strings.HasPrefix(raw, Prefix) {
 		return KeyInfo{}, ErrNotFound
 	}
-	const q = `SELECT id, "workspace_id", "user_id", scopes, "revoked_at" FROM "api_keys" WHERE "key_hash" = $1`
+	// A key stops working when its holder is deactivated, whether or not the key
+	// itself was revoked (deactivation revokes it too; this covers the race).
+	const q = `SELECT k.id, k."workspace_id", k."user_id", k.scopes, COALESCE(k."revoked_at", u."deactivated_at")
+		FROM "api_keys" k JOIN "users" u ON u.id = k."user_id" WHERE k."key_hash" = $1`
 	var info KeyInfo
 	var revokedAt *time.Time
 	err := s.db.QueryRow(ctx, q, hashKey(raw)).Scan(&info.ID, &info.WorkspaceID, &info.UserID, &info.Scopes, &revokedAt)

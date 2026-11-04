@@ -172,6 +172,35 @@ AUTH_MAGICLINK_LOGIN_ENABLED=false
 
 Note when switching an existing instance to SSO-only: a user who already has a password account links their SSO identity to it automatically only when the provider's email domain is listed in `OIDC_ALLOWED_EMAIL_DOMAINS` (you are vouching that the provider owns those emails). Without that, their first SSO login creates a separate account. Set the allowlist before flipping the switch if you have existing password users.
 
+### Provisioning accounts from your identity provider (SCIM)
+
+SCIM 2.0 lets an identity provider (Authentik, Entra ID, Okta, Keycloak, JumpCloud) create accounts, keep their names and emails current, and, most importantly, **cut off a person who leaves**. Disabling someone in the provider alone only stops new SSO logins; with SCIM, deactivation also revokes their sessions and API keys, closes any editor tab they still have open, and refuses every sign-in method. Their designs stay where they are: memberships are suspended, not deleted, and come back if they are reactivated.
+
+SCIM is off unless you set a token:
+
+| Variable | Effect |
+| --- | --- |
+| `SCIM_TOKEN` | Enables `/scim/v2`. The bearer token your provider presents; at least 32 characters (`openssl rand -hex 32`). Treat it like `JWT_SECRET`: it can create accounts and grant any mapped role. |
+| `SCIM_GROUP_MAP` | Which provider groups grant which workspace roles: `<group name>=<workspace slug>:<role>`, comma-separated, e.g. `hycanvas-admins=acme:admin,staff=acme:member`. Roles: `owner`, `admin`, `member`, `viewer`. Someone in several mapped groups gets the highest role. |
+| `SCIM_WORKSPACE_MODES` | Per workspace, how much of its membership SCIM controls: `<workspace slug>:additive` (default) or `<workspace slug>:authoritative`. |
+
+- **Additive** (the default): SCIM only adds, changes and removes the memberships it created. People you invite by hand, such as an outside collaborator, are never touched.
+- **Authoritative**: the provider is the source of truth for that workspace. Anyone in it who is not in a mapped group is removed at the next sync, including people invited by hand.
+- In both modes SCIM never removes or demotes a workspace's last owner.
+
+A malformed map, an unknown role, or a mode for a workspace the map does not mention stops the server at start-up with the offending entry in the log, so a typo cannot silently grant nothing.
+
+People provisioned by SCIM sign in with SSO. Their account is linked to their SSO identity by the provider's `externalId`, which must equal the OIDC `sub` your provider issues. Authentik does this by default (its SCIM `externalId` is the user's uid, which is the `sub` under its default "hashed user id" subject mode); with another subject mode, add a SCIM property mapping that sets `externalId` to the same value. An account that already exists with the same email (someone who signed up before SCIM) is linked only if it already carries that SSO identity, or if its domain is in `OIDC_ALLOWED_EMAIL_DOMAINS`; otherwise the provider gets a conflict and nothing is taken over.
+
+Setting up Authentik:
+
+1. Set the variables above and restart HyCanvas.
+2. Create a SCIM provider with URL `https://<your instance>/scim/v2` and the token, and attach it as a backchannel provider to an application whose policy bindings select exactly the people to provision. An application with no bindings provisions every user, including the built-in admin.
+3. Run the first sync with dry run enabled and read the requests it logs before letting it write.
+4. If SCIM should be the only way accounts are created, set `AUTH_OIDC_SIGNUP_ENABLED=false`.
+
+Every SCIM change is logged as one structured line with `actor=scim`, including any membership change it skipped and why.
+
 ### CAPTCHA on the auth forms
 
 Protect login, signup, password-reset request, and magic-link request from automated abuse with Cloudflare Turnstile or Google reCAPTCHA. It is off until you set a provider:

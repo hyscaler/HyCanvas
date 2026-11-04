@@ -154,6 +154,9 @@ type Hub struct {
 	// is force-disconnected and refused on rejoin. In-memory per-hub (single
 	// instance / self-host); cross-instance ban fan-out is deferred like locks were.
 	bans map[string]map[string]bool
+	// refused: users just disconnected by DisconnectUser, and until when their
+	// joins are refused (guarded by mu, like bans).
+	refused map[string]time.Time
 	// lastLeave is the server-authoritative last-leave hook (doc 16 FR-11): when
 	// the last local connection leaves a room, it fires (after lastLeaveDelay,
 	// canceled by a rejoin) so the composition root can fold the design's update
@@ -169,8 +172,15 @@ type Hub struct {
 // NewHub builds a relay. updateLog may be nil. The coordinator defaults to the
 // single-instance no-op; use WithCoordinator to enable cross-instance fan-out.
 func NewHub(updateLog UpdateLog) *Hub {
-	return &Hub{rooms: map[string]*liveRoom{}, updateLog: updateLog, coord: localCoordinator{}, bans: map[string]map[string]bool{}, leaveTimers: map[string]*time.Timer{}}
+	return &Hub{rooms: map[string]*liveRoom{}, updateLog: updateLog, coord: localCoordinator{}, bans: map[string]map[string]bool{}, leaveTimers: map[string]*time.Timer{}, refused: map[string]time.Time{}}
 }
+
+// disconnectRefuseTTL is how long a join is refused after DisconnectUser. A
+// socket can pass its session check just before a deactivation and join just
+// after it, when there was nothing yet to close; that window is a handshake,
+// well under a second. The refusal is short so a reactivated person can
+// collaborate again. A var so tests can shorten it.
+var disconnectRefuseTTL = 30 * time.Second
 
 // WithLastLeaveHook installs the last-leave callback (doc 16 FR-11): fn runs on
 // its own goroutine `delay` after a room loses its last local connection, unless
@@ -280,12 +290,27 @@ const ctrlRosterRequest = "\x00ctrl:roster-request"
 // there is no fan-out loop.
 const ctrlLocksChanged = "\x00ctrl:locks-changed"
 
+// ctrlDisconnectUser is a sentinel `except` marking a cross-instance signal that
+// a person's account was deactivated: every instance closes that person's local
+// connections (F38 FR-13). The user id rides as a JSON string; the designID is
+// empty because the signal is about a person, not a room. Peers do NOT
+// re-publish, so there is no fan-out loop.
+const ctrlDisconnectUser = "\x00ctrl:disconnect-user"
+
 // deliverRemote handles a message that ORIGINATED on a peer instance. A control
 // signal (sentinel `except`) triggers a local action; any other message is a
 // client frame broadcast into this instance's local room. It never re-publishes
 // (no fan-out loop) and never re-journals (the originating instance owns
 // durability). A frame for a design with no local connections is dropped.
 func (h *Hub) deliverRemote(designID, except string, payload []byte) {
+	// A peer deactivated someone: close their connections here too.
+	if except == ctrlDisconnectUser {
+		var userID string
+		if json.Unmarshal(payload, &userID) == nil && userID != "" {
+			h.disconnectUserLocal(userID)
+		}
+		return
+	}
 	// Cross-instance role refresh: re-resolve THIS instance's connections and push
 	// role frames to them. Run off the delivery goroutine (the resolver hits the
 	// DB); the local path takes no coordinator action, so there is no fan-out loop.
@@ -388,7 +413,8 @@ func (h *Hub) roomFor(designID string) *liveRoom {
 // point). Production connections go through Serve -> joinConn so a kick can tear
 // them down.
 func (h *Hub) Join(id PeerIdentity, designID string, serverTimeMs int64) *conn {
-	return h.joinConn(id, designID, serverTimeMs, nil)
+	c, _ := h.joinConn(id, designID, serverTimeMs, nil)
+	return c
 }
 
 // joinConn registers a connection: adds it to the room, sends welcome/roster/
@@ -398,13 +424,21 @@ func (h *Hub) Join(id PeerIdentity, designID string, serverTimeMs int64) *conn {
 // TOCTOU window. `cancel` tears the connection's pumps down and is stored on the
 // conn BEFORE it is observable to a kick, so a concurrent ban always
 // force-disconnects it.
-func (h *Hub) joinConn(id PeerIdentity, designID string, serverTimeMs int64, cancel context.CancelFunc) *conn {
+func (h *Hub) joinConn(id PeerIdentity, designID string, serverTimeMs int64, cancel context.CancelFunc) (*conn, string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	// Bans are DESIGN-scoped (keyed by the design part of the room key), so a
 	// banned user is refused from the main room and every branch room alike.
 	if banDesign, _ := SplitRoomKey(designID); h.bans[banDesign][id.UserID] {
-		return nil // banned: refuse the join under the same lock the ban write holds
+		return nil, "ban" // banned: refuse the join under the same lock the ban write holds
+	}
+	// Just deactivated: refused under the lock DisconnectUser holds, so a join is
+	// either closed by the disconnect or refused here, never neither.
+	if until, ok := h.refused[id.UserID]; ok {
+		if time.Now().Before(until) {
+			return nil, "deactivated"
+		}
+		delete(h.refused, id.UserID)
 	}
 	if id.Color == "" {
 		id.Color = colorForUser(id.UserID) // stable per-user palette color
@@ -444,7 +478,7 @@ func (h *Hub) joinConn(id PeerIdentity, designID string, serverTimeMs int64, can
 	if h.lockStore != nil {
 		go h.reconcileLocksLocal(designID)
 	}
-	return c
+	return c, ""
 }
 
 // removeConnLocked tears down one connection: drop it from the room + lock table,
@@ -1191,4 +1225,42 @@ func (h *Hub) broadcastLocked(lr *liveRoom, payload []byte, exceptClientID strin
 func frame(v map[string]any) []byte {
 	b, _ := json.Marshal(v)
 	return b
+}
+
+// DisconnectUser closes every connection a person holds, on this instance and,
+// through the coordinator, on every peer instance. Called after an account is
+// deactivated: revoking its sessions stops new requests, but an editor tab
+// opened before that holds a socket the session check never sees again.
+func (h *Hub) DisconnectUser(userID string) {
+	if userID == "" {
+		return
+	}
+	h.disconnectUserLocal(userID)
+	payload, _ := json.Marshal(userID)
+	h.coord.Publish("", ctrlDisconnectUser, payload)
+}
+
+// disconnectUserLocal notifies and cancels every connection the person holds on
+// THIS instance, in any room. As with a moderation kick, cancel() only signals
+// the connection's pump context; its own goroutine runs Leave, so calling it
+// under h.mu cannot deadlock.
+func (h *Hub) disconnectUserLocal(userID string) {
+	notice := frame(map[string]any{"t": "moderated", "action": "deactivated"})
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.refused[userID] = time.Now().Add(disconnectRefuseTTL)
+	for _, room := range h.rooms {
+		for _, c := range room.conns {
+			if c.userID != userID {
+				continue
+			}
+			select {
+			case c.send <- notice:
+			default:
+			}
+			if c.cancel != nil {
+				c.cancel()
+			}
+		}
+	}
 }

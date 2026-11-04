@@ -221,6 +221,16 @@ The "Continue with ..." button appears only when all three of issuer/client-id/c
 | `OIDC_SCOPES` | Default `openid email profile`. |
 | `OIDC_LABEL` | Button label (e.g. `Google`). |
 
+### SCIM provisioning (optional)
+
+Lets an identity provider create, update and deactivate accounts and drive workspace roles from its groups. Off unless `SCIM_TOKEN` is set. How the modes and the group map behave, and how to set up Authentik, is in [Provisioning accounts from your identity provider](docs/self-hosting.md#provisioning-accounts-from-your-identity-provider-scim).
+
+| Variable | Description |
+| --- | --- |
+| `SCIM_TOKEN` | Enables `/scim/v2`; the bearer token the provider presents. At least 32 characters. |
+| `SCIM_GROUP_MAP` | `<group name>=<workspace slug>:<role>`, comma-separated. |
+| `SCIM_WORKSPACE_MODES` | `<workspace slug>:additive` (default) or `:authoritative`, comma-separated. |
+
 ### Web push (optional)
 
 Enabled only when both keys are set; otherwise push is a no-op and in-app notifications still work. Generate a pair with `npx web-push generate-vapid-keys`.

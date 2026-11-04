@@ -43,7 +43,7 @@ In scope:
 Deliberately out of scope, decided August 2026. These were in the original enterprise-governance sweep and are being dropped rather than deferred, because they target a buyer a free, open-source product is not pursuing, and each carries permanent cost:
 
 - **SAML 2.0.** OIDC ships and covers every modern identity provider (Okta, Entra, Google, Auth0, Keycloak). SAML serves legacy IdPs and is expensive in the worst way: XML signature validation is one of the most reliably vulnerable surfaces in enterprise auth, and adopting it means owning that risk permanently. An operator who must have SAML can put an OIDC-speaking gateway in front.
-- **SCIM 2.0.** Its real value is automated DEPROVISIONING. Without it an admin removes a departed user by hand, which is a genuine security gap rather than a mere inconvenience, and it is recorded here as a known one. For self-hosted teams whose admin knows their users, manual removal plus the API is enough.
+- **SCIM 2.0.** Its real value is automated DEPROVISIONING. Without it an admin removes a departed user by hand, which is a genuine security gap rather than a mere inconvenience, and it is recorded here as a known one. For self-hosted teams whose admin knows their users, manual removal plus the API is enough. **Reversed November 2026:** the gap proved wider than recorded (disabling a person at the identity provider left their sessions, API keys and open sockets working), so SCIM is back in scope as opt-in, off-by-default provisioning. See [`38-scim-provisioning.md`](38-scim-provisioning.md).
 - **DLP and content controls.** A policy engine for restricting downloads, copy-out, and app installs is enterprise governance for a buyer we are not selling to. One idea survives it, and is NOT DLP: a per-workspace toggle that disables external sharing. That is a checkbox and belongs with the sharing feature.
 - **Customer-managed encryption keys (CMEK).** CMEK exists so a HOSTED tenant can control a key the vendor holds. A self-hoster already owns the database, the object storage, and the keys, so this would be elaborate machinery granting control the operator already has. The revocation semantics ("renders data inaccessible when revoked") are also a poor fit for a product whose first rule is zero data loss.
 
@@ -145,7 +145,7 @@ Internationalization:
 
 Identity, access, and governance:
 - FR-12 (OIDC ships): Organizations can require SSO via OIDC; on enforcement, password login is disabled for managed members (extending accounts and workspaces). SAML 2.0 is out of scope (see section 2).
-- FR-13 (dropped): SCIM 2.0 provisioning is out of scope (see section 2). Members are managed through the admin UI and the API. The known gap this leaves is automated deprovisioning on offboarding, which stays a manual admin step.
+- FR-13 (shipped, reinstated November 2026): SCIM 2.0 provisioning, opt-in and off by default, with identity-provider groups mapped to workspace roles and account deactivation that revokes sessions, API keys and live sockets. Specified in [`38-scim-provisioning.md`](38-scim-provisioning.md).
 - FR-14 (TOTP ships; passkeys deferred): MFA can be required org-wide or per role. TOTP is implemented (`mfa_enabled` on the account, `ErrMFARequired` on the auth path); WebAuthn and passkeys are deferred at low priority, not dropped.
 - FR-15: RBAC defines roles (owner, admin, member, viewer, plus custom roles) with permissions scoped to workspace, folder, and design, and to admin functions (billing-free, but key/app/policy management); every API and editor action checks the actor's effective permission.
 - FR-16 (reduced, then DEFERRED August 2026; see section 2): A workspace-scoped audit trail records security- and governance-relevant events with actor, target, timestamp, and request id, and is readable by workspace admins and exportable as a file. The design-scoped half of this ships today; the workspace-scoped extension is deferred as useful but not pressing, and it is the only thing standing between F38 and closure.
@@ -349,7 +349,7 @@ GET    /i18n/catalogs/{locale}             served to clients; cached
 GET/POST/PATCH/DELETE /workspaces/{id}/roles
 POST   /workspaces/{id}/role-assignments
 
-# SSO (OIDC only; SAML and SCIM are out of scope, see section 2)
+# SSO (OIDC only; SAML is out of scope, see section 2). SCIM: see 38-scim-provisioning.md
 POST   /workspaces/{id}/sso                 configure OIDC
 POST   /sso/oidc/callback                   IdP callback
 
@@ -377,7 +377,7 @@ Internal contracts:
 
 - Accessibility is built as a shared `@hc/a11y` service plus an accessibility tree the editor derives from the scene model, so screen readers see a meaningful, navigable structure that mirrors the canvas. The same `check()` function runs live in the editor (incremental, debounced) and on a worker to gate exports when policy requires. Tagged-PDF generation extends the export pipeline by mapping reading order, structure, alt text, and language into PDF structure tags.
 - i18n uses an externalized catalog loaded at runtime; the build runs pseudo-localization in CI to catch hard-coded strings and truncation. RTL is handled with logical CSS properties and a direction resolver so the chrome mirrors automatically; canvas content directionality and complex-script shaping are owned by the text engine and only consumed here.
-- Identity extends accounts and workspaces: an OIDC SSO module maps users to roles. SAML and SCIM are out of scope (section 2), so members are managed through the admin UI and the API. RBAC is a single `@hc/authz` `can()` check enforced uniformly at the API and in the editor; per-workspace isolation already exists at the query layer and RBAC layers on top.
+- Identity extends accounts and workspaces: an OIDC SSO module maps users to roles. SAML is out of scope (section 2); members are managed through the admin UI and the API, or pushed by an identity provider over SCIM (FR-13). RBAC is a single `@hc/authz` `can()` check enforced uniformly at the API and in the editor; per-workspace isolation already exists at the query layer and RBAC layers on top.
 - Activity recording reuses the shipped emitter rather than adding a subsystem: a feature calls `EmitActivity` on a notable action and the panel reads it back. No hash chain, no SIEM, and no DLP choke points; all three were cut (section 2). Brand locks still compose with brand controls.
 - Encryption relies on the storage layer: TLS in transit (terminating at the edge, mTLS internally) and at-rest encryption provided by Postgres and the object store. There is no envelope-encryption or CMEK layer; a self-hoster already controls the database, the object storage and the keys (section 2).
 - Compliance is achieved by composing these controls (access control, audit, encryption, data lifecycle, residency) and operating them under documented policies; the platform produces the evidence (logs, configs, reports) that SOC 2/ISO audits require, and a HIPAA-eligible configuration enables stricter PHI handling and BAA coverage.

@@ -23,9 +23,9 @@ func (h *Hub) Serve(ctx context.Context, ws *websocket.Conn, id PeerIdentity, de
 
 	// Join refuses a banned user (under h.mu, so a ban racing this join can't slip
 	// through) and stores `cancel` on the conn so a kick can force-disconnect it.
-	c := h.joinConn(id, designID, time.Now().UnixMilli(), cancel)
+	c, refused := h.joinConn(id, designID, time.Now().UnixMilli(), cancel)
 	if c == nil {
-		_ = ws.Write(ctx, websocket.MessageText, frame(map[string]any{"t": "moderated", "action": "ban", "designId": designID}))
+		_ = ws.Write(ctx, websocket.MessageText, frame(map[string]any{"t": "moderated", "action": refused, "designId": designID}))
 		return
 	}
 	defer h.Leave(c)
