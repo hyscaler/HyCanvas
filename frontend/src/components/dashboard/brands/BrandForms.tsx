@@ -25,11 +25,29 @@ export type AssetUrls = Record<string, string>;
 /** Local object URLs for logos uploaded in this session, by asset id. */
 const localLogoSrc = new Map<string, string>();
 
+// Schemes a logo <img> may load: this session's object URLs, raster or SVG
+// data URLs, and the asset endpoint. Anything else (javascript:, data:text/html)
+// is dropped rather than handed to the DOM.
+const SAFE_LOGO_SCHEMES = new Set(["blob:", "data:", "http:", "https:"]);
+
+export function safeLogoUrl(url: string): string | null {
+  let parsed: URL;
+  try {
+    // The static export pre-renders without a window; any absolute base works there.
+    parsed = new URL(url, typeof window === "undefined" ? "http://localhost/" : window.location.href);
+  } catch {
+    return null;
+  }
+  if (!SAFE_LOGO_SCHEMES.has(parsed.protocol)) return null;
+  if (parsed.protocol === "data:" && !/^data:image\/[a-z0-9.+-]+[;,]/i.test(url)) return null;
+  return parsed.href;
+}
+
 export function logoSrc(assetId: string, urls: AssetUrls): string | null {
   const local = localLogoSrc.get(assetId);
-  if (local) return local;
+  if (local) return safeLogoUrl(local);
   const u = urls[assetId];
-  return u ? resolveAssetUrl(u) : null;
+  return u ? safeLogoUrl(resolveAssetUrl(u)) : null;
 }
 
 /** Upload a logo file as a workspace asset and remember its local preview. */
