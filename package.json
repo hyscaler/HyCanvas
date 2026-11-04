@@ -73,6 +73,10 @@
     "source-map-js": "^1.2.2",
     "minimatch@3": {
       "brace-expansion": "^1.1.21"
+    },
+    "zod": "^4.6.7",
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.4"
     }
   },
   "engines": {
