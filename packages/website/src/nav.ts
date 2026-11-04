@@ -15,7 +15,9 @@ export function kebab(s: string): string {
     .toLowerCase()
     .replace(/[\s_]+/g, "-")
     .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    // Runs are already single hyphens, so trimming one at each end is enough,
+    // and a fixed-width pattern stays linear on any input.
+    .replace(/^-|-$/g, "");
 }
 
 /** Slug for a page: kebab of its name, or `page-N` (1-based) when unnamed. */
