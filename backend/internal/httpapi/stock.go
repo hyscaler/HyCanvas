@@ -146,6 +146,7 @@ func stockProxyHandler(st *stock.Service) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Type", mime)
+		setUntrustedContentHeaders(w)
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(bytes)

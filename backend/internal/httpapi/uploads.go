@@ -273,8 +273,26 @@ func assetProxyHandler(up *uploads.Service) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Type", "video/mp4")
+		setUntrustedContentHeaders(w)
 		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(data))
 	}
+}
+
+// untrustedContentCSP locks down a user-supplied file opened as a page in its
+// own right. The bytes are served from the app origin, so an SVG (or anything a
+// browser renders as a document) carrying script would otherwise run with the
+// viewer's session. `sandbox` without allow-scripts gives the response an
+// opaque origin and blocks script outright; default-src 'none' stops it pulling
+// anything in. A CSP on a response only governs that response as a document,
+// so <img>, <video>, fetch() and canvas use of the same URL are unaffected.
+const untrustedContentCSP = "default-src 'none'; img-src data: blob:; media-src data: blob:; style-src 'unsafe-inline'; font-src data:; sandbox"
+
+// setUntrustedContentHeaders marks a response that carries user-supplied bytes:
+// nosniff pins the declared type so a browser never upgrades it to HTML, and the
+// sandbox CSP neutralises it when it is opened directly.
+func setUntrustedContentHeaders(w http.ResponseWriter) {
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Content-Security-Policy", untrustedContentCSP)
 }
 
 func assetContentHandler(up *uploads.Service) http.HandlerFunc {
@@ -291,6 +309,7 @@ func assetContentHandler(up *uploads.Service) http.HandlerFunc {
 		}
 		defer func() { _ = rc.Close() }()
 		w.Header().Set("Content-Type", mime)
+		setUntrustedContentHeaders(w)
 		// ServeContent adds Accept-Ranges/206 partial responses. Browsers treat
 		// media without Range support as UNSEEKABLE (currentTime snaps to 0),
 		// which broke video scrubbing, filmstrips, and scene detection; it also
