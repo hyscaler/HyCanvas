@@ -39,6 +39,7 @@ type ServerFrame =
   | { t: "vote"; op: "changed"; designId: string } // server-authoritative vote signal (FR-19)
   | { t: "audience"; kind: AudienceEvent["kind"]; emoji?: string; action?: string; code?: string } // live audience event (doc 28) + remote relay (C21)
   | { t: "moderated"; action: "kick" | "ban" | "unban"; designId: string } // you were removed (FR-32)
+  | { t: "revoked"; designId: string } // your access to the design was removed
   | { t: "notify"; designId: string } // new in-app notification for the caller
   | { t: "role"; role: RealtimeRole; reason?: RoleChangeReason } // live role change
   | {
@@ -329,6 +330,11 @@ export class RealtimeClient {
         // A facilitator removed us. Stop reconnecting (a ban refuses rejoin and
         // would loop) and let the shell surface it. close() sets closed=true.
         for (const fn of moderatedListeners) fn(frame.action);
+        this.close();
+        break;
+      case "revoked":
+        // Our access to this design was removed. The server refuses a rejoin,
+        // so stop reconnecting rather than retry forever.
         this.close();
         break;
       case "facilitator":

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"sort"
 	"sync"
@@ -142,7 +143,8 @@ type Hub struct {
 	updateLog UpdateLog
 	coord     Coordinator
 	// roleResolver re-resolves a user's gateway role (editor/viewer) for a design,
-	// used by RefreshRoles to live-downgrade editors when an approval lock engages.
+	// used by RefreshRoles to live-downgrade editors when an approval lock engages
+	// and to disconnect a user whose access is gone (it returns ErrAccessRevoked).
 	// Nil = role refresh is a no-op (roles only re-resolve on (re)connect).
 	roleResolver func(ctx context.Context, designID, userID string) (string, error)
 	// lockStore is the cross-instance lock authority (FR-8). Nil = locks are
@@ -212,6 +214,11 @@ func (h *Hub) cancelLastLeaveLocked(designID string) {
 	}
 }
 
+// ErrAccessRevoked is what a role resolver returns when the user no longer has
+// any access to the design. A refresh disconnects such a connection; any other
+// resolver error is treated as transient and leaves the connection alone.
+var ErrAccessRevoked = errors.New("realtime: access revoked")
+
 // WithRoleResolver installs the per-user role resolver (backed by the sharing
 // service) so RefreshRoles can push live editor/viewer changes. Returns the hub.
 func (h *Hub) WithRoleResolver(fn func(ctx context.Context, designID, userID string) (string, error)) *Hub {
@@ -268,6 +275,11 @@ func (h *Hub) CloseLockStore() error {
 // collide with this NUL-prefixed value.
 const ctrlRefreshRoles = "\x00ctrl:refresh-roles"
 
+// ctrlRefreshUser is a sentinel `except` marking a cross-instance user-scoped
+// role refresh (see RefreshUser). It is published with an empty designID and a
+// userRefresh payload, since the user's connections may sit in any design room.
+const ctrlRefreshUser = "\x00ctrl:refresh-user"
+
 // ctrlRosterRequest is a sentinel `except` marking a cross-instance roster-catchup
 // request: a client just joined on a peer instance, so every instance with local
 // members for the design re-announces them (cross-instance initial roster, FR-7).
@@ -293,6 +305,13 @@ func (h *Hub) deliverRemote(designID, except string, payload []byte) {
 		var reason string
 		_ = json.Unmarshal(payload, &reason)
 		go h.refreshRolesLocal(context.Background(), designID, reason)
+		return
+	}
+	if except == ctrlRefreshUser {
+		var ur userRefresh
+		if json.Unmarshal(payload, &ur) == nil && ur.UserID != "" {
+			go h.refreshUserLocal(context.Background(), ur.UserID, ur.Reason)
+		}
 		return
 	}
 	// Cross-instance roster catchup: a peer instance's client just joined, so
@@ -1108,6 +1127,14 @@ func (h *Hub) RefreshRoles(ctx context.Context, designID, reason string) {
 // Design-scoped: covers the main room AND every branch room of the design,
 // since a permission change applies to the design as a whole.
 func (h *Hub) refreshRolesLocal(ctx context.Context, designID, reason string) {
+	h.refreshDesignLocal(ctx, designID, "", reason)
+}
+
+// refreshDesignLocal is refreshRolesLocal limited to one user's connections when
+// onlyUser is set. A connection whose access is gone (the resolver reports
+// ErrAccessRevoked) is told so and disconnected; a transient resolver error
+// leaves the connection as it is.
+func (h *Hub) refreshDesignLocal(ctx context.Context, designID, onlyUser, reason string) {
 	if h.roleResolver == nil {
 		return
 	}
@@ -1119,6 +1146,9 @@ func (h *Hub) refreshRolesLocal(ctx context.Context, designID, reason string) {
 			continue
 		}
 		for cid, c := range lr.conns {
+			if onlyUser != "" && c.userID != onlyUser {
+				continue
+			}
 			entries = append(entries, entry{key, cid, c.userID})
 		}
 	}
@@ -1129,6 +1159,10 @@ func (h *Hub) refreshRolesLocal(ctx context.Context, designID, reason string) {
 
 	for _, e := range entries {
 		role, err := h.roleResolver(ctx, designID, e.userID)
+		if errors.Is(err, ErrAccessRevoked) {
+			h.revokeConn(e.roomKey, e.clientID, designID)
+			continue
+		}
 		if err != nil || (role != string(RoleEditor) && role != string(RoleViewer)) {
 			continue
 		}
@@ -1145,6 +1179,67 @@ func (h *Hub) refreshRolesLocal(ctx context.Context, designID, reason string) {
 			}
 		}
 		h.mu.Unlock()
+	}
+}
+
+// revokeConn tells a connection its access to the design is gone and tears it
+// down. As with a moderation kick, cancel() only signals the connection's pump
+// context; the Leave runs in its own goroutine, so this never deadlocks.
+func (h *Hub) revokeConn(roomKey, clientID, designID string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	lr, ok := h.rooms[roomKey]
+	if !ok {
+		return
+	}
+	c, present := lr.conns[clientID]
+	if !present {
+		return
+	}
+	select {
+	case c.send <- frame(map[string]any{"t": "revoked", "designId": designID}):
+	default:
+	}
+	if c.cancel != nil {
+		c.cancel()
+	}
+}
+
+// RefreshUser re-resolves every live connection a user holds, across all
+// designs, after a workspace-level access change (removal from a workspace or a
+// role change). It refreshes THIS instance and signals peer instances to refresh
+// theirs, the same way RefreshRoles does for a single design.
+func (h *Hub) RefreshUser(ctx context.Context, userID, reason string) {
+	if h.roleResolver == nil || userID == "" {
+		return
+	}
+	h.refreshUserLocal(ctx, userID, reason)
+	payload, _ := json.Marshal(userRefresh{UserID: userID, Reason: reason})
+	h.coord.Publish("", ctrlRefreshUser, payload)
+}
+
+// userRefresh is the cross-instance payload of a ctrlRefreshUser signal.
+type userRefresh struct {
+	UserID string `json:"userId"`
+	Reason string `json:"reason"`
+}
+
+// refreshUserLocal re-resolves one user's connections on THIS instance only.
+func (h *Hub) refreshUserLocal(ctx context.Context, userID, reason string) {
+	h.mu.Lock()
+	designs := map[string]bool{}
+	for key, lr := range h.rooms {
+		for _, c := range lr.conns {
+			if c.userID == userID {
+				d, _ := SplitRoomKey(key)
+				designs[d] = true
+				break
+			}
+		}
+	}
+	h.mu.Unlock()
+	for d := range designs {
+		h.refreshDesignLocal(ctx, d, userID, reason)
 	}
 }
 

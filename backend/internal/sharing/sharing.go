@@ -67,6 +67,14 @@ type Mailer interface {
 	SendDesignShare(email, designID string)
 }
 
+// RoleRefresher re-resolves the live collaboration connections of a design after
+// its access changes, so a removed grant disconnects its holder and a downgraded
+// one drops to viewer without waiting for a reconnect. Optional (attached via
+// WithRoleRefresher); nil = roles only re-resolve on (re)connect.
+type RoleRefresher interface {
+	RefreshRoles(ctx context.Context, designID, reason string)
+}
+
 // Errors map to RFC 7807 statuses at the HTTP layer.
 var (
 	ErrForbidden     = errors.New("forbidden")
@@ -95,6 +103,7 @@ type Service struct {
 	locks      ApprovalLock
 	files      Files
 	mailer     Mailer
+	roles      RoleRefresher
 }
 
 // NewService wires the sharing service. engagement and locks may be nil.
@@ -106,6 +115,13 @@ func NewService(db DBTX, persist Persistence, engagement Engagement, locks Appro
 // invitee). Nil-safe; returns the service for chaining.
 func (s *Service) WithMailer(m Mailer) *Service {
 	s.mailer = m
+	return s
+}
+
+// WithRoleRefresher attaches the live-connection role refresher (the realtime
+// hub). Nil-safe; returns the service for chaining.
+func (s *Service) WithRoleRefresher(r RoleRefresher) *Service {
+	s.roles = r
 	return s
 }
 
@@ -395,12 +411,18 @@ func (s *Service) GetAccess(ctx context.Context, designID, userID string) (Desig
 	return s.resolveForUser(ctx, designID, userID, "", nil)
 }
 
-// ResolveGatewayRole returns "editor" only when the resolved mode is edit; all
-// else connects as "viewer" (FR-9).
+// ResolveGatewayRole returns "editor" only when the resolved mode is edit; any
+// other caller with the view capability connects as "viewer" (FR-9). A caller
+// with no access source (no membership, grant or link) resolves to view mode
+// with zero capabilities, so the capability, not the mode, decides admission:
+// such a caller gets ErrForbidden and never joins the room.
 func (s *Service) ResolveGatewayRole(ctx context.Context, designID, userID string, lockedOverride *bool) (string, error) {
 	access, err := s.resolveForUser(ctx, designID, userID, "", lockedOverride)
 	if err != nil {
 		return "", err
+	}
+	if !has(access, authz.CapView) {
+		return "", ErrForbidden
 	}
 	if access.Mode == authz.ModeEdit {
 		return "editor", nil
@@ -747,6 +769,7 @@ func (s *Service) UpdateGrant(ctx context.Context, grantID, userID string, mode 
 		return ShareGrant{}, err
 	}
 	s.emit(ctx, grant.DesignID, userID, "share", map[string]any{"op": "changed", "mode": string(row.Mode)})
+	s.refreshRoles(ctx, grant.DesignID, "access-changed")
 	return grantView(row), nil
 }
 
@@ -762,6 +785,7 @@ func (s *Service) RemoveGrant(ctx context.Context, grantID, userID string) error
 		return err
 	}
 	s.emit(ctx, grant.DesignID, userID, "share", map[string]any{"op": "removed"})
+	s.refreshRoles(ctx, grant.DesignID, "access-changed")
 	return nil
 }
 
@@ -1066,6 +1090,12 @@ func (s *Service) AssignRole(ctx context.Context, designID, userID, targetUserID
 }
 
 // --- engagement hooks (best-effort, nil-safe) ----------------------------
+
+func (s *Service) refreshRoles(ctx context.Context, designID, reason string) {
+	if s.roles != nil {
+		s.roles.RefreshRoles(ctx, designID, reason)
+	}
+}
 
 func (s *Service) emit(ctx context.Context, designID, actorID, kind string, payload map[string]any) {
 	if s.engagement != nil {

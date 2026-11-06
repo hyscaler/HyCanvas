@@ -13,6 +13,11 @@ import (
 // inbound frames, and on disconnect leaves the room (releasing locks +
 // broadcasting leave). Blocks until the connection closes.
 func (h *Hub) Serve(ctx context.Context, ws *websocket.Conn, id PeerIdentity, designID string) {
+	// The reader keeps the request context: coder/websocket closes the socket the
+	// moment a Read context is cancelled, which would drop a closing notice the
+	// writer has not flushed yet. A kick or revocation cancels the pump context
+	// instead, and the writer closes the socket once its queue is flushed.
+	readCtx := ctx
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -30,8 +35,18 @@ func (h *Hub) Serve(ctx context.Context, ws *websocket.Conn, id PeerIdentity, de
 	}
 	defer h.Leave(c)
 
-	// Writer pump: drain the connection's outbound queue.
+	// Writer pump: drain the connection's outbound queue. Serve waits for it on
+	// the way out, so a closing notice it is still flushing (a kick, or access
+	// being revoked) reaches the client before the handler closes the socket.
+	writerDone := make(chan struct{})
+	defer func() {
+		cancel()
+		<-writerDone
+	}()
 	go func() {
+		defer close(writerDone)
+		// However the writer stops, close the socket so the reader's Read returns.
+		defer func() { _ = ws.Close(websocket.StatusNormalClosure, "") }()
 		for {
 			select {
 			case <-ctx.Done():
@@ -59,7 +74,10 @@ func (h *Hub) Serve(ctx context.Context, ws *websocket.Conn, id PeerIdentity, de
 				if !ok {
 					return
 				}
-				writeCtx, wcancel := context.WithTimeout(ctx, 10*time.Second)
+				// Not derived from ctx: when a closing notice and the cancel land
+				// together, select may pick this branch with ctx already done, and
+				// the notice must still be written.
+				writeCtx, wcancel := context.WithTimeout(context.Background(), 10*time.Second)
 				err := ws.Write(writeCtx, websocket.MessageText, msg)
 				wcancel()
 				if err != nil {
@@ -72,7 +90,7 @@ func (h *Hub) Serve(ctx context.Context, ws *websocket.Conn, id PeerIdentity, de
 
 	// Reader pump: dispatch inbound frames until the socket errors/closes.
 	for {
-		typ, data, err := ws.Read(ctx)
+		typ, data, err := ws.Read(readCtx)
 		if err != nil {
 			return
 		}
