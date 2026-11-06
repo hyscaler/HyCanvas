@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -98,7 +99,46 @@ func NewFromEnv() (Driver, error) {
 	if path == "" {
 		path = ".data/storage"
 	}
-	return NewLocal(path)
+	l, err := NewLocal(path)
+	if err != nil {
+		return nil, err
+	}
+	if err := checkWritable(l.base); err != nil {
+		return nil, err
+	}
+	return l, nil
+}
+
+// checkWritable proves at boot that the server can create files in the local
+// storage directory, so an unwritable one stops the server with the fix in the
+// message instead of surfacing later as every upload failing. The usual cause
+// is a volume or bind mount created by an image that ran as root.
+func checkWritable(base string) error {
+	probe, err := func() (string, error) {
+		if err := os.MkdirAll(base, 0o755); err != nil {
+			return "", err
+		}
+		f, err := os.CreateTemp(base, ".write-probe-*")
+		if err != nil {
+			return "", err
+		}
+		return f.Name(), f.Close()
+	}()
+	if probe != "" {
+		_ = os.Remove(probe)
+	}
+	if err == nil {
+		return nil
+	}
+	uid := os.Getuid()
+	if uid < 0 {
+		// No numeric user ids (Windows): the fix is a permissions change, not chown.
+		return fmt.Errorf("local storage %s is not writable by the user this server runs as: %w", base, err)
+	}
+	return fmt.Errorf("local storage %s is not writable by uid %d: %w; give the directory to that user once, "+
+		"for a bind mount `chown -R %d:0 <host path>`, for a named volume "+
+		"`docker run --rm -u 0 -v <volume>:/data debian:bookworm-slim chown -R %d:0 /data`",
+		base, uid, err, uid, uid)
 }
 
 func (l *Local) Kind() string { return "local" }

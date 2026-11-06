@@ -106,6 +106,8 @@ docker run -d --name hycanvas --network hycanvas-net -p 8005:8005 \
 
 Persist uploads/exports by mounting a volume at `/app/.data/storage`, or use S3.
 
+The server runs as uid `10001` (group `0`), not root. A new named volume just works. A volume created by an older image is owned by root, and the server refuses to start on it until it is handed over once: `docker run --rm -u 0 -v hycanvas-storage:/data debian:bookworm-slim chown -R 10001:0 /data`. The compose file does this for you.
+
 For every variable, SSO/web-push setup, external Postgres, and production hardening, see the [Docker setup guide](https://github.com/hyscaler/HyCanvas/blob/development/DOCKER_SETUP.md).
 
 ## Tags
