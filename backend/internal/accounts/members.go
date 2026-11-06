@@ -27,6 +27,14 @@ type Notifier interface {
 	Notify(ctx context.Context, actorID, targetUserID, typ, designID string, payload map[string]any)
 }
 
+// AccessRefresher re-resolves a user's live collaboration connections after a
+// workspace-level access change, so a removed member is disconnected and a
+// demoted one drops to viewer without waiting for a reconnect. Optional (wired
+// via WithAccessRefresher); nil = roles only re-resolve on (re)connect.
+type AccessRefresher interface {
+	RefreshUser(ctx context.Context, userID, reason string)
+}
+
 // inviteTTL is how long a workspace invitation stays valid.
 const inviteTTL = 7 * 24 * time.Hour
 
@@ -549,7 +557,11 @@ func (s *Service) ChangeMemberRole(ctx context.Context, callerID, workspaceID, t
 	if ct.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	s.refreshAccess(ctx, targetUserID)
+	return nil
 }
 
 // RemoveMember removes a member from a workspace. A member may always remove
@@ -607,7 +619,19 @@ func (s *Service) RemoveMember(ctx context.Context, callerID, workspaceID, targe
 	if ct.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	s.refreshAccess(ctx, targetUserID)
+	return nil
+}
+
+// refreshAccess asks the realtime hub, when wired, to re-resolve the user's live
+// connections after a committed membership change.
+func (s *Service) refreshAccess(ctx context.Context, userID string) {
+	if s.access != nil {
+		s.access.RefreshUser(ctx, userID, "access-changed")
+	}
 }
 
 // InvitationsForUser returns invitations sent to and pending/accepted by a

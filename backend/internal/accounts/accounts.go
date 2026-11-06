@@ -301,6 +301,9 @@ type Service struct {
 	notifier Notifier
 	// onWorkspace runs after a workspace is created; see WithWorkspaceHook.
 	onWorkspace WorkspaceHook
+	// access re-resolves a user's live realtime connections after a membership
+	// change; optional, wired post-construction (see WithAccessRefresher).
+	access AccessRefresher
 }
 
 // WorkspaceHook runs after a workspace has been created and committed: the
@@ -317,6 +320,13 @@ func NewService(db DBTX, jwtSecret string) *Service {
 // returns the service. Set once at boot, before serving.
 func (s *Service) WithNotifier(n Notifier) *Service {
 	s.notifier = n
+	return s
+}
+
+// WithAccessRefresher wires the realtime hub so a membership removal or role
+// change re-resolves the member's live connections. Returns the service.
+func (s *Service) WithAccessRefresher(a AccessRefresher) *Service {
+	s.access = a
 	return s
 }
 

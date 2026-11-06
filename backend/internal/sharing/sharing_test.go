@@ -30,6 +30,13 @@ func (s stubFiles) LoadFileForDesign(ctx context.Context, designID string) (any,
 	return s.file, nil
 }
 
+// recordingRefresher records the designs whose live connections were refreshed.
+type recordingRefresher struct{ designs []string }
+
+func (r *recordingRefresher) RefreshRoles(ctx context.Context, designID, reason string) {
+	r.designs = append(r.designs, designID)
+}
+
 func TestSharing_DB(t *testing.T) {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
@@ -63,7 +70,8 @@ func TestSharing_DB(t *testing.T) {
 		t.Fatalf("design: %v", err)
 	}
 
-	svc := NewService(tx, persistence.NewService(tx), nil, nil)
+	refresher := &recordingRefresher{}
+	svc := NewService(tx, persistence.NewService(tx), nil, nil).WithRoleRefresher(refresher)
 
 	// Owner resolves to edit + share capability.
 	access, err := svc.GetAccess(ctx, designID, owner.ID)
@@ -81,6 +89,14 @@ func TestSharing_DB(t *testing.T) {
 	}
 	if len(out.Capabilities) != 0 {
 		t.Fatalf("outsider must have no capabilities: %+v", out)
+	}
+	// ...so the live collaboration gateway refuses them too, even though the
+	// no-access resolution reports view mode.
+	if _, err := svc.ResolveGatewayRole(ctx, designID, outsider.ID, nil); err != ErrForbidden {
+		t.Fatalf("outsider must not join the realtime room, got %v", err)
+	}
+	if role, err := svc.ResolveGatewayRole(ctx, designID, owner.ID, nil); err != nil || role != "editor" {
+		t.Fatalf("owner should join as editor: %q err=%v", role, err)
 	}
 
 	// Outsider cannot share (no share capability).
@@ -101,6 +117,9 @@ func TestSharing_DB(t *testing.T) {
 	out2, err := svc.GetAccess(ctx, designID, outsider.ID)
 	if err != nil || out2.Mode != authz.ModeComment || !has(out2, authz.CapComment) {
 		t.Fatalf("granted outsider should have comment: %+v err=%v", out2, err)
+	}
+	if role, err := svc.ResolveGatewayRole(ctx, designID, outsider.ID, nil); err != nil || role != "viewer" {
+		t.Fatalf("a comment grantee should join as viewer: %q err=%v", role, err)
 	}
 
 	// Update grant to edit.
@@ -193,6 +212,14 @@ func TestSharing_DB(t *testing.T) {
 	out4, _ := svc.GetAccess(ctx, designID, outsider.ID)
 	if len(out4.Capabilities) != 0 {
 		t.Fatalf("after removal outsider should have no access: %+v", out4)
+	}
+	if _, err := svc.ResolveGatewayRole(ctx, designID, outsider.ID, nil); err != ErrForbidden {
+		t.Fatalf("after removal the realtime gateway must refuse the outsider, got %v", err)
+	}
+	// Both the grant update and the removal refreshed the design's live
+	// connections, so a revoked holder is cut off without reconnecting.
+	if len(refresher.designs) != 2 || refresher.designs[0] != designID || refresher.designs[1] != designID {
+		t.Fatalf("grant update and removal should refresh live connections: %v", refresher.designs)
 	}
 }
 

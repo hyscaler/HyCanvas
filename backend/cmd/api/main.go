@@ -207,11 +207,19 @@ func main() {
 	sharingSvc := sharing.NewService(pool, persist, emitter, lockChecker).WithFiles(titles).WithMailer(acct)
 	// Realtime collaboration relay (opaque Yjs blob broadcast + presence + locks);
 	// it journals editor updates to the DesignUpdateLog via persistence. The role
-	// resolver lets the hub live-downgrade editors when an approval lock engages.
+	// resolver lets the hub live-downgrade editors when an approval lock engages,
+	// and disconnect anyone whose access to the design is gone.
 	rtHub := realtime.NewHub(persist).WithRoleResolver(
 		func(ctx context.Context, designID, userID string) (string, error) {
-			return sharingSvc.ResolveGatewayRole(ctx, designID, userID, nil)
+			role, err := sharingSvc.ResolveGatewayRole(ctx, designID, userID, nil)
+			if errors.Is(err, sharing.ErrForbidden) || errors.Is(err, sharing.ErrNotFound) {
+				return "", realtime.ErrAccessRevoked
+			}
+			return role, err
 		})
+	// Grant and membership changes re-resolve live connections immediately.
+	sharingSvc.WithRoleRefresher(rtHub)
+	acct.WithAccessRefresher(rtHub)
 	// Server-authoritative last-leave snapshot (doc 16 FR-11): when a design's
 	// room empties (10s grace for transient reconnects), fold its journaled
 	// update log server-side and materialize an AUTO snapshot. Catch-up-only:
