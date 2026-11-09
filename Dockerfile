@@ -61,8 +61,6 @@ RUN useradd --uid 10001 --gid 0 --home-dir /app --no-create-home --shell /usr/sb
  && chmod -R g=u /app
 
 COPY --from=backend /out/hycanvas /usr/local/bin/hycanvas
-# The old path, for anything that still calls /app/hycanvas.
-RUN ln -s /usr/local/bin/hycanvas /app/hycanvas
 
 ENV HOME=/app \
     PORT=8005 \

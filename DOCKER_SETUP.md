@@ -163,11 +163,11 @@ Postgres data persists in its own volume (the `pgdata` volume under compose, or 
 
 ### The container runs as a non-root user
 
-The server runs as uid `10001` in group `0`, never as root. `/app` (the working directory, where the setup wizard writes `.env`) and `/app/.data/storage` belong to that user and are writable by group `0`, so the image also runs under any other uid in group `0`, such as a Kubernetes `runAsUser` or OpenShift's random uids. The binary is at `/usr/local/bin/hycanvas` (with `/app/hycanvas` linked to it), out of the server's reach.
+The server runs as uid `10001` in group `0`, never as root. `/app` (the working directory, where the setup wizard writes `.env`) and `/app/.data/storage` belong to that user and are writable by group `0`, so the image also runs under any other uid in group `0`, such as a Kubernetes `runAsUser` or OpenShift's random uids. The binary is at `/usr/local/bin/hycanvas`, out of the server's reach. The old `/app/hycanvas` compatibility symlink is removed; use `/usr/local/bin/hycanvas` for `docker exec` commands.
 
 If the storage directory is not writable, the server refuses to start and logs the command that fixes it, rather than starting and failing every upload.
 
-- **Compose**: the bundled compose files run a one-shot `storage-init` step before the app. It hands the storage directory to uid `10001` the first time and does nothing on later starts, so upgrades and new bind-mount folders need no manual step.
+- **Compose**: the bundled compose files run a one-shot `storage-init` step before the app. It scans the entire storage tree on every start and repairs entries whose owner/group differ from `10001:0`, including nested root-owned files from manual copies. On Linux bind mounts this changes ownership on the host: the root compose file hands `./data/storage` and its contents to uid `10001`, group `0`. Budget startup time for large trees.
 - **`docker run` with a named volume**: a new volume takes the image's ownership automatically. A volume created by an image from before this change is owned by root; give it to the app user once:
 
   ```

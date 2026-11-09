@@ -30,19 +30,19 @@ services:
 
   # The app runs as uid 10001, never root. Storage created by an earlier image
   # (or a bind-mount folder Docker created) is root-owned, so this one-shot step
-  # hands it to that user once, and is a no-op on every later start. It only
+  # checks the whole tree, repairing mismatched ownership. It only
   # changes ownership of the storage directory; the app itself never runs as root.
   storage-init:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: hycanvas-local:production
+    pull_policy: never
     user: "0"
-    entrypoint: ["sh", "-c", "[ \"$$(stat -c %u /app/.data/storage)\" = 10001 ] || chown -R 10001:0 /app/.data/storage"]
+    entrypoint: ["sh", "-c", "find /app/.data/storage -xdev \\( ! -user 10001 -o ! -group 0 \\) -exec chown -h 10001:0 {} +"]
     restart: "no"
     volumes:
       - storage:/app/.data/storage
 
   app:
+    image: hycanvas-local:production
     build:
       context: .
       dockerfile: Dockerfile
