@@ -198,6 +198,12 @@ func (s *Service) RequestPasswordReset(ctx context.Context, email string) error 
 	if err != nil || u == nil {
 		return nil
 	}
+	if err := s.checkActive(ctx, u.ID); err != nil {
+		if errors.Is(err, ErrAccountDisabled) {
+			return nil
+		}
+		return err
+	}
 	_, err = s.sendVerificationToken(ctx, u.ID, u.Email, "reset")
 	return err
 }
@@ -211,6 +217,9 @@ func (s *Service) ResetPassword(ctx context.Context, raw, newPassword string) er
 	id, userID, ok := s.usableToken(ctx, raw, "reset")
 	if !ok {
 		return ErrToken
+	}
+	if err := s.checkActive(ctx, userID); err != nil {
+		return err
 	}
 	hash, err := secrets.HashPassword(newPassword)
 	if err != nil {
@@ -237,6 +246,12 @@ func (s *Service) RequestMagicLink(ctx context.Context, email string, allowSignu
 	u, err := s.findUserByEmail(ctx, email)
 	switch {
 	case err == nil && u != nil:
+		if err := s.checkActive(ctx, u.ID); err != nil {
+			if errors.Is(err, ErrAccountDisabled) {
+				return nil
+			}
+			return err
+		}
 		_, err = s.sendVerificationToken(ctx, u.ID, u.Email, "magic")
 		return err
 	case errors.Is(err, pgx.ErrNoRows):

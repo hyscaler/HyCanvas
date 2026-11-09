@@ -81,6 +81,9 @@ func realtimeHandler(hub *realtime.Hub, acct *accounts.Service, sh *sharing.Serv
 			}
 			roomKey = realtime.RoomKey(designID, branch)
 		}
-		hub.Serve(r.Context(), ws, id, roomKey)
+		hub.Serve(r.Context(), ws, id, roomKey, func() error {
+			_, _, err := acct.VerifyAccess(r.Context(), c.Value)
+			return err
+		})
 	}
 }

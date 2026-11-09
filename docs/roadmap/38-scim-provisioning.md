@@ -59,7 +59,7 @@ Rules:
 Each mapped workspace is in one of two modes. Both build the same desired state: for every active SCIM-managed person, the highest role their mapped groups grant in that workspace.
 
 - FR-5 **Additive** (default). SCIM changes only memberships it created, marked by `workspace_members.managed_by_scim`. It adds a membership when desired and none exists, changes the role of a membership it manages, and removes a membership it manages that is no longer desired. A membership created any other way (an email invitation, the workspace creator) is never changed, even if the same person is also in a mapped group.
-- FR-6 **Authoritative**. The identity provider is the single source of truth for the workspace. Every membership is brought to the desired state, and any member who is not desired is removed, including people invited by hand. Memberships SCIM touches become `managed_by_scim`.
+- FR-6 **Authoritative**. The identity provider controls the memberships of people touched by the current request. Their memberships are brought to the desired state, including hand-created memberships. Unrelated members and the workspace creator are not swept. Memberships SCIM touches become `managed_by_scim`.
 - FR-7 In both modes SCIM never removes or demotes a workspace's last active owner. It skips that one change, logs it, and completes the rest of the request successfully.
 - FR-8 Reconcile runs after every SCIM write that can change desired state (a user's `active`, group membership, a group rename, a group delete), for exactly the people affected, inside one transaction per request.
 - FR-9 A deactivated person's memberships are handled by section 5, not by reconcile: they are suspended, not removed, so reactivation restores them unchanged.
@@ -75,7 +75,7 @@ Each mapped workspace is in one of two modes. Both build the same desired state:
 
 People often sign up through SSO before SCIM is configured. When `POST /Users` carries an email that already belongs to an account with no SCIM link:
 
-- FR-12 The account is adopted (linked, not duplicated) only when one of these holds, mirroring the rules SSO linking already uses (`accounts/oidc_login.go`):
+- FR-12 The account must be active. It is adopted (linked, not duplicated) only when one of these holds, mirroring the rules SSO linking already uses (`accounts/oidc_login.go`):
   - it already has an OIDC identity whose subject equals `externalId`, or
   - `OIDC_ALLOWED_EMAIL_DOMAINS` is set and lists the email's domain.
 - FR-13 Otherwise the response is `409` with `scimType: uniqueness`. Authentik then looks the person up by `userName` and, finding no linked account, reports the conflict instead of taking the account over.
@@ -83,6 +83,7 @@ People often sign up through SSO before SCIM is configured. When `POST /Users` c
 ### 5.3 Update
 
 - FR-14 `PUT /Users/{id}` replaces the person's SCIM attributes (Authentik's update path). `PATCH /Users/{id}` supports `replace` and `add` on `active`, `displayName`, `name`, `emails` and `userName`, with and without a path (Entra ID and Okta send both forms). Other attributes are accepted and ignored.
+- `externalId` is immutable after creation (400 mutability); unsupported password attributes are discarded case-insensitively on every write and read.
 - FR-15 An email change that collides with another account is `409 uniqueness` and changes nothing.
 
 ### 5.4 Deactivate, reactivate, delete
@@ -93,10 +94,10 @@ People often sign up through SSO before SCIM is configured. When `POST /Users` c
   3. revokes every API key the person holds, in every workspace;
   4. sets each of their `ACTIVE` memberships to `SUSPENDED`, recording that deactivation did it (`suspended_by_deactivation`).
   After commit it closes every realtime socket the person holds on this instance and publishes the same to other instances.
-  Deactivation applies even to a workspace's only active owner: cutting a departed person off outranks keeping a workspace owned, so FR-7's last-owner guard covers membership changes, not deactivation. The workspace and its data stay intact with no active owner until that person is reactivated. A realtime socket that passed its session check but had not yet joined when deactivation ran is refused for a short window (30 seconds) instead of joining after the disconnect.
+  Deactivation applies even to a workspace's only active owner: cutting a departed person off outranks keeping a workspace owned, so FR-7's last-owner guard covers membership changes, not deactivation. The workspace and its data stay intact with no active owner until that person is reactivated. Realtime rechecks the session after registering a socket, closing the handshake race without caching a refusal that would block a reactivated user.
 - FR-17 A deactivated account cannot sign in by any path: password, magic link, OIDC (including an existing linked identity), and refresh-token rotation. Each returns the same "account disabled" error.
 - FR-18 `active: true` clears `deactivated_at` and restores to `ACTIVE` exactly the memberships with `suspended_by_deactivation`, then reconciles (group membership may have changed meanwhile). Sessions and API keys stay revoked, including any created in the moment a sign-in raced the deactivation; the person signs in again.
-- FR-19 `DELETE /Users/{id}` deactivates (FR-16) and detaches the SCIM link (`scim_users.deleted_at`); afterwards `GET` on that id is `404`. No data is deleted. A later `POST` for the same person (same `externalId`) re-links and reactivates.
+- FR-19 `DELETE /Users/{id}` deactivates (FR-16) and detaches the SCIM link (`scim_users.deleted_at`); afterwards `GET` on that id is `404`. Account and design data are retained. Group associations are removed. A later `POST` for the same person re-links and reactivates only if the original OIDC subject is still linked and the email is unchanged; group grants must be sent again.
 - FR-20 Every query that grants access through a membership counts only `ACTIVE` memberships. Queries that merely list members may show `SUSPENDED` ones, labelled.
 
 ## 6. Groups
@@ -136,7 +137,7 @@ All additive, per the zero-data-loss rule:
 - AC-3 The request sequence Authentik's client sends (create; `409` then `userName eq` lookup and adoption; full `PUT` with `active: false`; group create; `PATCH` member add and remove; group `DELETE`) completes with the status codes and bodies Authentik expects.
 - AC-4 After deactivation, a previously valid access token, refresh token, API key and open realtime socket are each refused or closed, and each login path returns "account disabled".
 - AC-5 Reactivation restores exactly the memberships deactivation suspended, and none that an admin removed meanwhile.
-- AC-6 Additive mode leaves a hand-invited membership unchanged across every SCIM operation; authoritative mode removes it when it is not desired.
+- AC-6 Additive mode leaves a hand-invited membership unchanged across every SCIM operation; authoritative mode removes it when the request touches that person and no grant is desired.
 - AC-7 Neither mode removes or demotes a workspace's last owner, and the request still succeeds.
 - AC-8 A first SSO login after SCIM provisioning lands on the provisioned account, by subject.
 - AC-9 Group `DELETE` returns `204` for mapped and unmapped groups.

@@ -510,8 +510,8 @@ func (s *Service) Login(ctx context.Context, email, password, device, ip string)
 	}
 	// Refuse a deactivated account before any MFA challenge, so every sign-in
 	// path answers the same way (issueSession is the backstop).
-	if s.isDeactivated(ctx, u.ID) {
-		return nil, nil, "", ErrAccountDisabled
+	if err := s.checkActive(ctx, u.ID); err != nil {
+		return nil, nil, "", err
 	}
 	if u.MFAEnabled {
 		mfaToken, err := s.mfaChallengeToken(u.ID)
@@ -532,8 +532,8 @@ func (s *Service) Login(ctx context.Context, email, password, device, ip string)
 func (s *Service) issueSession(ctx context.Context, u *UserRow, device, ip string) (*AuthUser, *Tokens, error) {
 	// Every sign-in path (password, magic link, OIDC, MFA verify, signup) ends
 	// here, so this one check refuses a deactivated account on all of them.
-	if s.isDeactivated(ctx, u.ID) {
-		return nil, nil, ErrAccountDisabled
+	if err := s.checkActive(ctx, u.ID); err != nil {
+		return nil, nil, err
 	}
 	refresh := uuid.NewString() + "." + uuid.NewString()
 	sessionID := uuid.NewString()

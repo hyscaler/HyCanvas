@@ -185,22 +185,26 @@ func TestAuthoritative_DB(t *testing.T) {
 	if got := f.membership(aID); got != "MEMBER/ACTIVE/scim" {
 		t.Fatalf("desired member: %q", got)
 	}
-	if got := f.membership(guest); got != "" {
-		t.Fatalf("authoritative kept an undesired guest: %q", got)
+	if got := f.membership(guest); got != "VIEWER/ACTIVE/hand" {
+		t.Fatalf("unrelated sync changed an untouched guest: %q", got)
 	}
 	if got := f.membership(f.owner); got != "OWNER/ACTIVE/hand" {
 		t.Fatalf("the last owner was removed: %q", got)
 	}
 
-	// With a SCIM-granted owner in place, the hand-made owner is no longer the
-	// last one, and goes.
+	// Another owner does not make an unrelated request sweep the creator.
 	f.group(f.owners, a)
 	if got := f.membership(aID); got != "OWNER/ACTIVE/scim" {
 		t.Fatalf("mapped owner: %q", got)
 	}
-	f.patch(f.groupID(f.staff), removeOp(a)) // any write touching the workspace sweeps it
-	if got := f.membership(f.owner); got != "" {
-		t.Fatalf("authoritative kept the hand-made owner once another owner existed: %q", got)
+	f.patch(f.groupID(f.staff), removeOp(a)) // only A is touched
+	if got := f.membership(f.owner); got != "OWNER/ACTIVE/hand" {
+		t.Fatalf("unrelated sync changed the creator: %q", got)
+	}
+	// An explicitly touched member is still removed when their final grant goes.
+	f.patch(f.groupID(f.owners), removeOp(a))
+	if got := f.membership(aID); got != "" {
+		t.Fatalf("touched member kept an obsolete grant: %q", got)
 	}
 }
 

@@ -12,7 +12,7 @@ import (
 // joins the room (sending welcome/roster/locks + broadcasting join), relays
 // inbound frames, and on disconnect leaves the room (releasing locks +
 // broadcasting leave). Blocks until the connection closes.
-func (h *Hub) Serve(ctx context.Context, ws *websocket.Conn, id PeerIdentity, designID string) {
+func (h *Hub) Serve(ctx context.Context, ws *websocket.Conn, id PeerIdentity, designID string, validateSession ...func() error) {
 	// The reader keeps the request context: coder/websocket closes the socket the
 	// moment a Read context is cancelled, which would drop a closing notice the
 	// writer has not flushed yet. A kick or revocation cancels the pump context
@@ -34,6 +34,16 @@ func (h *Hub) Serve(ctx context.Context, ws *websocket.Conn, id PeerIdentity, de
 		return
 	}
 	defer h.Leave(c)
+
+	// Recheck AFTER registration: deactivation either cancels this registered
+	// connection or has already revoked its session. No TTL refusal cache is
+	// needed, and a freshly authenticated reactivated user can join immediately.
+	for _, validate := range validateSession {
+		if err := validate(); err != nil {
+			_ = ws.Close(websocket.StatusPolicyViolation, "session revoked")
+			return
+		}
+	}
 
 	// Writer pump: drain the connection's outbound queue. Serve waits for it on
 	// the way out, so a closing notice it is still flushing (a kick, or access

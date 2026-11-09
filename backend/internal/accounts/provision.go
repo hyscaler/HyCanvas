@@ -67,6 +67,14 @@ func (s *Service) AdoptForProvisioning(ctx context.Context, email, oidcSubject s
 	if err != nil {
 		return "", err
 	}
+	// Adoption never revives a disabled account, even if a subject was linked
+	// by an earlier failed login. Detached SCIM relinks are checked separately.
+	if err := s.checkActive(ctx, u.ID); err != nil {
+		if errors.Is(err, ErrAccountDisabled) {
+			return "", ErrEmailTaken
+		}
+		return "", err
+	}
 	if oidcSubject != "" {
 		owner, err := s.oidcSubjectOwner(ctx, oidcSubject)
 		if err != nil {
@@ -78,12 +86,6 @@ func (s *Service) AdoptForProvisioning(ctx context.Context, email, oidcSubject s
 		if owner != "" {
 			return "", ErrSubjectTaken
 		}
-	}
-	// A deactivated account belongs to someone who left; a different identity
-	// carrying the same (recycled) email must not inherit it and its data, even
-	// on a vouched domain. Only the same subject (above) brings it back.
-	if s.isDeactivated(ctx, u.ID) {
-		return "", ErrEmailTaken
 	}
 	if allowed, configured := emailDomainAllowed(email); configured && allowed {
 		if oidcSubject != "" {
@@ -115,14 +117,22 @@ func (s *Service) UpdateProvisionedUser(ctx context.Context, userID, email, name
 	if name == "" {
 		name = strings.SplitN(email, "@", 2)[0]
 	}
-	ct, err := s.db.Exec(ctx, `UPDATE "users" SET email = $2, name = $3, "updated_at" = now() WHERE id = $1`, userID, email, name)
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	ct, err := tx.Exec(ctx, `UPDATE "users" SET email = $2, name = $3, "updated_at" = now() WHERE id = $1`, userID, email, name)
 	if err != nil {
 		return err
 	}
 	if ct.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	return nil
+	if _, err := tx.Exec(ctx, `UPDATE "auth_identities" SET "provider_subject" = $2 WHERE "user_id" = $1 AND provider = 'PASSWORD'`, userID, email); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 // oidcSubjectOwner returns the id of the account an SSO subject is linked to,

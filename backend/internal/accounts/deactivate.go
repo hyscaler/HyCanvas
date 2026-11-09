@@ -85,12 +85,14 @@ func (s *Service) ReactivateUser(ctx context.Context, userID string) error {
 	return tx.Commit(ctx)
 }
 
-// isDeactivated reports whether the account is deactivated. A lookup failure
-// reads as deactivated: a sign-in path must fail closed.
-func (s *Service) isDeactivated(ctx context.Context, userID string) bool {
+// checkActive refuses disabled accounts and preserves database errors.
+func (s *Service) checkActive(ctx context.Context, userID string) error {
 	var off bool
 	if err := s.db.QueryRow(ctx, `SELECT "deactivated_at" IS NOT NULL FROM "users" WHERE id = $1`, userID).Scan(&off); err != nil {
-		return true
+		return err
 	}
-	return off
+	if off {
+		return ErrAccountDisabled
+	}
+	return nil
 }

@@ -50,7 +50,7 @@ func readUserIn(r *http.Request) (*userIn, error) {
 	if in.email() == "" {
 		return nil, badRequest("invalidValue", "an email address is required (emails, or a userName that is one)")
 	}
-	delete(in.raw, "password")
+	stripPasswords(in.raw)
 	return &in, nil
 }
 
@@ -102,11 +102,31 @@ func optional(s string) *string {
 	return &s
 }
 
+// Passwords are write-only in SCIM and unsupported here. Remove them at every
+// persistence boundary and on reads, including mixed case and extension objects.
+func stripPasswords(v any) {
+	switch x := v.(type) {
+	case map[string]any:
+		for k, value := range x {
+			if strings.EqualFold(k, "password") || strings.HasSuffix(strings.ToLower(k), ":password") {
+				delete(x, k)
+			} else {
+				stripPasswords(value)
+			}
+		}
+	case []any:
+		for _, value := range x {
+			stripPasswords(value)
+		}
+	}
+}
+
 func (u *userRec) resource() map[string]any {
 	out := make(map[string]any, len(u.Attrs)+8)
 	for k, v := range u.Attrs {
 		out[k] = v
 	}
+	stripPasswords(out)
 	out["schemas"] = []string{schemaUser}
 	out["id"] = u.ID
 	out["userName"] = u.UserName
@@ -217,9 +237,17 @@ func (s *Server) accountFor(o *op, in *userIn, ext *string) (userID, how string,
 			return "", "", err
 		}
 		if prev != "" {
-			if err := o.acct.UpdateProvisionedUser(o.ctx, prev, in.email(), in.displayName()); err != nil {
-				return "", "", accountErr(err)
+			// A detached externalId alone is not proof of ownership. Require the
+			// original live OIDC binding and unchanged email before restoring it.
+			var matches bool
+			if err := o.tx.QueryRow(o.ctx, `SELECT EXISTS (SELECT 1 FROM "users" u JOIN "auth_identities" a ON a."user_id" = u.id WHERE u.id = $1 AND lower(u.email) = lower($2) AND a.provider = 'OIDC' AND a."provider_subject" = $3)`, prev, in.email(), subject).Scan(&matches); err != nil {
+				return "", "", err
 			}
+			if !matches {
+				return "", "", conflict("detached account requires its original SSO identity and email")
+			}
+			// Restoring the link does not overwrite the account's profile. The
+			// provider can update it explicitly through the restored resource.
 			return prev, "relinked", nil
 		}
 	}
@@ -306,6 +334,17 @@ func (s *Server) replaceUser(w http.ResponseWriter, r *http.Request) {
 // applyUser writes a user's new state: identity attributes, the account's email
 // and name, the stored representation, and the active flag (nil leaves it).
 func (s *Server) applyUser(o *op, u *userRec, userName string, ext *string, email, name string, attrs map[string]any, active *bool) error {
+	oldSubject, newSubject := "", ""
+	if u.ExternalID != nil {
+		oldSubject = *u.ExternalID
+	}
+	if ext != nil {
+		newSubject = *ext
+	}
+	if oldSubject != newSubject {
+		return badRequest("mutability", "externalId is immutable; it identifies the linked SSO subject")
+	}
+	stripPasswords(attrs)
 	if clash, err := liveLinkConflict(o.ctx, o.tx, userName, ext, u.ID); err != nil {
 		return err
 	} else if clash {
@@ -343,6 +382,9 @@ func (s *Server) patchUser(w http.ResponseWriter, r *http.Request) {
 		st := patchState{userName: u.UserName, ext: u.ExternalID, email: u.Email, name: u.Name, attrs: u.Attrs}
 		for _, p := range ops {
 			if p.Op == "remove" {
+				if strings.EqualFold(p.Path, "externalId") {
+					return 0, nil, badRequest("mutability", "externalId is immutable")
+				}
 				continue // nothing a provider removes from a user changes its account
 			}
 			if err := st.apply(p); err != nil {
@@ -394,6 +436,8 @@ func (st *patchState) set(path string, v json.RawMessage) error {
 	var anyv any
 	_ = json.Unmarshal(v, &anyv)
 	switch {
+	case lp == "password" || strings.HasSuffix(lp, ":password"):
+		return nil
 	case lp == "active":
 		b, ok := flexBool(v)
 		if !ok {
@@ -464,6 +508,9 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 			return 0, nil, err
 		}
 		if _, err := o.tx.Exec(o.ctx, `UPDATE "scim_users" SET "deleted_at" = now(), "updated_at" = now() WHERE id = $1`, u.ID); err != nil {
+			return 0, nil, err
+		}
+		if _, err := o.tx.Exec(o.ctx, `DELETE FROM "scim_group_members" WHERE "user_id" = $1`, u.UserID); err != nil {
 			return 0, nil, err
 		}
 		o.audit("user.delete", "scim_id", u.ID, "user_id", u.UserID)

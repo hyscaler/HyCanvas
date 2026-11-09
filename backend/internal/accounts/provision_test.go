@@ -142,8 +142,8 @@ func TestAdoptRefusesDeactivatedAccountForNewSubject_DB(t *testing.T) {
 	if _, err := svc.AdoptForProvisioning(ctx, email, "sub-"+uuid.NewString()); !errors.Is(err, ErrEmailTaken) {
 		t.Fatalf("a new subject adopted a deactivated account: got %v, want ErrEmailTaken", err)
 	}
-	// Control: the same person (same subject) is still recognised.
-	if got, err := svc.AdoptForProvisioning(ctx, email, oldSub); err != nil || got != id {
+	// Even a matching identity cannot bypass the disabled check through adoption.
+	if got, err := svc.AdoptForProvisioning(ctx, email, oldSub); !errors.Is(err, ErrEmailTaken) || got != "" {
 		t.Fatalf("same subject: got %q, %v; want %q", got, err, id)
 	}
 }
@@ -164,5 +164,35 @@ func TestProvisionedEmailIsValidated_DB(t *testing.T) {
 	}
 	if err := svc.UpdateProvisionedUser(ctx, id, "not-an-email@", "x"); !errors.Is(err, ErrBadRequest) {
 		t.Fatalf("update to an invalid email: got %v, want ErrBadRequest", err)
+	}
+}
+
+func TestProvisionedEmailMovesPasswordIdentity_DB(t *testing.T) {
+	tx := deactivateTestTx(t)
+	ctx := context.Background()
+	svc := NewService(tx, "test")
+	email := "old-" + uuid.NewString() + "@example.com"
+	u, _, _, err := svc.Signup(ctx, email, "a-strong-password", "User")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.UpdateProvisionedUser(ctx, u.ID, "new-"+email, "Renamed"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, err := svc.Signup(ctx, email, "a-strong-password", "New person"); err != nil {
+		t.Fatal("old email remains reserved", err)
+	}
+	if err := svc.DeactivateUser(ctx, u.ID); err != nil {
+		t.Fatal(err)
+	}
+	before := len(svc.Outbox())
+	if err := svc.RequestPasswordReset(ctx, "new-"+email); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.RequestMagicLink(ctx, "new-"+email, true); err != nil {
+		t.Fatal(err)
+	}
+	if len(svc.Outbox()) != before {
+		t.Fatal("disabled account received a sign-in/reset email")
 	}
 }

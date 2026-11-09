@@ -2,6 +2,10 @@ package realtime
 
 import (
 	"context"
+	"errors"
+	"github.com/coder/websocket"
+	"net/http"
+	"net/http/httptest"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -77,25 +81,47 @@ func (c *countingCoord) InstanceID() string                                  { r
 func (c *countingCoord) Start(context.Context, func(string, string, []byte)) {}
 func (c *countingCoord) Close() error                                        { return nil }
 
-// A socket that passed its session check but had not joined yet when the
-// person was deactivated must not join afterwards: DisconnectUser found nothing
-// to close for it. The refusal is short-lived, so a reactivated person can
-// collaborate again.
-func TestJoinRefusedJustAfterDisconnect(t *testing.T) {
-	old := disconnectRefuseTTL
-	disconnectRefuseTTL = 80 * time.Millisecond
-	defer func() { disconnectRefuseTTL = old }()
-
+// A handshake authenticated before deactivation must be rechecked after joining.
+// A new session on a reactivated account must work without a 30-second cooldown.
+func TestSessionRecheckedAfterJoin(t *testing.T) {
 	h := NewHub(nil)
+	var active atomic.Bool
+	active.Store(false)
+	checked := make(chan bool, 2)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ws, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
+		if err != nil {
+			return
+		}
+		defer ws.CloseNow()
+		h.Serve(r.Context(), ws, PeerIdentity{ClientID: r.URL.Query().Get("cid"), UserID: "u", Role: RoleEditor}, "design-1", func() error {
+			h.mu.Lock()
+			registered := len(h.rooms["design-1"].conns) > 0
+			h.mu.Unlock()
+			checked <- registered
+			if !active.Load() {
+				return errors.New("session revoked")
+			}
+			return nil
+		})
+	}))
+	defer srv.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 	h.DisconnectUser("u")
-	if c, why := h.joinConn(PeerIdentity{ClientID: "late", UserID: "u", Role: RoleEditor}, "d1", 1000, nil); c != nil || why != "deactivated" {
-		t.Fatalf("a join racing the disconnect was let in (refusal %q)", why)
+	stale := dial(t, ctx, srv.URL, "stale", "u", "editor")
+	defer stale.CloseNow()
+	if !<-checked {
+		t.Fatal("validation happened before registration")
 	}
-	if c := h.Join(PeerIdentity{ClientID: "o", UserID: "other", Role: RoleEditor}, "d1", 1000); c == nil {
-		t.Fatal("someone else was refused")
+	if _, _, err := stale.Read(ctx); websocket.CloseStatus(err) != websocket.StatusPolicyViolation {
+		t.Fatal("stale session admitted", err)
 	}
-	time.Sleep(120 * time.Millisecond)
-	if c := h.Join(PeerIdentity{ClientID: "back", UserID: "u", Role: RoleEditor}, "d1", 1000); c == nil {
-		t.Fatal("the refusal never expired")
+	active.Store(true)
+	fresh := dial(t, ctx, srv.URL, "fresh", "u", "editor")
+	defer fresh.CloseNow()
+	if !<-checked {
+		t.Fatal("validation happened before registration")
 	}
+	readUntil(t, ctx, fresh, "welcome")
 }

@@ -185,12 +185,18 @@ SCIM is off unless you set a token:
 | `SCIM_WORKSPACE_MODES` | Per workspace, how much of its membership SCIM controls: `<workspace slug>:additive` (default) or `<workspace slug>:authoritative`. |
 
 - **Additive** (the default): SCIM only adds, changes and removes the memberships it created. People you invite by hand, such as an outside collaborator, are never touched.
-- **Authoritative**: the provider is the source of truth for that workspace. Anyone in it who is not in a mapped group is removed at the next sync, including people invited by hand.
+- **Authoritative**: for each user touched by a request, mapped groups determine membership, including memberships created by hand. A touched user without a mapped grant is removed (subject to the last-owner guard). Unrelated users, guests and the workspace creator are not swept by another person's sync.
 - In both modes SCIM never removes or demotes a workspace's last owner.
 
 A malformed map, an unknown role, or a mode for a workspace the map does not mention stops the server at start-up with the offending entry in the log, so a typo cannot silently grant nothing.
 
 People provisioned by SCIM sign in with SSO. Their account is linked to their SSO identity by the provider's `externalId`, which must equal the OIDC `sub` your provider issues. Authentik does this by default (its SCIM `externalId` is the user's uid, which is the `sub` under its default "hashed user id" subject mode); with another subject mode, add a SCIM property mapping that sets `externalId` to the same value. An account that already exists with the same email (someone who signed up before SCIM) is linked only if it already carries that SSO identity, or if its domain is in `OIDC_ALLOWED_EMAIL_DOMAINS`; otherwise the provider gets a conflict and nothing is taken over.
+
+**SCIM token trust:** on a domain listed in `OIDC_ALLOWED_EMAIL_DOMAINS`, the token holder can adopt any matching active account, including the instance administrator, and then control its email, name and lifecycle. Only vouch for domains whose identities the provider is authorized to control. Disabled accounts cannot be adopted by email, even with a matching identity.
+
+`externalId` is immutable after creation; PUT/PATCH attempts to change or clear it return `400 mutability`. A deleted SCIM link can be restored by POST only when its original OIDC subject is still linked to the account and its email is unchanged. Change profile attributes after restoring the link. DELETE clears the person's SCIM group memberships, so a later reactivation requires the provider to send those memberships again. Password attributes are unsupported and discarded case-insensitively on POST, PUT and PATCH; they are never returned.
+
+Membership removals and role changes refresh open editor connections after commit. SCIM writes are serialized within the database to keep concurrent syncs consistent; reads remain concurrent.
 
 Setting up Authentik:
 

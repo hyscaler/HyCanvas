@@ -125,6 +125,7 @@ func deletedLinkByExternalID(ctx context.Context, tx pgx.Tx, externalID string) 
 // link if it has one (an account has at most one link row, live or detached).
 // The caller has already refused a conflicting live link.
 func upsertLink(ctx context.Context, tx pgx.Tx, userID, userName string, externalID *string, attrs map[string]any) (string, error) {
+	stripPasswords(attrs)
 	raw, _ := json.Marshal(attrs)
 	var id string
 	err := tx.QueryRow(ctx, `INSERT INTO "scim_users" (id, "user_id", "external_id", "user_name", attributes)
@@ -137,6 +138,7 @@ func upsertLink(ctx context.Context, tx pgx.Tx, userID, userName string, externa
 
 // updateLink replaces a live link's provider-facing attributes.
 func updateLink(ctx context.Context, tx pgx.Tx, id, userName string, externalID *string, attrs map[string]any) error {
+	stripPasswords(attrs)
 	raw, _ := json.Marshal(attrs)
 	_, err := tx.Exec(ctx, `UPDATE "scim_users" SET "user_name" = $2, "external_id" = $3, attributes = $4, "updated_at" = now() WHERE id = $1`,
 		id, userName, externalID, raw)

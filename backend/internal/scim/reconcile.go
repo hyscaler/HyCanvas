@@ -10,9 +10,7 @@ import (
 )
 
 // reconcile brings people's memberships in every mapped workspace to what their
-// mapped groups grant (spec section 4). In an authoritative workspace everyone
-// currently in it is reconciled too, so a member no mapped group wants is
-// removed even if no SCIM change named them.
+// mapped groups grant (spec section 4), for only the people this request touched.
 func (s *Server) reconcile(o *op, userIDs ...string) error {
 	if len(s.cfg.Groups) == 0 {
 		return nil
@@ -31,21 +29,6 @@ func (s *Server) reconcile(o *op, userIDs ...string) error {
 		people := map[string]bool{}
 		for _, id := range userIDs {
 			people[id] = true
-		}
-		if mode == ModeAuthoritative {
-			rows, err := o.tx.Query(o.ctx, `SELECT "user_id"::text FROM "workspace_members" WHERE "workspace_id" = $1`, wsID)
-			if err != nil {
-				return err
-			}
-			for rows.Next() {
-				var id string
-				if err := rows.Scan(&id); err != nil {
-					rows.Close()
-					return err
-				}
-				people[id] = true
-			}
-			rows.Close()
 		}
 		ids := make([]string, 0, len(people))
 		for id := range people {
@@ -104,6 +87,7 @@ func (s *Server) reconcileOne(o *op, wsID, slug string, mode Mode, userID string
 		if _, err := o.tx.Exec(o.ctx, `DELETE FROM "workspace_members" WHERE "workspace_id" = $1 AND "user_id" = $2`, wsID, userID); err != nil {
 			return err
 		}
+		o.refresh = append(o.refresh, userID)
 		log("remove", "role", role)
 	case !exists:
 		if _, err := o.tx.Exec(o.ctx,
@@ -131,6 +115,7 @@ func (s *Server) reconcileOne(o *op, wsID, slug string, mode Mode, userID string
 			 WHERE "workspace_id" = $1 AND "user_id" = $2`, wsID, userID, want); err != nil {
 			return err
 		}
+		o.refresh = append(o.refresh, userID)
 		log("set-role", "from", role, "to", want)
 	}
 	return nil
@@ -169,7 +154,7 @@ func (s *Server) isLastOwner(o *op, wsID, userID, role, status string) (bool, er
 		return false, nil
 	}
 	rows, err := o.tx.Query(o.ctx, `SELECT "user_id"::text FROM "workspace_members"
-		WHERE "workspace_id" = $1 AND role = 'OWNER' AND status = 'ACTIVE' FOR UPDATE`, wsID)
+		WHERE "workspace_id" = $1 AND role = 'OWNER' AND status = 'ACTIVE' ORDER BY "user_id" FOR UPDATE`, wsID)
 	if err != nil {
 		return false, err
 	}

@@ -156,9 +156,6 @@ type Hub struct {
 	// is force-disconnected and refused on rejoin. In-memory per-hub (single
 	// instance / self-host); cross-instance ban fan-out is deferred like locks were.
 	bans map[string]map[string]bool
-	// refused: users just disconnected by DisconnectUser, and until when their
-	// joins are refused (guarded by mu, like bans).
-	refused map[string]time.Time
 	// lastLeave is the server-authoritative last-leave hook (doc 16 FR-11): when
 	// the last local connection leaves a room, it fires (after lastLeaveDelay,
 	// canceled by a rejoin) so the composition root can fold the design's update
@@ -174,20 +171,11 @@ type Hub struct {
 // NewHub builds a relay. updateLog may be nil. The coordinator defaults to the
 // single-instance no-op; use WithCoordinator to enable cross-instance fan-out.
 func NewHub(updateLog UpdateLog) *Hub {
-	return &Hub{rooms: map[string]*liveRoom{}, updateLog: updateLog, coord: localCoordinator{}, bans: map[string]map[string]bool{}, leaveTimers: map[string]*time.Timer{}, refused: map[string]time.Time{}}
+	return &Hub{rooms: map[string]*liveRoom{}, updateLog: updateLog, coord: localCoordinator{}, bans: map[string]map[string]bool{}, leaveTimers: map[string]*time.Timer{}}
 }
 
-// disconnectRefuseTTL is how long a join is refused after DisconnectUser. A
-// socket can pass its session check just before a deactivation and join just
-// after it, when there was nothing yet to close; that window is a handshake,
-// well under a second. The refusal is short so a reactivated person can
-// collaborate again. A var so tests can shorten it.
-var disconnectRefuseTTL = 30 * time.Second
-
-// WithLastLeaveHook installs the last-leave callback (doc 16 FR-11): fn runs on
-// its own goroutine `delay` after a room loses its last local connection, unless
-// someone rejoins first. The delay skips transient reconnects (a page refresh
-// tears down and rejoins within seconds) so routine navigation does not fold.
+// WithLastLeaveHook schedules a fold after the last local connection leaves,
+// unless a new connection joins before the delay expires.
 func (h *Hub) WithLastLeaveHook(fn func(designID string), delay time.Duration) *Hub {
 	h.lastLeave = fn
 	h.lastLeaveDelay = delay
@@ -450,14 +438,6 @@ func (h *Hub) joinConn(id PeerIdentity, designID string, serverTimeMs int64, can
 	// banned user is refused from the main room and every branch room alike.
 	if banDesign, _ := SplitRoomKey(designID); h.bans[banDesign][id.UserID] {
 		return nil, "ban" // banned: refuse the join under the same lock the ban write holds
-	}
-	// Just deactivated: refused under the lock DisconnectUser holds, so a join is
-	// either closed by the disconnect or refused here, never neither.
-	if until, ok := h.refused[id.UserID]; ok {
-		if time.Now().Before(until) {
-			return nil, "deactivated"
-		}
-		delete(h.refused, id.UserID)
 	}
 	if id.Color == "" {
 		id.Color = colorForUser(id.UserID) // stable per-user palette color
@@ -1343,7 +1323,6 @@ func (h *Hub) disconnectUserLocal(userID string) {
 	notice := frame(map[string]any{"t": "moderated", "action": "deactivated"})
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.refused[userID] = time.Now().Add(disconnectRefuseTTL)
 	for _, room := range h.rooms {
 		for _, c := range room.conns {
 			if c.userID != userID {

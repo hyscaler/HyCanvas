@@ -417,7 +417,7 @@ func main() {
 	srv := &http.Server{
 		Addr: cfg.BindHost + ":" + cfg.Port,
 		Handler: httpapi.NewRouter(httpapi.Deps{
-			SCIM:          scim.NewServer(scimCfg, pool, cfg.JWTSecret, rtHub.DisconnectUser, logger).WithWorkspaceHook(seedWorkspace).Handler(),
+			SCIM:          scim.NewServer(scimCfg, pool, cfg.JWTSecret, rtHub.DisconnectUser, logger).WithAccessRefresher(rtHub).WithWorkspaceHook(seedWorkspace).Handler(),
 			DB:            pool,
 			Logger:        logger,
 			Version:       version,

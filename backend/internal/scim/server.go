@@ -22,12 +22,16 @@ type Server struct {
 	cfg        *Config
 	db         accounts.DBTX
 	jwtSecret  string
+	refresh    accounts.AccessRefresher
 	disconnect func(userID string)
 	log        *slog.Logger
 	// workspaceHook sets up a newly created workspace (the starter brand kit),
 	// as accounts.Service.WithWorkspaceHook does for every other new account.
 	workspaceHook func(ctx context.Context, workspaceID, ownerID string)
 }
+
+// WithAccessRefresher rechecks live editor permissions after committed changes.
+func (s *Server) WithAccessRefresher(fn accounts.AccessRefresher) *Server { s.refresh = fn; return s }
 
 // WithWorkspaceHook runs fn, after commit, for the personal workspace of each
 // account SCIM creates.
@@ -112,6 +116,7 @@ type op struct {
 	ctx        context.Context
 	tx         pgx.Tx
 	acct       *accounts.Service
+	refresh    []string
 	disconnect []string    // user ids whose sockets to close after commit
 	audits     [][]any     // audit lines to write after commit
 	created    [][2]string // {workspace id, owner id} of new personal workspaces
@@ -135,6 +140,15 @@ func (s *Server) run(w http.ResponseWriter, r *http.Request, fn func(o *op) (int
 		return
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+	// Serialize SCIM writers before any account/group locks. This gives concurrent
+	// syncs a consistent view and avoids lock inversion across mapped workspaces.
+	// Reads remain concurrent; the transaction lock releases on rollback too.
+	if r.Method != http.MethodGet {
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(724638210)`); err != nil {
+			s.fail(w, err)
+			return
+		}
+	}
 	o := &op{ctx: ctx, tx: tx, acct: accounts.NewService(tx, s.jwtSecret)}
 	status, body, err := fn(o)
 	if err != nil {
@@ -150,6 +164,15 @@ func (s *Server) run(w http.ResponseWriter, r *http.Request, fn func(o *op) (int
 	}
 	for _, id := range o.disconnect {
 		s.disconnect(id)
+	}
+	if s.refresh != nil {
+		seen := map[string]bool{}
+		for _, id := range o.refresh {
+			if !seen[id] {
+				s.refresh.RefreshUser(ctx, id, "access-changed")
+				seen[id] = true
+			}
+		}
 	}
 	if s.workspaceHook != nil {
 		for _, c := range o.created {
