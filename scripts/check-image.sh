@@ -13,7 +13,7 @@ set -eu
 
 IMAGE="${1:?usage: check-image.sh IMAGE}"
 CLI="${CONTAINER_CLI:-$(command -v podman >/dev/null 2>&1 && echo podman || echo docker)}"
-HELPER=debian:bookworm-slim
+HELPER=docker.io/library/debian:bookworm-slim
 TAG="hyc-check-$$"
 FAILS=0
 
@@ -36,7 +36,7 @@ trap cleanup EXIT INT TERM
 # The app joins the database container's network namespace rather than a
 # created network: no subnet to allocate, and the same on docker and podman.
 $CLI run -d --name "$TAG-db" \
-  -e POSTGRES_USER=hyc -e POSTGRES_PASSWORD=hyc -e POSTGRES_DB=hyc postgres:16-alpine >/dev/null
+  -e POSTGRES_USER=hyc -e POSTGRES_PASSWORD=hyc -e POSTGRES_DB=hyc docker.io/library/postgres:16-alpine >/dev/null
 i=0
 until $CLI exec "$TAG-db" pg_isready -U hyc -d hyc >/dev/null 2>&1; do
   i=$((i + 1)); [ "$i" -lt 60 ] || { echo "Postgres did not start"; exit 2; }; sleep 1
@@ -83,6 +83,8 @@ if healthy; then
   bin=$($CLI image inspect -f '{{index .Config.Entrypoint 0}}' "$IMAGE")
   in_app "test -x '$bin' && ! test -w '$bin' && ! test -w \"\$(dirname '$bin')\"" \
     && pass "server cannot modify its own binary ($bin)" || fail "server can modify its own binary ($bin) or its directory"
+  in_app 'test ! -e /app/hycanvas && test ! -L /app/hycanvas' \
+    && pass "no executable compatibility symlink in writable /app" || fail "unsafe /app/hycanvas compatibility path remains"
   in_app 'touch /app/.env.probe && rm /app/.env.probe' \
     && pass "working directory /app is writable (setup wizard writes .env there)" || fail "working directory /app is not writable"
   in_app 'echo ok > /app/.data/storage/probe && rm /app/.data/storage/probe' \
