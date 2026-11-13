@@ -13,9 +13,26 @@ import (
 
 // Go's built-in mime table has no entry for .webmanifest, so ServeContent
 // would fall back to sniffing (text/plain) and browsers would reject the PWA
-// manifest the frontend links.
+// manifest the frontend links. On Windows the table is also overridden from
+// the registry, where installed software can map .js to text/plain (browsers
+// then refuse the scripts), so the frontend's own types are pinned here.
 func init() {
-	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
+	for ext, typ := range map[string]string{
+		".webmanifest": "application/manifest+json",
+		".html":        "text/html; charset=utf-8",
+		".js":          "text/javascript; charset=utf-8",
+		".mjs":         "text/javascript; charset=utf-8",
+		".css":         "text/css; charset=utf-8",
+		".json":        "application/json",
+		".svg":         "image/svg+xml",
+		".wasm":        "application/wasm",
+		".woff2":       "font/woff2",
+		".png":         "image/png",
+		".webp":        "image/webp",
+		".ico":         "image/vnd.microsoft.icon",
+	} {
+		_ = mime.AddExtensionType(ext, typ)
+	}
 }
 
 // mountStatic serves the statically-exported Next.js frontend from dir, so the
