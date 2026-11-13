@@ -250,3 +250,65 @@ func TestStaticGAInjection(t *testing.T) {
 		t.Fatalf("sanitizeGAID mangled a valid id")
 	}
 }
+
+// TestStaticCacheHeaders pins the caching that keeps a binary upgrade safe: the
+// service worker script, HTML pages, and the manifest always revalidate, while
+// hashed /_next assets stay immutable. Both the plain path and the analytics
+// injection path (which writes HTML itself) are covered.
+func TestStaticCacheHeaders(t *testing.T) {
+	dir := t.TempDir()
+	write := func(rel, body string) {
+		p := filepath.Join(dir, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("index.html", "<html><head></head>shell</html>")
+	write("404.html", "<html><head></head>notfound</html>")
+	write("offline.html", "<html><head></head>offline</html>")
+	write("dashboard/index.html", "<html><head></head>dash</html>")
+	write("sw.js", "self.addEventListener('fetch', () => {});")
+	write("manifest.webmanifest", "{}")
+	write("_next/static/chunks/app-abc123.js", "console.log(1)")
+	write("icon-192.png", "png")
+
+	for _, ga := range []string{"", "G-TEST123"} {
+		r := chi.NewRouter()
+		mountStaticFS(r, http.FS(os.DirFS(dir)), ga)
+		srv := httptest.NewServer(r)
+		cases := []struct {
+			path, cache, ctype string
+			code               int
+		}{
+			{"/sw.js", "no-cache", "text/javascript", 200},
+			{"/", "no-cache", "text/html", 200},
+			{"/dashboard/", "no-cache", "text/html", 200},
+			{"/offline.html", "no-cache", "text/html", 200},
+			{"/manifest.webmanifest", "no-cache", "application/manifest+json", 200},
+			{"/_next/static/chunks/app-abc123.js", "public, max-age=31536000, immutable", "javascript", 200},
+			{"/no/such/page", "no-cache", "text/html", 404},
+			{"/icon-192.png", "", "", 200},
+		}
+		for _, c := range cases {
+			resp, err := http.Get(srv.URL + c.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, _ = io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
+			if resp.StatusCode != c.code {
+				t.Errorf("ga=%q %s: status %d, want %d", ga, c.path, resp.StatusCode, c.code)
+			}
+			if got := resp.Header.Get("Cache-Control"); got != c.cache {
+				t.Errorf("ga=%q %s: Cache-Control %q, want %q", ga, c.path, got, c.cache)
+			}
+			if got := resp.Header.Get("Content-Type"); !strings.Contains(got, c.ctype) {
+				t.Errorf("ga=%q %s: Content-Type %q, want it to contain %q", ga, c.path, got, c.ctype)
+			}
+		}
+		srv.Close()
+	}
+}

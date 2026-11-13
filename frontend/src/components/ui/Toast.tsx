@@ -7,16 +7,32 @@ import { cn } from "@/lib/cn";
 import { tr } from "@/lib/i18n";
 
 type ToastKind = "success" | "error" | "info";
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface Toast {
   id: number;
   kind: ToastKind;
   message: string;
+  action?: ToastAction;
+}
+
+export interface ToastOptions {
+  kind?: ToastKind;
+  /** A single button next to the message; clicking it also dismisses. */
+  action?: ToastAction;
+  /** Milliseconds before auto-dismiss; 0 keeps it until dismissed. */
+  duration?: number;
 }
 
 interface ToastApi {
   toast: (message: string, kind?: ToastKind) => void;
   success: (message: string) => void;
   error: (message: string) => void;
+  /** A toast with options (an action, or one that stays). Returns a dismiss. */
+  show: (message: string, options?: ToastOptions) => () => void;
 }
 
 const ToastContext = createContext<ToastApi | null>(null);
@@ -40,13 +56,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const remove = useCallback((id: number) => setToasts((t) => t.filter((x) => x.id !== id)), []);
 
-  const toast = useCallback(
-    (message: string, kind: ToastKind = "info") => {
+  const show = useCallback(
+    (message: string, { kind = "info", action, duration = 4000 }: ToastOptions = {}) => {
       const id = ++seq.current;
-      setToasts((t) => [...t, { id, kind, message }]);
-      setTimeout(() => remove(id), 4000);
+      setToasts((t) => [...t, { id, kind, message, action }]);
+      if (duration > 0) setTimeout(() => remove(id), duration);
+      return () => remove(id);
     },
     [remove],
+  );
+
+  const toast = useCallback(
+    (message: string, kind: ToastKind = "info") => {
+      show(message, { kind });
+    },
+    [show],
   );
 
   // Stable identity: `toast` is a useCallback, so memoizing here keeps the whole
@@ -60,8 +84,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       toast,
       success: (m) => toast(m, "success"),
       error: (m) => toast(m, "error"),
+      show,
     }),
-    [toast],
+    [toast, show],
   );
 
   return (
@@ -70,7 +95,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         role="status"
         aria-live="polite"
-        className="pointer-events-none fixed bottom-4 end-4 z-[100] flex flex-col gap-2"
+        // --oc-toast-lift lets a screen with its own bottom bar (the editor's
+        // phone tab bar) raise toasts above it instead of covering it.
+        className="pointer-events-none fixed bottom-[calc(1rem+var(--oc-toast-lift,0px))] end-4 z-[100] flex flex-col gap-2"
       >
         {toasts.map((t) => {
           const Icon = ICONS[t.kind];
@@ -84,6 +111,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             >
               <Icon size={18} className={cn("mt-0.5 shrink-0", TONE[t.kind])} />
               <span className="flex-1 text-neutral-800">{t.message}</span>
+              {t.action && (
+                <button
+                  onClick={() => {
+                    remove(t.id);
+                    t.action?.onClick();
+                  }}
+                  className="shrink-0 rounded font-semibold text-brand-ink hover:underline"
+                >
+                  {t.action.label}
+                </button>
+              )}
               <button onClick={() => remove(t.id)} className="text-neutral-400 hover:text-neutral-700" aria-label={tr("ui.dismiss")}>
                 <X size={15} />
               </button>

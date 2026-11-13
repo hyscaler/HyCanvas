@@ -81,6 +81,10 @@ async function main() {
     exec('npm run build:packages');
 
     // 3. Build the frontend as a static export (BUILD_DIST routes the API to /api).
+    //    The frontend's postbuild:dist step (scripts/precompress-static.js) then
+    //    writes .br/.gz siblings for every text asset, which the binary serves
+    //    by Accept-Encoding. It runs as an npm post-script so the Dockerfile and
+    //    the release workflow, which call the same build:dist, get it too.
     log('Building frontend...');
     exec('npm run build:dist -w frontend', {
       env: { ...process.env, NODE_ENV: 'production' },

@@ -14,9 +14,24 @@
 # secrets (JWT_SECRET, SMTP_*, OIDC_*, AI keys, VAPID_*, ...) also come from .env.
 
 services:
+  # The app runs as uid 10001, never root. Storage created by an earlier image
+  # (or a bind-mount folder Docker created) is root-owned, so this one-shot step
+  # checks the whole tree, repairing mismatched ownership. It only
+  # changes ownership of the storage directory; the app itself never runs as root.
+  storage-init:
+    image: hycanvas/hycanvas:latest
+    user: "0"
+    entrypoint: ["sh", "-c", "find /app/.data/storage -xdev \\( ! -user 10001 -o ! -group 0 \\) -exec chown -h 10001:0 {} +"]
+    restart: "no"
+    volumes:
+      - ./data/storage:/app/.data/storage
+
   app:
     image: hycanvas/hycanvas:latest
     restart: unless-stopped
+    depends_on:
+      storage-init:
+        condition: service_completed_successfully
     ports:
       - "${APP_PORT}:8005"
     # All app config/secrets (JWT_SECRET, SMTP_*, OIDC_*, OPENAI/ANTHROPIC keys,

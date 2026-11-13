@@ -8,8 +8,10 @@
     "dev": "next dev",
     "prebuild": "node ../scripts/gen-theme.mjs",
     "build": "cross-env NODE_ENV=production next build",
+    "postbuild": "node ../scripts/build-sw.mjs",
     "prebuild:dist": "node ../scripts/gen-theme.mjs",
     "build:dist": "cross-env NODE_ENV=production BUILD_DIST=true next build",
+    "postbuild:dist": "node ../scripts/build-sw.mjs && node ../scripts/precompress-static.js out",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run"

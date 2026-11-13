@@ -12,6 +12,7 @@ import { requestAi } from "@/lib/aiRequests";
 import type { CanvasApi } from "@/lib/useEditorCanvas";
 import { pageGap } from "@/lib/pageLayout";
 import { tr } from "@/lib/i18n";
+import { useIsPhone } from "@/lib/useIsPhone";
 import { avoidRect, type Rect } from "@/lib/avoidRect";
 
 // The floating zoom control's box relative to the overlay, so "Add page" can
@@ -34,7 +35,7 @@ function HdrBtn({ icon: Icon, title, onClick, disabled, danger }: { icon: typeof
       aria-label={title}
       disabled={disabled}
       onClick={onClick}
-      className={`grid h-7 w-7 place-items-center rounded-md transition disabled:opacity-30 ${danger ? "text-neutral-500 hover:bg-red-50 hover:text-red-600" : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"}`}
+      className={`grid h-7 w-7 place-items-center rounded-md pointer-coarse:h-9 pointer-coarse:w-9 transition disabled:opacity-30 ${danger ? "text-neutral-500 hover:bg-red-50 hover:text-red-600" : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"}`}
     >
       <Icon size={15} />
     </button>
@@ -48,6 +49,8 @@ export function PageOverlays({ api }: { api: CanvasApi }) {
   useEditor((s) => s.viewport);
   const activePage = useEditor((s) => s.activePage);
   const cropping = useEditor((s) => s.cropping);
+  // A phone adds pages from the page pill, which sits where this button would.
+  const { isPhone } = useIsPhone();
   const maskRefining = useEditor((s) => s.maskRefining);
   const presenting = useEditor((s) => s.presenting);
   const doc = useEditor.getState().doc;
@@ -150,14 +153,16 @@ export function PageOverlays({ api }: { api: CanvasApi }) {
           </div>
         );
       })}
-      <div className="pointer-events-auto absolute" style={{ left: add.left, top: add.top, width: add.width }}>
-        <button
-          onClick={() => st.addPage()}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-surface py-2.5 text-sm font-medium text-neutral-600 shadow-sm transition hover:border-brand-400 hover:text-brand-ink"
-        >
-          <Plus size={16} /> {tr("editor.add_page")}
-        </button>
-      </div>
+      {!isPhone && (
+        <div className="pointer-events-auto absolute" style={{ left: add.left, top: add.top, width: add.width }}>
+          <button
+            onClick={() => st.addPage()}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-surface py-2.5 text-sm font-medium text-neutral-600 shadow-sm transition hover:border-brand-400 hover:text-brand-ink"
+          >
+            <Plus size={16} /> {tr("editor.add_page")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

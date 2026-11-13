@@ -181,7 +181,7 @@ export function LayerPanel() {
                   title={isOpen ? tr("editor.collapse") : tr("editor.expand")}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => toggleExpanded(node.id)}
-                  className="shrink-0 text-neutral-400 hover:text-neutral-700"
+                  className="grid shrink-0 place-items-center text-neutral-400 hover:text-neutral-700 pointer-coarse:h-10 pointer-coarse:w-8"
                 >
                   {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                 </button>
@@ -207,7 +207,9 @@ export function LayerPanel() {
                 </span>
               )}
               {/* One step forward or back, on the row: the reason most people
-                  open this panel, and dragging a row one slot is fiddly. */}
+                  open this panel, and dragging a row one slot is fiddly. These
+                  and duplicate/delete appear on hover, so a touch screen (no
+                  hover) hides them; the selection toolbar carries all four. */}
               <button
                 type="button"
                 title={tr("editor.bring_forward")}
@@ -215,7 +217,7 @@ export function LayerPanel() {
                 disabled={atFront}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => step(node.id, 1)}
-                className="shrink-0 text-neutral-400 opacity-0 hover:text-neutral-700 focus-visible:opacity-100 disabled:opacity-0 group-hover:opacity-100 group-hover:disabled:opacity-20"
+                className="shrink-0 text-neutral-400 opacity-0 hover:text-neutral-700 focus-visible:opacity-100 disabled:opacity-0 group-hover:opacity-100 group-hover:disabled:opacity-20 pointer-coarse:hidden"
               >
                 <ArrowUp size={14} />
               </button>
@@ -226,7 +228,7 @@ export function LayerPanel() {
                 disabled={atBack}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => step(node.id, -1)}
-                className="shrink-0 text-neutral-400 opacity-0 hover:text-neutral-700 focus-visible:opacity-100 disabled:opacity-0 group-hover:opacity-100 group-hover:disabled:opacity-20"
+                className="shrink-0 text-neutral-400 opacity-0 hover:text-neutral-700 focus-visible:opacity-100 disabled:opacity-0 group-hover:opacity-100 group-hover:disabled:opacity-20 pointer-coarse:hidden"
               >
                 <ArrowDown size={14} />
               </button>
@@ -237,7 +239,7 @@ export function LayerPanel() {
                 aria-pressed={node.hidden}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => useEditor.getState().setNodeHidden(node.id, !node.hidden)}
-                className={`shrink-0 hover:text-neutral-700 ${node.hidden ? "text-neutral-700" : "text-neutral-300"}`}
+                className={`grid shrink-0 place-items-center hover:text-neutral-700 pointer-coarse:h-10 pointer-coarse:w-10 ${node.hidden ? "text-neutral-700" : "text-neutral-300"}`}
               >
                 {node.hidden ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
@@ -248,7 +250,7 @@ export function LayerPanel() {
                 aria-pressed={node.locked}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => useEditor.getState().setNodeLocked(node.id, !node.locked)}
-                className={`shrink-0 hover:text-neutral-700 ${node.locked ? "text-neutral-700" : "text-neutral-300"}`}
+                className={`grid shrink-0 place-items-center hover:text-neutral-700 pointer-coarse:h-10 pointer-coarse:w-10 ${node.locked ? "text-neutral-700" : "text-neutral-300"}`}
               >
                 {node.locked ? <Lock size={15} /> : <Unlock size={15} />}
               </button>
@@ -258,7 +260,7 @@ export function LayerPanel() {
                 aria-label={tr("editor.duplicate_layer")}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => { const st = useEditor.getState(); st.select([node.id]); st.duplicateSelection(); }}
-                className="shrink-0 text-neutral-400 opacity-0 hover:text-neutral-700 focus-visible:opacity-100 group-hover:opacity-100"
+                className="shrink-0 text-neutral-400 opacity-0 hover:text-neutral-700 focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:hidden"
               >
                 <Copy size={14} />
               </button>
@@ -268,7 +270,7 @@ export function LayerPanel() {
                 aria-label={tr("editor.delete_layer")}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => { const st = useEditor.getState(); st.select([node.id]); st.deleteSelection(); }}
-                className="shrink-0 text-neutral-400 opacity-0 hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100"
+                className="shrink-0 text-neutral-400 opacity-0 hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:hidden"
               >
                 <Trash2 size={14} />
               </button>

@@ -43,6 +43,8 @@ The build variant serves at `http://localhost:8005`; the published `docker-compo
 Notes:
 - ffmpeg (for video export) is bundled in the image; no host install needed.
 - Local-file storage persists on the host at `./data/storage` (bind-mounted to `/app/.data/storage`) with the published `docker-compose.yml`, so it survives `docker compose down -v`. To use object storage instead, set the `S3_*` variables on the `app` service.
+- The server runs as uid `10001`, not root. A one-shot `storage-init` step in the compose files hands the storage folder to that user before the app starts, including storage left by an older image. Running the image another way? See [the non-root notes](../DOCKER_SETUP.md#the-container-runs-as-a-non-root-user).
+- Compose storage initialization checks nested entries too. On Linux, a bind mount such as the root compose file's `./data/storage` has its host ownership changed to uid `10001`, group `0`. Large storage trees take longer to scan. Use `/usr/local/bin/hycanvas` for commands inside the container; `/app/hycanvas` is no longer supplied.
 - Secrets/config (notably `JWT_SECRET`, and optionally `AI_SECRET`, `OIDC_*`, `VAPID_*`) come from your `.env`.
 - Database: the published `docker-compose.yml` always uses an external Postgres, set `DATABASE_URL` or `EXTERNAL_DATABASE_URL` in `.env`. The build-from-source `docker-compose.prod.yml` can bundle Postgres with `COMPOSE_PROFILES=bundled`, or point it external by emptying `COMPOSE_PROFILES` and setting `EXTERNAL_DATABASE_URL`. For Postgres on the host, use `host.docker.internal` (both compose files map it via `extra_hosts`).
 

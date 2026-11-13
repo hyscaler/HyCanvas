@@ -47,9 +47,23 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl \
  && rm -rf /var/lib/apt/lists/*
 
-COPY --from=backend /out/hycanvas /app/hycanvas
+# Runs as an unprivileged user, never root. The uid is numeric so Kubernetes
+# runAsNonRoot can verify it. /app (the working directory, where the setup
+# wizard writes .env) and the storage directory are owned by group 0 with group
+# write, so the default user, a new named volume (which copies this ownership)
+# and any uid run in group 0 (runAsUser, OpenShift) can all write them. The
+# binary lives in root-owned /usr/local/bin, out of reach of the process.
+# A storage volume created by an earlier image is root-owned; the server
+# refuses to start on it with the one-time chown that fixes it (DOCKER_SETUP.md).
+RUN useradd --uid 10001 --gid 0 --home-dir /app --no-create-home --shell /usr/sbin/nologin hycanvas \
+ && mkdir -p /app/.data/storage \
+ && chown -R 10001:0 /app \
+ && chmod -R g=u /app
 
-ENV PORT=8005 \
+COPY --from=backend /out/hycanvas /usr/local/bin/hycanvas
+
+ENV HOME=/app \
+    PORT=8005 \
     DB_AUTO_MIGRATE=true \
     STORAGE_DRIVER=local \
     LOCAL_STORAGE_PATH=/app/.data/storage
@@ -62,4 +76,5 @@ VOLUME ["/app/.data/storage"]
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD curl -fsS "http://localhost:${PORT}/healthz" || exit 1
 
-ENTRYPOINT ["/app/hycanvas"]
+USER 10001:0
+ENTRYPOINT ["/usr/local/bin/hycanvas"]

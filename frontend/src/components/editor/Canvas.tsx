@@ -28,6 +28,7 @@ import { rulerTicks } from "@/lib/rulerTicks";
 import { overlay } from "@/lib/theme.generated";
 import { useEditorCanvas, type CanvasApi } from "@/lib/useEditorCanvas";
 import { useEditor, ocClipPrefix } from "@/store/editor";
+import { useIsPhone } from "@/lib/useIsPhone";
 import { commandForEvent } from "@/lib/shortcuts";
 import { Gizmo } from "./Gizmo";
 import { SelectionToolbar } from "./SelectionToolbar";
@@ -155,6 +156,39 @@ const toolbar = (): ({ tool: ToolName; title: string; icon: typeof MousePointer2
   { tool: "pen", title: tr("editor.pen_p"), icon: PenTool },
   { tool: "pencil", title: tr("editor.pencil_b_drag_to_draw_freehand"), icon: Pencil },
 ];
+
+// Smallest on-screen size, in CSS px, that text should have while it is being
+// typed into on a touch screen (iOS also zooms the whole page below 16px).
+const READABLE_TEXT_PX = 16;
+
+/**
+ * The viewport that makes text node `id` readable for editing on a touch
+ * screen, or null when no change is needed (a mouse, or text already large
+ * enough). Zooms until the largest run renders at READABLE_TEXT_PX, without
+ * letting the box outgrow the canvas width, and places the box in the upper
+ * part of the canvas, clear of an on-screen keyboard.
+ */
+function readableTextViewport(id: string): { zoom: number; panX: number; panY: number } | null {
+  if (typeof window === "undefined" || !window.matchMedia?.("(pointer: coarse)").matches) return null;
+  const st = useEditor.getState();
+  const node = locate(st.doc, id)?.node;
+  const box = unionAABB(st.doc, [id]);
+  if (!node || node.type !== "text" || !box) return null;
+  const paras = (node as unknown as { content?: EditPara[] }).content ?? [];
+  const sizes = paras.flatMap((p) => p.runs.map((r) => Number((r.style as { fontSize?: number }).fontSize) || 16));
+  const fontSize = sizes.length ? Math.max(...sizes) : 16;
+  const vs = st.viewportSize;
+  const cur = st.viewport.zoom || 1;
+  if (fontSize * cur >= READABLE_TEXT_PX || !vs.width || !vs.height) return null;
+  const fitWidth = box.width > 0 ? (vs.width * 0.9) / box.width : Infinity;
+  const zoom = Math.max(cur, Math.min(8, READABLE_TEXT_PX / fontSize, fitWidth));
+  if (zoom <= cur * 1.05) return null;
+  return {
+    zoom,
+    panX: box.x + box.width / 2 - vs.width / 2 / zoom,
+    panY: box.y - (vs.height * 0.15) / zoom,
+  };
+}
 
 // Single-key canvas tool shortcuts.
 // `fontStyle` values are file-format tokens ("Regular", "Bold Italic"), never
@@ -1119,7 +1153,37 @@ export function Canvas() {
   // the renderer's "skip this node" and the HTML overlay flip in the SAME render.
   // (A deferred mirror caused a 1-frame double/missing flicker.)
   const editing = useEditor((s) => s.editingTextId);
-  const setEditing = (id: string | null) => useEditor.getState().setEditingText(id);
+  // On a touch screen, text at the fit zoom is often a few pixels tall, so
+  // editing first zooms to make it readable and above the on-screen keyboard,
+  // and the previous view comes back when editing ends.
+  const textZoomRestore = useRef<{ zoom: number; panX: number; panY: number } | null>(null);
+  const setEditing = (id: string | null) => {
+    const st = useEditor.getState();
+    if (id === null) {
+      st.setEditingText(null);
+      return;
+    }
+    const target = readableTextViewport(id);
+    if (!target) {
+      st.setEditingText(id);
+      return;
+    }
+    if (!textZoomRestore.current) {
+      const { zoom, panX, panY } = st.viewport;
+      textZoomRestore.current = { zoom, panX, panY };
+    }
+    st.setViewport(target);
+    // Open the editor on the next frame, once the canvas has the new zoom: the
+    // overlay sizes its text from the zoom it sees when it mounts.
+    requestAnimationFrame(() => useEditor.getState().setEditingText(id));
+  };
+  // However editing ends (commit, Escape, a tap elsewhere), put the view back.
+  useEffect(() => {
+    if (editing !== null || !textZoomRestore.current) return;
+    const prev = textZoomRestore.current;
+    textZoomRestore.current = null;
+    useEditor.getState().setViewport(prev);
+  }, [editing]);
   const [editingSticky, setEditingSticky] = useState<string | null>(null);
   // Connector whose label is being edited (F30 FR-8); opened by double-click.
   const [editingConnectorLabel, setEditingConnectorLabel] = useState<string | null>(null);
@@ -1215,6 +1279,13 @@ export function Canvas() {
   // Whiteboard surface enables drag-to-connect; harmless elsewhere (never shown).
   const isWhiteboard = useEditor((s) => (s.doc.meta as { kind?: string } | undefined)?.kind === "whiteboard");
   const canComment = useComments((s) => s.canComment);
+  // On a phone the tool palette is one button showing the current tool; it
+  // opens into the full column on tap and folds again once a tool is picked,
+  // so it never sits over the page.
+  const { isPhone } = useIsPhone();
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsFolded = isPhone && !toolsOpen;
+  const pickTool = (fn: () => void) => { fn(); setToolsOpen(false); };
   const selection = useEditor((s) => s.selection);
   const transforming = useEditor((s) => s.transforming);
   const cropping = useEditor((s) => s.cropping);
@@ -2742,7 +2813,10 @@ export function Canvas() {
             })
           : tr("editor.design_canvas")
       }
-      className="relative h-full w-full overflow-hidden bg-neutral-200 outline-none"
+      // touch-none here, not only on the drawing layer: two fingers that land
+      // on an overlay (a text or sticky editor, the selection handles) must
+      // not zoom the whole page instead of the canvas.
+      className="relative h-full w-full touch-none overflow-hidden bg-neutral-200 outline-none"
       // The design and every overlay positioned over it live in the design's own
       // coordinate space, so the shell's direction must not reach them.
       dir={designSurfaceDir}
@@ -2770,16 +2844,32 @@ export function Canvas() {
           }}
         />
       )}
-      <div className="absolute left-3 top-3 z-10 flex flex-col gap-1 rounded-xl border border-neutral-200 bg-surface p-1 shadow-md">
+      {toolsFolded ? (() => {
+        const cur = toolbar().find((b): b is Exclude<ReturnType<typeof toolbar>[number], "sep"> => b !== "sep" && b.tool === tool);
+        const Icon = tool === "comment" ? MessageSquarePlus : (cur?.icon ?? MousePointer2);
+        return (
+          <button
+            type="button"
+            onClick={() => setToolsOpen(true)}
+            aria-label={tr("editor.tools")}
+            aria-expanded={false}
+            className="absolute left-3 top-3 z-10 grid h-11 w-11 place-items-center rounded-xl border border-neutral-200 bg-surface text-brand-ink shadow-md"
+          >
+            <Icon size={20} />
+          </button>
+        );
+      })() : (
+      <div className={`absolute left-3 top-3 flex flex-col gap-1 rounded-xl border border-neutral-200 bg-surface p-1 shadow-md ${isPhone ? "oc-scroll-none z-30 max-h-[calc(100%-1.5rem)] overflow-y-auto" : "z-10"}`}>
         {toolbar().map((b, i) =>
           b === "sep" ? (
             <div key={`sep${i}`} className="my-0.5 h-px w-7 self-center bg-neutral-200" />
           ) : (
             <button
               key={b.tool}
-              onClick={() => (b.tool === "select" ? finishPen() : useEditor.getState().setTool(b.tool))}
+              onClick={() => pickTool(() => (b.tool === "select" ? finishPen() : useEditor.getState().setTool(b.tool)))}
               title={b.title}
-              className={`grid h-9 w-9 place-items-center rounded-lg ${tool === b.tool ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}
+              aria-label={b.title}
+              className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg pointer-coarse:h-11 pointer-coarse:w-11 ${tool === b.tool ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}
             >
               <b.icon size={18} />
             </button>
@@ -2791,19 +2881,21 @@ export function Canvas() {
           <>
             <div className="my-0.5 h-px w-7 self-center bg-neutral-200" />
             <button
-              onClick={() => useEditor.getState().setTool("comment")}
+              onClick={() => pickTool(() => useEditor.getState().setTool("comment"))}
               title={tr("editor.comment_c_click_the_canvas_to_drop_a_pin")}
-              className={`grid h-9 w-9 place-items-center rounded-lg ${tool === "comment" ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}
+              aria-label={tr("editor.comment_c_click_the_canvas_to_drop_a_pin")}
+              className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg pointer-coarse:h-11 pointer-coarse:w-11 ${tool === "comment" ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}
             >
               <MessageSquarePlus size={18} />
             </button>
           </>
         )}
       </div>
+      )}
       {/* Brush options: shown for the pencil and board ink tools. Width / opacity /
           color feed addPencilPath / addInkStroke via the store's brush settings. */}
       {(tool === "pencil" || tool === "ink") && (
-        <div className="absolute left-16 top-3 z-10 flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface px-3 py-2 shadow-md">
+        <div className={`absolute z-10 flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface px-3 py-2 shadow-md ${isPhone ? "left-3 top-16 max-w-[calc(100%-1.5rem)] flex-wrap" : "left-16 top-3"}`}>
           <label className="flex items-center gap-1.5 text-[11px] text-neutral-500">
             {tr("editor.size")}
             <input type="range" min={1} max={40} value={brush.width} onChange={(e) => useEditor.getState().setBrush({ width: Number(e.target.value) })} className="w-20 accent-brand-600" />
@@ -3286,8 +3378,9 @@ export function Canvas() {
       )}
       {/* Per-page headers (title + tools) for continuous-scroll mode. */}
       <PageOverlays api={api} />
-      {/* Zoom overview: a corner thumbnail with a draggable viewport rectangle. */}
-      <MiniMap />
+      {/* Zoom overview: a corner thumbnail with a draggable viewport rectangle.
+          Not on a phone, where it would sit over the page after every pinch. */}
+      {!isPhone && <MiniMap />}
       {/* Offscreen mirror of the page's objects for assistive technology, plus
           a polite live region announcing selection changes (F38). */}
       <A11yTree />

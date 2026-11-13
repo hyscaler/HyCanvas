@@ -7,7 +7,6 @@
 // by simply not existing in one of them.
 
 import { oc } from "@/lib/sdk";
-import { pdfFileToTextWithScanCheck } from "@/lib/pdfImport";
 import { tr } from "@/lib/i18n";
 import { ApiError } from "@hc/sdk";
 import { apiCodeMessage } from "@/lib/errors";
@@ -77,6 +76,9 @@ async function readOne(f: File): Promise<string | null> {
   if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
     // Scanned-PDF detection: an image-only PDF has no text layer to ground on,
     // and OCR is out of scope, so say so rather than attach an empty source.
+    // Loaded on use: the PDF reader (and the design schema it builds pages
+    // with) stays out of the dashboard's first load.
+    const { pdfFileToTextWithScanCheck } = await import("@/lib/pdfImport");
     const { text, scanned } = await pdfFileToTextWithScanCheck(f);
     if (scanned) throw new Error(tr("editor.pdf_looks_scanned_no_text_layer"));
     return text;

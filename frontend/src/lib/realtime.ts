@@ -10,6 +10,7 @@ import * as syncProtocol from "y-protocols/sync";
 import * as encoding from "lib0/encoding";
 import * as decoding from "lib0/decoding";
 import { apiOrigin } from "@/lib/sdk";
+import { emitNotify } from "@/lib/realtimeNotify";
 import { usePresence, type ConnectionState, type LockHolder, type Peer, type PeerState } from "@/store/presence";
 import type { DesignDoc } from "@/lib/ydoc";
 
@@ -132,18 +133,9 @@ export function onRoleChanged(
   return () => roleListeners.delete(fn);
 }
 
-// Listeners notified when the server pushes a `{ t: "notify" }` frame (FR-13):
-// a new in-app notification was created for the caller on this
-// design, so an open client refetches its unread count without polling. The
-// frame carries no content; the client re-reads over REST (which re-checks
-// ownership). Module-level so it survives client reconnects.
-const notifyListeners = new Set<(designId: string) => void>();
-
-/** Subscribe to live notification signals; returns an unsubscribe. */
-export function onNotify(fn: (designId: string) => void): () => void {
-  notifyListeners.add(fn);
-  return () => notifyListeners.delete(fn);
-}
+// Live notification signals (`{ t: "notify" }` frames) fan out through
+// realtimeNotify.ts; re-exported here for existing callers.
+export { onNotify } from "@/lib/realtimeNotify";
 
 // --- base64 <-> Uint8Array (sync frames travel as JSON strings on the socket) -
 function toBase64(bytes: Uint8Array): string {
@@ -353,7 +345,7 @@ export class RealtimeClient {
         break;
       case "notify":
         // A new notification landed for us; let the bell refetch its count.
-        for (const fn of notifyListeners) fn(frame.designId);
+        emitNotify(frame.designId);
         break;
       case "role":
         // The server re-resolved our per-design role (e.g. approval lock flipped).

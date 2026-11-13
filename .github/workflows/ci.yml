@@ -30,6 +30,71 @@ jobs:
       - run: npm run build:frontend
         env:
           NEXT_PUBLIC_BACKEND_URL: /api
+      # First-load JavaScript budget for the dashboard and editor (gzip KB),
+      # so a heavy static import fails here instead of slowing phones down.
+      - run: npm run check:bundle
+
+  # Phone smoke test (#79): the real binary against a throwaway Postgres,
+  # driven in phone-sized Chromium with touch input, so a layout change that
+  # makes the editor unusable on a phone fails here. Screenshots are uploaded
+  # either way.
+  mobile:
+    name: Phone smoke test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hycanvas
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+          cache-dependency-path: backend/go.sum
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build:packages
+      # The same export and embed the release workflow ships.
+      - run: npm run build:dist -w frontend
+      - run: mkdir -p backend/internal/webui/public && cp -R frontend/out/. backend/internal/webui/public/
+      - name: Build binary
+        working-directory: backend
+        run: go build -tags embed -o ../hycanvas ./cmd/api
+      - run: npm install --no-save --no-audit --no-fund playwright@1.63.0 && npx playwright install --with-deps chromium
+      - name: Start HyCanvas
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hycanvas
+          JWT_SECRET: ci-only-not-a-secret-0000000000000000000000000000000000000000
+          PORT: "8080"
+          APP_URL: http://localhost:8080
+          DB_AUTO_MIGRATE: "true"
+          STORAGE_DRIVER: local
+          LOCAL_STORAGE_PATH: ${{ runner.temp }}/storage
+        run: |
+          ./hycanvas > "$RUNNER_TEMP/hycanvas.log" 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:8080/healthz && exit 0; sleep 1; done
+          cat "$RUNNER_TEMP/hycanvas.log"; exit 1
+      - run: node scripts/mobile-smoke.js
+        env:
+          BASE: http://localhost:8080
+          OUT: mobile-smoke
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mobile-smoke
+          path: mobile-smoke
+          if-no-files-found: ignore
 
   backend:
     name: Go backend
@@ -49,3 +114,21 @@ jobs:
       # the rest of the suite runs here. To run them in CI, add a postgres service,
       # set DATABASE_URL + JWT_SECRET, and run `go run ./cmd/migrate` first.
       - run: go test ./...
+
+  backend-windows:
+    name: Go backend (Windows)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+          cache-dependency-path: backend/go.sum
+      # The release ships a Windows exe. The embedded frontend is served through
+      # URL paths, which break if OS path separators leak in, so the static
+      # file handler's tests run on Windows too.
+      - run: go build ./...
+      - run: go test ./internal/httpapi/ -run "Static|Locales" -count=1

@@ -13,11 +13,9 @@
 import { currentSchemaVersion, migrate, repairCornerRadius, validate, type DesignFile } from "@hc/schema";
 import { tr } from "@/lib/i18n";
 import { CodedError } from "./errors";
+import { hycExtension } from "./hycFilePicker";
 
-export const hycExtension = ".hyc";
-/** What the import file pickers accept: .hyc first, plain .json as a fallback
- *  (content is validated, so the name never decides). */
-export const hycAccept = ".hyc,.json,application/json";
+export { hycAccept, hycExtension, importedTitle, readFileText } from "./hycFilePicker";
 
 /** Serialize a design file and hand it to the browser as `<baseName>.hyc`. */
 export function downloadHycFile(file: DesignFile, baseName: string): void {
@@ -71,23 +69,4 @@ export function parseHycFile(text: string): DesignFile {
     throw new CodedError("errors.hyc_invalid_design", `This file is not a valid HyCanvas design (${result.message}).`, { detail: result.message });
   }
   return migrated;
-}
-
-/** Read a picked File as text (the file pickers hand these straight here). */
-export function readFileText(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = () => reject(new CodedError("errors.file_read_failed", "Could not read the file."));
-    reader.readAsText(file);
-  });
-}
-
-/** The title an imported file lands under: its own title, else the filename
- *  without extension, else a generic fallback. */
-export function importedTitle(file: DesignFile, filename: string): string {
-  const own = typeof file.title === "string" ? file.title.trim() : "";
-  if (own) return own;
-  const stem = filename.replace(/\.[^.]*$/, "").trim();
-  return stem || tr("app.imported_design");
 }

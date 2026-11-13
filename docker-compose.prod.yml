@@ -28,7 +28,21 @@ services:
       timeout: 5s
       retries: 12
 
+  # The app runs as uid 10001, never root. Storage created by an earlier image
+  # (or a bind-mount folder Docker created) is root-owned, so this one-shot step
+  # checks the whole tree, repairing mismatched ownership. It only
+  # changes ownership of the storage directory; the app itself never runs as root.
+  storage-init:
+    image: hycanvas-local:production
+    pull_policy: never
+    user: "0"
+    entrypoint: ["sh", "-c", "find /app/.data/storage -xdev \\( ! -user 10001 -o ! -group 0 \\) -exec chown -h 10001:0 {} +"]
+    restart: "no"
+    volumes:
+      - storage:/app/.data/storage
+
   app:
+    image: hycanvas-local:production
     build:
       context: .
       dockerfile: Dockerfile
@@ -38,6 +52,8 @@ services:
       db:
         condition: service_healthy
         required: false
+      storage-init:
+        condition: service_completed_successfully
     ports:
       - "${APP_PORT:-8005}:8005"
     # Secrets/config (JWT_SECRET, AI_SECRET, OIDC_*, VAPID_*, SMTP_*, S3_*, ...)

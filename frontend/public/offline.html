@@ -1,0 +1,113 @@
+<!doctype html>
+<!--
+  Served by the service worker (public/sw.js) when a page is opened with no
+  network. Deliberately self-contained: no app JavaScript runs here, so a page
+  served from cache can never talk to a newer API with an older build. It
+  reloads itself as soon as the connection returns, which fetches fresh HTML
+  from whatever binary is running.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <title>HyCanvas</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      :root {
+        --page: #fafafa;
+        --surface: #ffffff;
+        --text: #171717;
+        --muted: #5f5f5f;
+        --border: #e5e5e5;
+      }
+      :root.dark {
+        --page: #111114;
+        --surface: #1b1b20;
+        --text: #f4f4f6;
+        --muted: #a5a5b0;
+        --border: #2a2a31;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        display: grid;
+        place-items: center;
+        min-height: 100dvh;
+        padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+        background: var(--page);
+        color: var(--text);
+        font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      main {
+        width: min(24rem, 100%);
+        padding: 28px 24px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--surface);
+        text-align: center;
+      }
+      img { width: 56px; height: 56px; border-radius: 14px; }
+      h1 { margin: 16px 0 6px; font-size: 18px; }
+      p { margin: 0 0 20px; color: var(--muted); }
+      button {
+        min-height: 44px;
+        padding: 0 20px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+    </style>
+    <script>
+      // Same preference the app's boot script applies (lib/theme.ts).
+      (function () {
+        try {
+          var v = localStorage.getItem("hc-theme");
+          if (v === "dark" || (v !== "light" && matchMedia("(prefers-color-scheme: dark)").matches)) {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <main>
+      <img src="/icon-192.png" alt="" />
+      <h1 id="title">You are offline</h1>
+      <p id="body">HyCanvas needs a connection to open this page. It will load as soon as you are back online.</p>
+      <button id="retry" type="button">Try again</button>
+    </main>
+    <script>
+      (function () {
+        // This page runs without the app, so it cannot read the UI catalogs;
+        // it carries its three strings for each shipped language instead.
+        var T = {
+          de: ["Sie sind offline", "HyCanvas braucht eine Verbindung, um diese Seite zu öffnen. Sie wird geladen, sobald Sie wieder online sind.", "Erneut versuchen"],
+          es: ["No tienes conexión", "HyCanvas necesita conexión para abrir esta página. Se cargará en cuanto vuelvas a estar en línea.", "Reintentar"],
+          fr: ["Vous êtes hors ligne", "HyCanvas a besoin d'une connexion pour ouvrir cette page. Elle se chargera dès que vous serez de nouveau en ligne.", "Réessayer"],
+          hi: ["आप ऑफ़लाइन हैं", "इस पेज को खोलने के लिए HyCanvas को कनेक्शन चाहिए। ऑनलाइन होते ही यह लोड हो जाएगा।", "फिर से कोशिश करें"],
+          ja: ["オフラインです", "このページを開くには HyCanvas への接続が必要です。オンラインに戻るとすぐに読み込まれます。", "再試行"],
+          "pt-br": ["Você está offline", "O HyCanvas precisa de conexão para abrir esta página. Ela será carregada assim que você voltar a ficar online.", "Tentar novamente"],
+          "zh-cn": ["您已离线", "HyCanvas 需要网络连接才能打开此页面。恢复联网后会立即加载。", "重试"],
+        };
+        var tag = "en";
+        try { tag = (localStorage.getItem("hc-locale") || navigator.language || "en").toLowerCase(); } catch (e) {}
+        var s = T[tag] || T[tag.split("-")[0]];
+        if (s) {
+          document.documentElement.lang = tag;
+          document.getElementById("title").textContent = s[0];
+          document.getElementById("body").textContent = s[1];
+          document.getElementById("retry").textContent = s[2];
+        }
+        var reload = function () { location.reload(); };
+        document.getElementById("retry").addEventListener("click", reload);
+        window.addEventListener("online", reload);
+      })();
+    </script>
+  </body>
+</html>

@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import type { NotificationType, NotificationView } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
-import { onNotify } from "@/lib/realtime";
+import { onNotify } from "@/lib/realtimeNotify";
 import { cn } from "@/lib/cn";
 import { tr } from "@/lib/i18n";
 

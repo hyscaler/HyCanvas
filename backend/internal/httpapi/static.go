@@ -5,7 +5,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -13,9 +13,26 @@ import (
 
 // Go's built-in mime table has no entry for .webmanifest, so ServeContent
 // would fall back to sniffing (text/plain) and browsers would reject the PWA
-// manifest the frontend links.
+// manifest the frontend links. On Windows the table is also overridden from
+// the registry, where installed software can map .js to text/plain (browsers
+// then refuse the scripts), so the frontend's own types are pinned here.
 func init() {
-	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
+	for ext, typ := range map[string]string{
+		".webmanifest": "application/manifest+json",
+		".html":        "text/html; charset=utf-8",
+		".js":          "text/javascript; charset=utf-8",
+		".mjs":         "text/javascript; charset=utf-8",
+		".css":         "text/css; charset=utf-8",
+		".json":        "application/json",
+		".svg":         "image/svg+xml",
+		".wasm":        "application/wasm",
+		".woff2":       "font/woff2",
+		".png":         "image/png",
+		".webp":        "image/webp",
+		".ico":         "image/vnd.microsoft.icon",
+	} {
+		_ = mime.AddExtensionType(ext, typ)
+	}
 }
 
 // mountStatic serves the statically-exported Next.js frontend from dir, so the
@@ -75,7 +92,9 @@ func mountStaticFS(r chi.Router, root http.FileSystem, gaID string) {
 			return
 		}
 
-		clean := filepath.Clean("/" + strings.TrimPrefix(p, "/"))
+		// URL paths always use "/": path.Clean, not filepath.Clean, which
+		// rewrites them with backslashes on Windows so no file is ever found.
+		clean := path.Clean("/" + strings.TrimPrefix(p, "/"))
 		if clean == "/" {
 			serve("/index.html")
 			return
@@ -137,6 +156,7 @@ func serveNotFound(w http.ResponseWriter, root http.FileSystem, gaID string) boo
 		return false
 	}
 	body = injectGA(body, gaID)
+	setStaticCacheHeaders(w, "/404.html")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusNotFound)
 	_, _ = w.Write(body)
@@ -186,6 +206,7 @@ func serveFile(w http.ResponseWriter, req *http.Request, root http.FileSystem, n
 		problemWithCode(w, req, http.StatusNotFound, "Not Found", "no route for "+req.URL.Path, "no_route")
 		return
 	}
+	setStaticCacheHeaders(w, name)
 	// HTML pages get the analytics snippet injected at serve time (when enabled),
 	// so a self-hoster's tracking id is a runtime env setting, not baked into the
 	// embedded build. The body changes length, so it is written directly rather
@@ -202,11 +223,36 @@ func serveFile(w http.ResponseWriter, req *http.Request, root http.FileSystem, n
 		}
 		// Read failed: fall through to ServeContent from the still-open file.
 	}
-	// Hashed Next assets are content-addressed and safe to cache aggressively.
-	if strings.HasPrefix(name, "/_next/") {
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	// A build-time brotli/gzip sibling, when the client accepts one.
+	if servePrecompressed(w, req, root, name) {
+		return
 	}
 	http.ServeContent(w, req, info.Name(), info.ModTime(), f)
+}
+
+// setStaticCacheHeaders picks the HTTP caching for a file of the exported
+// frontend. The rule that matters is upgrade safety: after a self-hoster swaps
+// the binary, no browser or proxy may keep serving the previous build's pages,
+// because a page names the hashed chunks of its own build and those must match
+// the API now running.
+//   - /_next/*: content addressed, cache for a year.
+//   - /sw.js: always revalidated, so a new build's worker (and with it the
+//     reload offer) is found on the next check. Its scope is the site root,
+//     which is the script's own directory, so no Service-Worker-Allowed header
+//     is needed.
+//   - HTML pages and the manifest: always revalidated. Without this, a
+//     PUBLIC_DIR deploy (whose files carry a modification time) let browsers
+//     reuse a page heuristically after an upgrade.
+func setStaticCacheHeaders(w http.ResponseWriter, name string) {
+	switch {
+	case strings.HasPrefix(name, "/_next/"):
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	case name == "/sw.js":
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	case strings.HasSuffix(name, ".html") || strings.HasSuffix(name, ".webmanifest"):
+		w.Header().Set("Cache-Control", "no-cache")
+	}
 }
 
 // sanitizeGAID keeps only the characters a Google Analytics measurement id can
@@ -269,12 +315,27 @@ type localesOverlay struct {
 const localesPrefix = "/locales/"
 
 func (o localesOverlay) Open(name string) (http.File, error) {
-	clean := filepath.Clean("/" + strings.TrimPrefix(name, "/"))
+	clean := path.Clean("/" + strings.TrimPrefix(name, "/"))
 	if o.dir != nil && strings.HasPrefix(clean, localesPrefix) && strings.HasSuffix(clean, ".json") {
 		rel := strings.TrimPrefix(clean, localesPrefix)
 		// Clean already removed any "..", so rel cannot escape the directory.
 		if f, err := o.dir.Open("/" + rel); err == nil {
 			return f, nil
+		}
+	}
+	// A translation overridden on disk must not be shadowed by the embedded
+	// copy's precompressed sibling (built from the old text): hide the sibling
+	// so the static server falls back to the overriding file.
+	if o.dir != nil && strings.HasPrefix(clean, localesPrefix) {
+		for _, enc := range precompressedEncodings {
+			orig, ok := strings.CutSuffix(clean, enc.ext)
+			if !ok || !strings.HasSuffix(orig, ".json") {
+				continue
+			}
+			if f, err := o.dir.Open("/" + strings.TrimPrefix(orig, localesPrefix)); err == nil {
+				f.Close()
+				return nil, os.ErrNotExist
+			}
 		}
 	}
 	return o.base.Open(name)

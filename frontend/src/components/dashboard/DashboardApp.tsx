@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/router";
+import dynamic from "next/dynamic";
 import {
   Home as HomeIcon,
   LayoutTemplate,
@@ -45,41 +46,14 @@ import {
   Users,
   Moon,
   Sun, Sparkles, Wand2, Paperclip, Loader2, X, Palette, Menu } from "lucide-react";
-import { createBlankDesign, type DesignFile } from "@hc/schema";
+import type { dialTones as aiDialTones } from "@hc/aistudio";
 import { useMediaQuery } from "@/lib/useMediaQuery";
-import { hycAccept, downloadHycFile, importedTitle, parseHycFile, readFileText } from "@/lib/hycFile";
-import { odpToDesign, pptxToDesign } from "@hc/export";
-import { catalogEntryForMood, deckThemes, dialTones, layoutDeck, parseMarkdownOutline } from "@hc/aistudio";
-
-// Markdown outline import (F28 C26): DETERMINISTIC, no AI - headings become
-// slides, list items become points, laid out through the same pure deck
-// builder generation uses (theme seeded from the title, no model calls).
-function mdOutlineToDesign(md: string, fallbackTitle: string): DesignFile {
-  const outline = parseMarkdownOutline(md, { fallbackTitle });
-  if (!outline) throw new Error("no outline structure in the markdown (add headings or list items)");
-  const size = { width: 1920, height: 1080 };
-  const seed = Array.from(outline.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
-  const theme = deckThemes({ count: 1, kicker: outline.title, seed })[0];
-  const deck = layoutDeck(outline, theme, size, { catalog: catalogEntryForMood(outline.theme, seed), seed });
-  const file = createBlankDesign({ title: outline.title, width: size.width, height: size.height });
-  let pageSeq = 0;
-  file.pages = deck.pages.map((p, i) => ({
-    id: `md-page-${++pageSeq}`,
-    name: p.name || `Page ${i + 1}`,
-    width: size.width,
-    height: size.height,
-    background: p.background,
-    children: p.nodes,
-    ...(p.note ? { notes: p.note } : {}),
-  })) as DesignFile["pages"];
-  return file;
-}
+import { hycAccept, importedTitle, readFileText } from "@/lib/hycFilePicker";
 import { ApiError, type AiProviderPreset, type DesignRecord, type HomeItem, type MyTask, type StorageUsageView, type TaskStatus, type TemplateCollectionSummary, type TemplateSummary, type WorkspaceRole } from "@hc/sdk";
 import { formatBytes } from "@/lib/format";
 import { useDateFormat } from "@/lib/datetime";
 import { resolvedTheme, setThemePreference } from "@/lib/theme";
 import { oc } from "@/lib/sdk";
-import { BrandsView } from "./brands/BrandsView";
 import { useAuth } from "@/store/auth";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
@@ -95,7 +69,6 @@ import { BulkCreateModal } from "./BulkCreateModal";
 import { MembersPanel } from "./MembersPanel";
 import { ApiKeysPanel } from "./ApiKeysPanel";
 import { WorkspaceAiPanel } from "./WorkspaceAiPanel";
-import { TemplateFromPptxDialog } from "./TemplateFromPptxDialog";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { HeroArt, EmptyArt, RailArt } from "@/components/ui/CanvasBackdrop";
@@ -104,6 +77,30 @@ import { stageAiSources } from "@/lib/aiRequests";
 import { tr, trOr } from "@/lib/i18n";
 import { apiCodeMessage, userMessage } from "@/lib/errors";
 import { matchParts, rankByTitle } from "@/lib/searchMatch";
+
+// The dashboard's first load carries only what it renders. The design schema
+// and validator, the deck builder and its template catalog (@hc/aistudio), and
+// the PPTX/ODP importers (@hc/export) are megabytes of code that only an
+// import, a download, or a create needs, so each loads on that action.
+const loadSchema = () => import("@hc/schema");
+const loadHycFile = () => import("@/lib/hycFile");
+// Sections and dialogs that are rendered only on demand: the Brands view (the
+// font catalog and brand tooling) and the PPTX template builder (the importer,
+// the engine, and the deck builder).
+const BrandsView = dynamic(() => import("./brands/BrandsView").then((m) => m.BrandsView), {
+  ssr: false,
+  loading: () => (
+    <div className="grid place-items-center py-16">
+      <Spinner className="text-2xl" />
+    </div>
+  ),
+});
+const TemplateFromPptxDialog = dynamic(() => import("./TemplateFromPptxDialog").then((m) => m.TemplateFromPptxDialog), { ssr: false });
+
+// The tone dial's options. @hc/aistudio owns the list, but importing it would
+// pull the whole package into the first load; the type annotation fails the
+// build if this copy ever drifts from the source.
+const dialTones: typeof aiDialTones = ["auto", "general", "persuasive", "inspiring", "instructive", "engaging"];
 
 // Time-aware greeting for the dashboard hero band.
 function greetByHour(): string {
@@ -583,12 +580,12 @@ export function DashboardApp({ view }: { view: DashboardView }) {
       const isOdp = /\.odp$/i.test(f.name) || f.type === "application/vnd.oasis.opendocument.presentation";
       const isMd = /\.(md|markdown)$/i.test(f.name);
       const file = isPptx
-        ? await pptxToDesign(new Uint8Array(await f.arrayBuffer()), { title: f.name.replace(/\.pptx$/i, "") })
+        ? await (await import("@hc/export")).pptxToDesign(new Uint8Array(await f.arrayBuffer()), { title: f.name.replace(/\.pptx$/i, "") })
         : isOdp
-          ? await odpToDesign(new Uint8Array(await f.arrayBuffer()), { title: f.name.replace(/\.odp$/i, "") })
+          ? await (await import("@hc/export")).odpToDesign(new Uint8Array(await f.arrayBuffer()), { title: f.name.replace(/\.odp$/i, "") })
           : isMd
-            ? mdOutlineToDesign(await readFileText(f), f.name.replace(/\.(md|markdown)$/i, ""))
-            : parseHycFile(await readFileText(f));
+            ? (await import("@/lib/mdOutlineDesign")).mdOutlineToDesign(await readFileText(f), f.name.replace(/\.(md|markdown)$/i, ""))
+            : (await loadHycFile()).parseHycFile(await readFileText(f));
       const title = importedTitle(file, f.name);
       const rec = await oc.createDesign({ workspaceId: activeWorkspaceId, title, from: { ...file, title } });
       toast.success(`Imported "${title}".`);
@@ -607,7 +604,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     if (!f || !activeWorkspaceId || busy) return;
     setBusy(true);
     try {
-      const file = parseHycFile(await readFileText(f));
+      const file = (await loadHycFile()).parseHycFile(await readFileText(f));
       const title = importedTitle(file, f.name);
       await oc.saveAsTemplate({ workspaceId: activeWorkspaceId, file, title, visibility: "workspace" });
       // Refresh with the SAME scope the Templates view loads under (workspace +
@@ -629,7 +626,8 @@ export function DashboardApp({ view }: { view: DashboardView }) {
   // Download a template as a portable .hyc file.
   async function downloadTemplateHyc(t: TemplateSummary) {
     try {
-      downloadHycFile(await oc.getTemplateFile(t.id), t.title);
+      const [{ downloadHycFile }, file] = await Promise.all([loadHycFile(), oc.getTemplateFile(t.id)]);
+      downloadHycFile(file, t.title);
     } catch {
       toast.error(tr("dashboard.could_not_download_the_template"));
     }
@@ -640,6 +638,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     setSizeOpen(false);
     setBusy(true);
     try {
+      const { createBlankDesign } = await loadSchema();
       const from = createBlankDesign({ title: label, width, height });
       // Document types (docs 28-32) carry their surface marker in meta.kind; a
       // plain design leaves it unset (treated as "design").

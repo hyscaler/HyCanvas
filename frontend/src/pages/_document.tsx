@@ -1,5 +1,6 @@
 import { Html, Head, Main, NextScript } from "next/document";
 import { brand } from "@/lib/theme.generated";
+import { theme } from "@/theme.config.mjs";
 import { themeBootScript } from "@/lib/theme";
 import { localeBootScript } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
@@ -18,7 +19,18 @@ export default function Document() {
         {/* Set lang and dir before first paint: a mirrored layout arriving a
             frame late moves every element on the page. */}
         <script dangerouslySetInnerHTML={{ __html: localeBootScript }} />
-        <meta name="theme-color" content={brand["600"]} />
+        {/* Browser and status bar color: the brand accent in light, the dark
+            chrome page color in dark. It follows the OS scheme, not the
+            in-app theme choice. */}
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content={brand["600"]} />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content={theme.dark.page} />
+        {/* Installed app on iOS (Add to Home Screen) and Android: full screen
+            without browser chrome. The default status bar style keeps content
+            below the status bar, so no layout has to pad for it. */}
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content={tr("page.hycanvas_2")} />
         {/* Social share card (Open Graph + Twitter): the banner shown when a
             HyCanvas link is unfurled in chat, social, and previews. The image is
             an absolute URL on the brand host so it resolves from any origin. */}

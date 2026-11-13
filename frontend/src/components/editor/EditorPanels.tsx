@@ -283,7 +283,9 @@ export function TemplatesPanel() {
           onClick={() => setPickFrom(t)}
           title={tr("editor.pick_slides")}
           aria-label={tr("editor.pick_slides_from", { title: t.title })}
-          className="absolute end-8 top-1 rounded-md border border-neutral-200 bg-surface p-1 text-neutral-600 opacity-0 shadow-sm transition hover:text-brand-ink focus-visible:opacity-100 group-hover:opacity-100"
+          // On touch there is no hover to reveal it, so it shows outright with
+          // a larger target, and takes the corner the download button leaves.
+          className="oc-hit absolute end-8 top-1 rounded-md border border-neutral-200 bg-surface p-1 text-neutral-600 opacity-0 shadow-sm transition hover:text-brand-ink focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:end-1 pointer-coarse:p-2 pointer-coarse:opacity-100"
         >
           <Layers size={12} />
         </button>
@@ -293,7 +295,9 @@ export function TemplatesPanel() {
         onClick={() => void downloadHyc(t)}
         title={tr("editor.download_as_hyc_file")}
         aria-label={`Download "${t.title}" as .hyc file`}
-        className="absolute end-1 top-1 rounded-md border border-neutral-200 bg-surface p-1 text-neutral-600 opacity-0 shadow-sm transition hover:text-brand-ink focus-visible:opacity-100 group-hover:opacity-100"
+        // Hover-revealed, so hidden on touch, where an invisible button over the
+        // card's corner would catch taps meant for the template.
+        className="absolute end-1 top-1 rounded-md border border-neutral-200 bg-surface p-1 text-neutral-600 opacity-0 shadow-sm transition hover:text-brand-ink focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:hidden"
       >
         <FileDown size={12} />
       </button>
@@ -728,7 +732,7 @@ export function ElementsPanel() {
                               return next;
                             })
                           }
-                          className="text-[11px] font-medium text-brand-ink hover:text-brand-ink"
+                          className="text-[11px] font-medium text-brand-ink hover:text-brand-ink pointer-coarse:-my-3 pointer-coarse:px-2 pointer-coarse:py-3"
                         >
                           {expanded ? tr("editor.show_less") : tr("editor.show_all")}
                         </button>

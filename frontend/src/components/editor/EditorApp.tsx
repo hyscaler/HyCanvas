@@ -4,9 +4,10 @@
 
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { useRouter } from "next/router";
+import dynamic from "next/dynamic";
 import { isAiBusy, requestAi, subscribeOpenProperties } from "@/lib/aiRequests";
 import type { Node as DesignNode } from "@hc/schema";
-import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown, Film, Table2 } from "lucide-react";
+import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown, Film, Table2, SlidersHorizontal } from "lucide-react";
 import type { AccessMode } from "@hc/sdk";
 import { ApiError } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
@@ -30,13 +31,9 @@ import { ShareDialog } from "./ShareDialog";
 import { RequestAccessScreen } from "./RequestAccessScreen";
 import { NotFoundScreen } from "@/components/ui/NotFound";
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
-import { PublishDialog } from "./PublishDialog";
-import { WebsiteDialog } from "./WebsiteDialog";
-import { PrintDialog } from "./PrintDialog";
-import { AccessibilityDialog } from "./AccessibilityDialog";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { ToolRail } from "./ToolRail";
-import { PagesBar } from "./PagesBar";
+import { PagesBar, PagePill } from "./PagesBar";
 import { DocumentSurface } from "./DocumentSurface";
 import { PresentMode } from "./PresentMode";
 import { PresenceBar } from "./PresenceBar";
@@ -58,6 +55,15 @@ import { useBoardFocus, enterBoardFocus, exitBoardFocus } from "@/store/boardFoc
 import { designSurfaceDir, mirrorInRtl, documentDirection } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
 import { useMediaQuery } from "@/lib/useMediaQuery";
+import { useIsPhone } from "@/lib/useIsPhone";
+
+// Dialogs mounted only while open load on first open, keeping their libraries
+// (publishing with its webhook signing and QR codes, the website builder, print
+// imposition, the accessibility checker) out of the editor's first load.
+const PublishDialog = dynamic(() => import("./PublishDialog").then((m) => m.PublishDialog), { ssr: false });
+const WebsiteDialog = dynamic(() => import("./WebsiteDialog").then((m) => m.WebsiteDialog), { ssr: false });
+const PrintDialog = dynamic(() => import("./PrintDialog").then((m) => m.PrintDialog), { ssr: false });
+const AccessibilityDialog = dynamic(() => import("./AccessibilityDialog").then((m) => m.AccessibilityDialog), { ssr: false });
 
 type Status = "loading" | "ready" | "error" | "forbidden" | "notfound";
 
@@ -66,7 +72,7 @@ function ViewToggles() {
   const showGrid = useEditor((s) => s.showGrid);
   const snapEnabled = useEditor((s) => s.snapEnabled);
   const st = useEditor.getState;
-  const cls = (on: boolean) => `grid h-8 w-8 place-items-center rounded-lg ${on ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`;
+  const cls = (on: boolean) => `grid h-8 w-8 place-items-center rounded-lg pointer-coarse:h-10 pointer-coarse:w-10 ${on ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`;
   return (
     <div className="ms-1 flex items-center gap-0.5">
       <button onClick={() => st().toggleRulers()} title={tr("editor.rulers_guides")} className={cls(showRulers)}><Ruler size={16} /></button>
@@ -140,7 +146,10 @@ function OverflowMenu({ items }: { items: MenuItem[] }) {
           role="menu"
           aria-label={tr("editor.more_actions")}
           onKeyDown={onMenuKeyDown}
-          className="absolute end-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-neutral-200 bg-surface py-1 shadow-lg"
+          // Capped to the space below the bar and scrollable: on a phone the
+          // full list is taller than the screen, and a clipped menu hid its
+          // last actions entirely.
+          className="oc-scroll absolute end-0 z-50 mt-2 max-h-[calc(100dvh-4.5rem)] w-56 overflow-y-auto overscroll-contain rounded-xl border border-neutral-200 bg-surface py-1 shadow-lg"
         >
           {items.map((it) => (
             <button
@@ -148,7 +157,7 @@ function OverflowMenu({ items }: { items: MenuItem[] }) {
               role="menuitem"
               disabled={it.disabled}
               onClick={() => { restoreFocusRef.current = true; setOpen(false); it.onClick(); }}
-              className="flex w-full items-center gap-2.5 px-3 py-2 text-start text-sm text-neutral-700 transition hover:bg-neutral-100 focus-visible:bg-neutral-100 focus-visible:outline-none disabled:opacity-40"
+              className="flex w-full items-center gap-2.5 px-3 py-2 pointer-coarse:py-3 text-start text-sm text-neutral-700 transition hover:bg-neutral-100 focus-visible:bg-neutral-100 focus-visible:outline-none disabled:opacity-40"
             >
               <it.icon size={16} className="shrink-0 text-neutral-500" />
               {it.label}
@@ -322,8 +331,9 @@ export function EditorApp() {
   // and stripped from the URL below, so a reload does not regenerate.
   const aiBrief = typeof router.query.ai === "string" ? router.query.ai : "";
   const isVeryNarrow = useMediaQuery("(max-width: 639px)"); // below Tailwind `sm`
-  // One-time, dismissible "optimized for larger screens" notice (non-blocking).
-  const [narrowNoticeDismissed, setNarrowNoticeDismissed] = useState(false);
+  // A phone gets its own canvas-first layout: tools in a bottom tab bar (a
+  // slim rail in landscape), panels as sheets, compact page and zoom pills.
+  const { isPhone, isPhonePortrait } = useIsPhone();
   // The right Properties panel can be collapsed for more canvas/board space; the
   // preference is per-user (localStorage), defaulting to open.
   const [propsOpen, setPropsOpen] = useState(
@@ -341,6 +351,26 @@ export function EditorApp() {
   // user's persisted lg+ preference). A per-session flag lets the user open it
   // while compact; the persisted `propsOpen` still governs the lg+ layout.
   const [compactPropsOpen, setCompactPropsOpen] = useState(false);
+  // On a phone the tool sheet and the properties sheet would cover each other
+  // and most of the canvas, so opening one closes the other. The rail owns its
+  // own open panel; bumping this signal asks it to close.
+  const [railCloseSignal, setRailCloseSignal] = useState(0);
+  const openCompactProps = useCallback(() => {
+    setCompactPropsOpen(true);
+    if (isPhone) setRailCloseSignal((n) => n + 1);
+  }, [isPhone]);
+  const onRailPanelOpen = useCallback(() => {
+    if (isPhone) setCompactPropsOpen(false);
+  }, [isPhone]);
+  // Toasts float above the phone tab bar rather than over it.
+  useEffect(() => {
+    if (!isPhonePortrait) return;
+    const root = document.documentElement;
+    root.style.setProperty("--oc-toast-lift", "var(--oc-tabbar-h)");
+    return () => {
+      root.style.removeProperty("--oc-toast-lift");
+    };
+  }, [isPhonePortrait]);
   const isBoard = docKind === "whiteboard";
   const effectivePropsOpen = isCompact ? compactPropsOpen : (isBoard ? boardPropsOpen : propsOpen);
   // Below lg the secondary right-side panels (history/comments/activity/insights,
@@ -351,7 +381,8 @@ export function EditorApp() {
   const rightPanelOverlay = isCompact ? "absolute end-0 top-0 z-30 h-full shadow-xl" : "contents";
   const toggleProps = () => {
     if (isCompact) {
-      setCompactPropsOpen((v) => !v);
+      if (compactPropsOpen) setCompactPropsOpen(false);
+      else openCompactProps();
       return;
     }
     if (isBoard) {
@@ -689,10 +720,10 @@ export function EditorApp() {
   // theme editor lives. Opening it here keeps panel visibility owned by the
   // shell that already manages it for every breakpoint.
   useEffect(() => subscribeOpenProperties(() => {
-    if (isCompact) setCompactPropsOpen(true);
+    if (isCompact) openCompactProps();
     else if (isBoard) setBoardPropsOpen(true);
     else setPropsOpen(true);
-  }), [isCompact, isBoard]);
+  }), [isCompact, isBoard, openCompactProps]);
 
   // In-app navigation needs its own guard: beforeunload does not fire for a
   // client-side route change, so clicking to the dashboard mid-generation used
@@ -943,7 +974,7 @@ export function EditorApp() {
           focus (full-screen) mode the whole bar is hidden so only the board
           canvas + its floating toolbar remain. */}
       {!inFocus && (
-      <header className="flex flex-nowrap items-center gap-3 border-b border-neutral-200 bg-surface px-3 py-2">
+      <header className={`flex flex-nowrap items-center border-b border-neutral-200 bg-surface py-2 ${isPhone ? "gap-1 ps-1 pe-2 pt-[max(0.5rem,env(safe-area-inset-top))]" : "gap-3 px-3"}`}>
         {/* The document's name as the page's level-one heading: screen
             readers navigate by headings, and the editor is otherwise a page
             of controls with no title in its structure. Offscreen because the
@@ -952,7 +983,9 @@ export function EditorApp() {
         <IconButton className="shrink-0" aria-label={tr("editor.back_to_dashboard")} onClick={() => void router.push("/dashboard")}>
           <ChevronLeft size={20} className={mirrorInRtl} />
         </IconButton>
-        <LogoMark size={28} />
+        {/* On a phone every pixel of the bar goes to the title and the
+            actions; the back button already identifies where you are. */}
+        {!isPhone && <LogoMark size={28} />}
         <input
           ref={titleRef}
           defaultValue={title}
@@ -962,7 +995,7 @@ export function EditorApp() {
           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
           className="min-w-0 max-w-[8rem] flex-shrink rounded-lg px-2 py-1 text-sm font-semibold text-neutral-800 outline-none hover:bg-neutral-100 focus:bg-neutral-100 sm:max-w-[12rem] lg:max-w-[14rem]"
         />
-        <div className="ms-2 flex shrink-0 items-center">
+        <div className={`flex shrink-0 items-center ${isPhone ? "" : "ms-2"}`}>
           <IconButton aria-label={tr("editor.undo")} onClick={undo}><Undo2 size={18} /></IconButton>
           <IconButton aria-label={tr("editor.redo")} onClick={redo}><Redo2 size={18} /></IconButton>
         </div>
@@ -1017,9 +1050,11 @@ export function EditorApp() {
               )}
             </div>
           )}
-          {designId && <NotificationsBell />}
+          {/* Notifications stay reachable from the dashboard on a phone; the
+              bell's popover has no room beside the editor's bar there. */}
+          {designId && !isPhone && <NotificationsBell />}
 
-          <Sep />
+          {!isPhone && <Sep />}
           {/* Less-frequent actions collapse into an overflow menu so the bar
               never wraps; each is gated the same way it was as a button. */}
           <OverflowMenu
@@ -1101,30 +1136,11 @@ export function EditorApp() {
               <Share2 size={16} /> {tr("editor.share")}
             </Button>
           )}
-          <Button size="sm" onClick={() => void save()} disabled={!designId || saving || accessMode !== "edit"} title={accessMode !== "edit" ? tr("editor.you_do_not_have_edit_access") : designId ? tr("editor.save_a_snapshot") : tr("editor.open_from_the_dashboard_to_save")}>
+          <Button size="sm" className="pointer-coarse:h-10" onClick={() => void save()} disabled={!designId || saving || accessMode !== "edit"} title={accessMode !== "edit" ? tr("editor.you_do_not_have_edit_access") : designId ? tr("editor.save_a_snapshot") : tr("editor.open_from_the_dashboard_to_save")}>
             {saving ? tr("editor.saving") : tr("editor.save")}
           </Button>
         </div>
       </header>
-      )}
-
-      {/* Very-narrow advisory (below sm): the editor is a complex desktop tool,
-          so on small viewports we surface a subtle, dismissible notice. It is a
-          slim bar in the layout flow (not an overlay), so it never blocks the
-          canvas or any control. */}
-      {isVeryNarrow && !narrowNoticeDismissed && !inFocus && (
-        <div className="flex shrink-0 items-center gap-2 border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900">
-          <Info size={14} className="shrink-0 text-amber-700" />
-          <span className="min-w-0 flex-1">{tr("editor.the_editor_is_optimized_for_larger_screens_s")}</span>
-          <button
-            onClick={() => setNarrowNoticeDismissed(true)}
-            aria-label={tr("editor.dismiss_notice")}
-            title={tr("editor.dismiss")}
-            className="grid h-5 w-5 shrink-0 place-items-center rounded text-amber-700 hover:bg-amber-100 hover:text-amber-800"
-          >
-            <X size={13} />
-          </button>
-        </div>
       )}
 
       <CommandMenu onExport={() => setExportOpen(true)} onShortcuts={() => setShortcutsOpen(true)} workspaceId={workspaceId} />
@@ -1152,7 +1168,8 @@ export function EditorApp() {
       {presenting && <PresentMode onClose={() => { useEditor.getState().setPresenting(false); setPresenting(false); }} />}
       <PromptHost />
 
-      <div className="relative flex min-h-0 flex-1">
+      {/* A phone in portrait stacks the canvas over the tool tab bar. */}
+      <div className={`relative flex min-h-0 flex-1 ${isPhonePortrait ? "flex-col" : ""}`}>
         {/* The left tool rail is shared by the canvas-backed kinds. Whiteboard is
             scene-backed (its surface renders the same Canvas + store), so the
             Elements/Text/Uploads/Stock/Brand/Layers panels apply there too; only
@@ -1160,7 +1177,19 @@ export function EditorApp() {
         {(docKind === "design" || docKind === "whiteboard") && !inFocus && (
           // key by kind so switching surface re-applies its default; boards open
           // with the slide-out panel collapsed (canvas-first).
-          <ToolRail key={docKind} workspaceId={workspaceId} designId={designId} overlay={isCompact} defaultCollapsed={isBoard} kind={docKind === "whiteboard" ? "whiteboard" : "design"} openTool={aiBrief ? "ai" : undefined} />
+          <ToolRail
+            key={docKind}
+            workspaceId={workspaceId}
+            designId={designId}
+            overlay={isCompact}
+            defaultCollapsed={isBoard}
+            kind={docKind === "whiteboard" ? "whiteboard" : "design"}
+            openTool={aiBrief ? "ai" : undefined}
+            phone={isPhonePortrait ? "portrait" : isPhone ? "landscape" : null}
+            onPanelOpen={onRailPanelOpen}
+            closeSignal={railCloseSignal}
+            leading={isPhone ? { icon: SlidersHorizontal, label: tr("editor.edit"), active: compactPropsOpen, onClick: toggleProps } : undefined}
+          />
         )}
         {docKind !== "design" ? (
           // Same relative wrapper as the design canvas so overlays (the
@@ -1199,6 +1228,7 @@ export function EditorApp() {
             />
           )}
           <ZoomControl />
+          {isPhone && <PagePill onOverview={() => setOverviewOpen(true)} />}
         </main>
         </>
         )}
@@ -1238,36 +1268,62 @@ export function EditorApp() {
               // overlay) and caps its width to the viewport, so opening it on a
               // phone never crushes the canvas; at lg+ it is a normal flex sibling
               // at the user's resizable width.
-              className={`flex flex-col border-s border-neutral-200 bg-surface ${
-                isCompact ? "absolute end-0 top-0 z-30 h-full shadow-xl" : "relative shrink-0"
+              // On a phone in portrait it is a bottom sheet over the tab bar,
+              // so the selection stays visible above it.
+              className={`flex flex-col bg-surface ${
+                isPhonePortrait
+                  ? "absolute inset-x-0 bottom-[var(--oc-tabbar-h)] z-40 h-[min(58dvh,30rem)] rounded-t-2xl border-t border-neutral-200 shadow-2xl"
+                  : isCompact
+                    ? "absolute end-0 top-0 z-30 h-full border-s border-neutral-200 shadow-xl"
+                    : "relative shrink-0 border-s border-neutral-200"
               }`}
-              style={{ width: isCompact ? "min(20rem, 86vw)" : panelWidth }}
+              style={{ width: isPhonePortrait ? undefined : isPhone ? "min(20rem, 50vw)" : isCompact ? "min(20rem, 86vw)" : panelWidth }}
+              role={isPhonePortrait ? "dialog" : undefined}
+              aria-label={isPhonePortrait ? tr("editor.edit") : undefined}
             >
-              {/* Drag the left edge to resize the panel. */}
-              <div
-                onPointerDown={onPanelResizeDown}
-                onPointerMove={onPanelResizeMove}
-                onPointerUp={onPanelResizeUp}
-                title={tr("editor.drag_to_resize")}
-                className="absolute start-0 top-0 z-20 h-full w-1.5 cursor-col-resize touch-none hover:bg-brand-200"
-              />
+              {/* Drag the left edge to resize the panel (not on a phone, where
+                  the sheet is fixed and a touch at its edge must not grab). */}
+              {!isPhone && (
+                <div
+                  onPointerDown={onPanelResizeDown}
+                  onPointerMove={onPanelResizeMove}
+                  onPointerUp={onPanelResizeUp}
+                  title={tr("editor.drag_to_resize")}
+                  className="absolute start-0 top-0 z-20 h-full w-1.5 cursor-col-resize touch-none hover:bg-brand-200"
+                />
+              )}
               {/* A thin header bar with the collapse toggle on the panel's inner
                   (left) edge, so it stays put and never overlaps the content. */}
-              <div className="flex shrink-0 items-center border-b border-neutral-100 py-1 ps-2.5 pe-2">
-                <button
-                  onClick={toggleProps}
-                  title={tr("editor.collapse_panel")}
-                  aria-label={tr("editor.collapse_properties_panel")}
-                  className="grid h-7 w-7 place-items-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
-                >
-                  <PanelRightClose size={16} className={mirrorInRtl} />
-                </button>
-              </div>
+              {isPhonePortrait ? (
+                <div className="flex shrink-0 items-center justify-between border-b border-neutral-100 ps-4 pe-1 pt-1">
+                  <span aria-hidden className="h-1 w-10 rounded-full bg-neutral-300" />
+                  <button
+                    onClick={toggleProps}
+                    aria-label={tr("editor.collapse_properties_panel")}
+                    className="grid h-11 w-11 place-items-center rounded-lg text-neutral-500 hover:bg-neutral-100"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex shrink-0 items-center border-b border-neutral-100 py-1 ps-2.5 pe-2">
+                  <button
+                    onClick={toggleProps}
+                    title={tr("editor.collapse_panel")}
+                    aria-label={tr("editor.collapse_properties_panel")}
+                    className="grid h-7 w-7 place-items-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 pointer-coarse:h-11 pointer-coarse:w-11"
+                  >
+                    <PanelRightClose size={16} className={mirrorInRtl} />
+                  </button>
+                </div>
+              )}
               <div className="oc-scroll min-h-0 flex-1 overflow-y-auto">
                 <PropertiesPanel workspaceId={workspaceId} />
               </div>
             </aside>
-          ) : (
+          ) : isPhone ? null : (
+            // On a phone the Edit tab in the tool bar opens the properties
+            // sheet, so this 36px strip does not eat canvas width.
             <button
               onClick={toggleProps}
               title={tr("editor.show_properties")}
@@ -1296,7 +1352,7 @@ export function EditorApp() {
         </>
         )}
       </div>
-      {docKind === "design" && <PagesBar />}
+      {docKind === "design" && !isPhone && <PagesBar />}
 
       {/* Focus-mode exit affordance. In focus mode the chrome is gone, so this
           floating pill (top-right, above the board's own overlays) is the way

@@ -329,6 +329,30 @@ body {
   display: none;
 }
 
+/* Height of the editor's phone tool tab bar, safe-area inset included. The
+   properties sheet stacks on top of it, so both read the same value. */
+:root {
+  --oc-tabbar-h: calc(3.5rem + env(safe-area-inset-bottom));
+}
+
+/* A phone bottom sheet: the panel inside fills the sheet edge to edge instead
+   of keeping the narrow side-panel width it uses beside the canvas. */
+.oc-sheet > div {
+  width: 100% !important;
+  height: 100%;
+}
+
+/* Hit slop for small controls on touch screens: the visible button keeps its
+   compact size, but the tappable area grows to about 44px around it. The
+   element must be positioned (add `relative` unless it already is absolute). */
+@media (pointer: coarse) {
+  .oc-hit::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+  }
+}
+
 /* Clean, swatch-style native color inputs used across the editor panels. */
 .oc-color {
   -webkit-appearance: none;
@@ -382,4 +406,26 @@ html.motion-reduce *::after {
    the anchor being placed. Hotspot dead center; falls back to crosshair. */
 .oc-cursor-pen {
   cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M12%202v6M12%2016v6M2%2012h6M16%2012h6%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23111827%22%20stroke-width%3D%221.4%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M12%202v6M12%2016v6M2%2012h6M16%2012h6%22%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%221.1%22%20fill%3D%22%23111827%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%220.8%22%2F%3E%3C%2Fsvg%3E") 12 12, crosshair;
+}
+
+/* Safe-area insets for notched phones and the installed (standalone) app. The
+   viewport meta sets viewport-fit=cover, so content can reach under the notch
+   and home indicator; these variables and utilities are the shared way for a
+   layout to pad for them (0 on devices without insets). Insets are physical
+   edges, so the horizontal utility pads both sides. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+@utility pt-safe {
+  padding-top: var(--safe-top);
+}
+@utility pb-safe {
+  padding-bottom: var(--safe-bottom);
+}
+@utility px-safe {
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
 }

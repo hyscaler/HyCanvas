@@ -84,6 +84,9 @@ import {
   Triangle,
   Minus,
   Sparkles,
+  SlidersHorizontal,
+  MoreHorizontal,
+  X,
 } from "lucide-react";
 import {
   newProject,
@@ -152,6 +155,8 @@ import { captionStyleOf, cueAt, withCaptionStyle, withCues, addCaptionTrack, rem
 import { detectSceneSeconds } from "@/lib/video/sceneDetect";
 import { videoTemplates, type VideoTemplate } from "@/lib/video/videoTemplates";
 import { tr } from "@/lib/i18n";
+import { useMediaQuery } from "@/lib/useMediaQuery";
+import { PHONE_QUERY } from "@/lib/useIsPhone";
 import { CodedError, userMessage } from "@/lib/errors";
 
 // ---------------------------------------------------------------------------
@@ -166,6 +171,13 @@ const regularFontStyle = "Regular";
 
 const TRACK_HEIGHT = 56; // px per track lane
 const GUTTER_WIDTH = 200; // px, the left track-header column
+const GUTTER_WIDTH_PHONE = 148; // px, the narrower phone header (name + options)
+// Bottom sheet shell for the phone layout. Sits under the app's modals (z-50).
+const SHEET_BASE =
+  "fixed inset-x-0 bottom-0 z-[45] max-h-[75dvh] rounded-t-2xl border-t border-neutral-200 bg-surface pb-[env(safe-area-inset-bottom)] shadow-2xl";
+const SHEET_CLS = `${SHEET_BASE} flex flex-col overflow-hidden`;
+// 44px touch targets for every control inside a phone sheet.
+const SHEET_TOUCH = "[&_button]:min-h-11 [&_button]:min-w-11 [&_select]:min-h-11 [&_input[type=number]]:min-h-11 [&_input[type=text]]:min-h-11";
 const RULER_HEIGHT = 28; // px, the time ruler above the lanes
 // The timeline viewport caps at ~4.5 lanes; more tracks scroll vertically.
 const DEFAULT_CLIP_FRAMES = 60; // length of a freshly added placeholder clip
@@ -856,6 +868,36 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
   // keyboard activation and skips right after a press.
   const railPressRef = useRef(0);
 
+  // Phone layout (portrait, or a short landscape touch screen): the preview
+  // stacks over the timeline, the media library, the edit and insert
+  // toolbars, the inspector, and each track's controls open as bottom sheets
+  // from a scrollable action row, and the track headers narrow to a readable
+  // name plus an options button. Desktop and tablet keep the side panels.
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  const isShort = useMediaQuery("(max-height: 500px)");
+  const coarse = useMediaQuery("(pointer: coarse)");
+  const [phoneSheet, setPhoneSheet] = useState<null | "media" | "edit" | "insert" | "inspector" | "track">(null);
+  const [sheetTrackId, setSheetTrackId] = useState<string | null>(null);
+  const closeSheet = useCallback(() => setPhoneSheet(null), []);
+  const gutterW = isPhone ? GUTTER_WIDTH_PHONE : GUTTER_WIDTH;
+  // Callbacks that convert pointer x to timeline frames read the live gutter
+  // width through a ref so they need no re-creation on a layout switch.
+  const gutterWRef = useRef(gutterW);
+  useEffect(() => {
+    gutterWRef.current = gutterW;
+  }, [gutterW]);
+  // The open sheet, or none once the layout leaves phone mode.
+  const sheet = isPhone ? phoneSheet : null;
+  // A sheet's close control closes the sheet; it never flips the persisted
+  // desktop panel preference.
+  const collapseMedia = isPhone ? closeSheet : toggleMedia;
+  const collapseInspector = isPhone ? closeSheet : toggleInspector;
+  // Toolbar groups: shown only in their own sheet on a phone (an inline
+  // display style, so it overrides each group's own flex class).
+  const onlyIn = (part: "edit" | "insert"): React.CSSProperties | undefined =>
+    isPhone && sheet !== part ? { display: "none" } : undefined;
+  const hiddenOnPhone: React.CSSProperties | undefined = isPhone ? { display: "none" } : undefined;
+
   const [timelineOpen, setTimelineOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     return window.localStorage.getItem(TIMELINE_OPEN_KEY) !== "0";
@@ -938,7 +980,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
 
   // Anchored zoom: the timeline point under the anchor (cursor, else the
   // playhead when visible, else the viewport center) stays put on screen.
-  // Content x of frame f inside the scroller = GUTTER_WIDTH + f * px.
+  // Content x of frame f inside the scroller = gutter width + f * px.
   const pendingScrollLeftRef = useRef<number | null>(null);
   const applyZoom = useCallback(
     (nextRaw: number, anchorClientX?: number) => {
@@ -954,18 +996,18 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       let anchorFrame: number;
       if (anchorClientX !== undefined) {
         offset = anchorClientX - rect.left;
-        anchorFrame = (offset - GUTTER_WIDTH + sc.scrollLeft) / prev;
+        anchorFrame = (offset - gutterWRef.current + sc.scrollLeft) / prev;
       } else {
-        const playheadOffset = GUTTER_WIDTH + playheadRef.current * prev - sc.scrollLeft;
-        if (playheadOffset >= GUTTER_WIDTH && playheadOffset <= rect.width) {
+        const playheadOffset = gutterWRef.current + playheadRef.current * prev - sc.scrollLeft;
+        if (playheadOffset >= gutterWRef.current && playheadOffset <= rect.width) {
           offset = playheadOffset;
           anchorFrame = playheadRef.current;
         } else {
-          offset = GUTTER_WIDTH + (rect.width - GUTTER_WIDTH) / 2;
-          anchorFrame = (offset - GUTTER_WIDTH + sc.scrollLeft) / prev;
+          offset = gutterWRef.current + (rect.width - gutterWRef.current) / 2;
+          anchorFrame = (offset - gutterWRef.current + sc.scrollLeft) / prev;
         }
       }
-      pendingScrollLeftRef.current = Math.max(0, GUTTER_WIDTH + anchorFrame * next - offset);
+      pendingScrollLeftRef.current = Math.max(0, gutterWRef.current + anchorFrame * next - offset);
       setPxPerFrame(next);
     },
     [pxPerFrame],
@@ -1003,7 +1045,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
   const zoomToFit = useCallback(() => {
     const sc = scrollRef.current;
     if (!sc) return;
-    const usable = Math.max(120, sc.clientWidth - GUTTER_WIDTH - 16);
+    const usable = Math.max(120, sc.clientWidth - gutterWRef.current - 16);
     const frames = Math.max(1, durationFramesRef.current + fpsRef.current * 2);
     setPxPerFrame(Math.max(MIN_PX_PER_FRAME, Math.min(MAX_PX_PER_FRAME, usable / frames)));
     requestAnimationFrame(() => {
@@ -3999,7 +4041,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       if (sc) {
         const r = sc.getBoundingClientRect();
         if (e.clientX > r.right - 36) sc.scrollLeft += 14;
-        else if (e.clientX < r.left + GUTTER_WIDTH + 36) sc.scrollLeft = Math.max(0, sc.scrollLeft - 14);
+        else if (e.clientX < r.left + gutterWRef.current + 36) sc.scrollLeft = Math.max(0, sc.scrollLeft - 14);
       }
 
       // Slip: shift the source window under a fixed clip position/duration.
@@ -4229,7 +4271,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
     const sc = scrollRef.current;
     if (!sc) return;
     if (rulerScrubRef.current || dragRef.current || sideDragRef.current) return;
-    const laneW = sc.clientWidth - GUTTER_WIDTH;
+    const laneW = sc.clientWidth - gutterWRef.current;
     if (laneW <= 0) return;
     const x = frame * pxPerFrame; // lane-content coords
     const viewL = sc.scrollLeft;
@@ -4283,11 +4325,11 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       {/* MEDIA PANEL (left): workspace video/audio; drag onto a lane, or   */}
       {/* click to add at the playhead. Upload lands here too.              */}
       {/* ---------------------------------------------------------------- */}
-      {mediaOpen ? (
+      {(isPhone ? sheet === "media" : mediaOpen) ? (
       <aside
         aria-label={tr("editor.media_library")}
-        className="relative flex shrink-0 flex-col border-r border-neutral-200 bg-neutral-100"
-        style={{ width: mediaW }}
+        className={isPhone ? `${SHEET_CLS} ${SHEET_TOUCH}` : "relative flex shrink-0 flex-col border-r border-neutral-200 bg-neutral-100"}
+        style={isPhone ? undefined : { width: mediaW }}
         onDragEnter={onPanelDragEnter}
         onDragOver={onPanelDragOver}
         onDragLeave={onPanelDragLeave}
@@ -4300,6 +4342,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             </span>
           </div>
         )}
+        {!isPhone && (
         <div
           onPointerDown={onSideResizeDown("left")}
           onPointerMove={onSideResizeMove}
@@ -4307,6 +4350,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           title={tr("editor.drag_resize_media_panel")}
           className="absolute inset-y-0 -right-0.5 z-20 w-1.5 cursor-col-resize hover:bg-brand-600/60"
         />
+        )}
         <div className="flex items-center justify-between border-b border-neutral-200 px-3 py-2">
           {/* The collapse control hugs the panel's OUTER edge, mirroring the
               inspector: it sits exactly where the reopen rail appears. */}
@@ -4317,15 +4361,15 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
               onPointerDown={(e) => {
                 if (e.button !== 0) return;
                 railPressRef.current = performance.now();
-                toggleMedia();
+                collapseMedia();
               }}
               onClick={() => {
                 if (performance.now() - railPressRef.current < 500) return;
-                toggleMedia();
+                collapseMedia();
               }}
               className="-ml-1.5 rounded p-1 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900"
             >
-              <PanelLeftClose size={15} className="pointer-events-none" />
+              {isPhone ? <X size={16} className="pointer-events-none" /> : <PanelLeftClose size={15} className="pointer-events-none" />}
             </button>
             <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-700">{tr("editor.media")}</span>
           </span>
@@ -4535,7 +4579,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           )}
         </div>
       </aside>
-      ) : (
+      ) : isPhone ? null : (
         <button
           type="button"
           title={tr("editor.open_the_media_panel")}
@@ -4559,7 +4603,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       )}
 
       {/* stage + timeline column (everything except the right inspector) */}
-      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+      <div className={`flex h-full min-h-0 min-w-0 flex-1 flex-col${isPhone && isShort ? " overflow-y-auto" : ""}`}>
       {/* sequence breadcrumb (visible while editing a nested sequence) */}
       {seqPath.length > 0 && (
         <div className="flex items-center gap-1 border-b border-neutral-200 bg-neutral-100 px-3 py-1.5 text-xs">
@@ -4594,7 +4638,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       {/* ---------------------------------------------------------------- */}
       {/* STAGE PREVIEW (top): the live compositor canvas.                  */}
       {/* ---------------------------------------------------------------- */}
-      <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-4">
+      <div className={`flex flex-1 items-center justify-center overflow-hidden ${isPhone ? (isShort ? "min-h-60 shrink-0 p-2" : "min-h-0 p-2") : "min-h-0 p-4"}`}>
         <div className="flex h-full max-h-full w-full max-w-4xl flex-col items-center justify-center">
           <div
             ref={stageBoxRef}
@@ -4700,10 +4744,10 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             </div>
             {activeClips.length === 0 && (
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
-                <div className="font-mono text-2xl tabular-nums tracking-wider text-neutral-600">
+                <div className={`font-mono tabular-nums tracking-wider text-neutral-600 ${isPhone ? "text-base" : "text-2xl"}`}>
                   {formatTimecode(frame, fps)}
                 </div>
-                <div className="text-xs text-neutral-400">
+                <div className={isPhone ? "hidden" : "text-xs text-neutral-400"}>
                   {project.stage.width}x{project.stage.height} &middot; {fps} fps &middot; use + on a track to add media
                 </div>
               </div>
@@ -4711,7 +4755,13 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           </div>
 
           {/* transport controls */}
-          <div className="mt-3 flex items-center gap-1.5">
+          <div
+            className={
+              isPhone
+                ? "mt-2 flex flex-wrap items-center justify-center gap-1.5 [&>button]:min-h-11 [&>button]:min-w-11 [&>select]:min-h-11"
+                : "mt-3 flex items-center gap-1.5"
+            }
+          >
             <TransportButton
               title={tr("editor.step_back_one_frame")}
               onClick={() => {
@@ -4786,7 +4836,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             >
               {previewMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
             </TransportButton>
-            <LevelMeter getLevel={playerLevel} />
+            {!isPhone && <LevelMeter getLevel={playerLevel} />}
             {exportHistory.length > 0 && (
               <div className="relative">
                 <TransportButton title={tr("editor.export_history_re_download_finished_renders")} onClick={() => setHistoryOpen((v) => !v)}>
@@ -4858,11 +4908,26 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       {/* ---------------------------------------------------------------- */}
       {/* TOOLBAR + TIMELINE (collapsible to a slim strip, persisted).      */}
       {/* ---------------------------------------------------------------- */}
-      {timelineOpen ? (
+      {/* On a phone the timeline always shows, and this toolbar becomes the
+          Edit or Insert bottom sheet: each group carries the sheet it belongs
+          to and is hidden while the other sheet is open. */}
+      {timelineOpen || isPhone ? (
       <>
-      <div className="flex flex-wrap items-center gap-2 border-t border-neutral-200 bg-neutral-100 px-3 py-2 text-xs">
+      {(!isPhone || sheet === "edit" || sheet === "insert") && (
+      <div
+        role={isPhone ? "dialog" : undefined}
+        aria-label={isPhone ? (sheet === "edit" ? tr("editor.edit") : tr("editor.insert")) : undefined}
+        className={
+          isPhone
+            ? `${SHEET_BASE} ${SHEET_TOUCH} flex flex-wrap content-start items-center gap-2 overflow-y-auto px-3 pb-3 text-xs`
+            : "flex flex-wrap items-center gap-2 border-t border-neutral-200 bg-neutral-100 px-3 py-2 text-xs"
+        }
+      >
+        {isPhone && (
+          <SheetHeader title={sheet === "edit" ? tr("editor.edit") : tr("editor.insert")} onClose={closeSheet} />
+        )}
         {/* clip actions (require a selection on an unlocked track) */}
-        <div className="flex items-center gap-1">
+        <div className={isPhone ? "flex flex-wrap items-center gap-1" : "flex items-center gap-1"} style={onlyIn("edit")}>
           <ToolbarButton title={tr("editor.split_at_playhead_s")} disabled={editDisabled} onClick={doSplit}>
             <Scissors size={13} /> {tr("editor.split")}
           </ToolbarButton>
@@ -4894,7 +4959,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
         </div>
 
         {/* speed */}
-        <label className="flex items-center gap-1 text-neutral-600">
+        <label className="flex items-center gap-1 text-neutral-600" style={onlyIn("edit")}>
           {tr("editor.speed")}
           <input
             type="number"
@@ -4911,7 +4976,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
 
         {/* transition: an edge selector (in/out) plus a type select, so a
             transition can be attached to EITHER edge of the selected clip (V4). */}
-        <label className="flex items-center gap-1 text-neutral-600">
+        <label className="flex items-center gap-1 text-neutral-600" style={onlyIn("edit")}>
           {tr("editor.transition")}
           <select
             disabled={editDisabled}
@@ -4945,10 +5010,10 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           </select>
         </label>
 
-        <div className="mx-1 h-5 w-px bg-neutral-300" />
+        <div className="mx-1 h-5 w-px bg-neutral-300" style={hiddenOnPhone} />
 
         {/* add tracks */}
-        <div className="flex items-center gap-1">
+        <div className={isPhone ? "flex flex-wrap items-center gap-1" : "flex items-center gap-1"} style={onlyIn("insert")}>
           <ToolbarButton title={tr("editor.add_video_track")} onClick={() => addTrack("video")}>
             <Film size={13} /> +Video
           </ToolbarButton>
@@ -5067,7 +5132,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           <ToolbarButton title={tr("editor.animate_all_elements_of_the_current_scene_wi")} onClick={() => animateSceneAll()}>
             <Wand2 size={13} /> {tr("editor.animate_all_2")}
           </ToolbarButton>
-          <div className="mx-1 h-5 w-px bg-neutral-300" />
+          <div className="mx-1 h-5 w-px bg-neutral-300" style={hiddenOnPhone} />
           <button
             type="button"
             disabled={!workspaceId}
@@ -5086,8 +5151,8 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           const curId = sceneAtFrame(project, frame)?.id;
           return (
             <>
-              <div className="mx-1 h-5 w-px bg-neutral-300" />
-              <div className="flex max-w-[36vw] items-center gap-1 overflow-x-auto" title={tr("editor.scenes_pages")}>
+              <div className="mx-1 h-5 w-px bg-neutral-300" style={hiddenOnPhone} />
+              <div className={isPhone ? "flex w-full flex-wrap items-center gap-1" : "flex max-w-[36vw] items-center gap-1 overflow-x-auto"} style={onlyIn("insert")} title={tr("editor.scenes_pages")}>
                 {scenes.map((s, i) => {
                   const active = s.id === curId;
                   const txType = project.tracks.flatMap((t) => t.clips).find((c) => c.id === s.clipIds[0])?.transitionIn?.type;
@@ -5138,13 +5203,14 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           );
         })()}
 
-        <div className="mx-1 h-5 w-px bg-neutral-300" />
+        <div className="mx-1 h-5 w-px bg-neutral-300" style={hiddenOnPhone} />
 
         {/* master ducking */}
 
         {/* captions editor toggle */}
         <button
           type="button"
+          style={onlyIn("edit")}
           onClick={() => setCaptionsOpen((v) => !v)}
           title={tr("editor.captions_edit_cues_export_srt_vtt")}
           className={`flex items-center gap-1 rounded px-2 py-1 ${
@@ -5157,6 +5223,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
         {project.range && (
           <button
             type="button"
+            style={onlyIn("edit")}
             onClick={clearRange}
             title={tr("editor.clear_the_export_range_set_with_i_and_o_at_t")}
             className="flex items-center gap-1 rounded bg-brand-600/30 px-2 py-1 text-brand-ink hover:bg-brand-600/50"
@@ -5169,7 +5236,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             panel when nothing is selected */}
 
         {/* zoom */}
-        <div className="ml-auto flex items-center gap-1">
+        <div className={isPhone ? "flex flex-wrap items-center gap-1" : "ml-auto flex items-center gap-1"} style={onlyIn("edit")}>
           <ToolbarButton
             title={snapOn ? "Snapping on (Alt bypasses); click to turn off" : "Snapping off; click to turn on"}
             onClick={toggleSnap}
@@ -5199,12 +5266,17 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           <ToolbarButton title={`Track height (${trackH === 40 ? "compact" : trackH === 56 ? "normal" : "tall"}); click to cycle`} onClick={cycleTrackHeight}>
             <Rows3 size={13} />
           </ToolbarButton>
-          <div className="mx-1 h-5 w-px bg-neutral-300" />
-          <ToolbarButton title={tr("editor.hide_the_timeline_more_room_for_the_preview")} onClick={toggleTimeline}>
-            <PanelBottomClose size={13} />
-          </ToolbarButton>
+          {!isPhone && (
+            <>
+              <div className="mx-1 h-5 w-px bg-neutral-300" />
+              <ToolbarButton title={tr("editor.hide_the_timeline_more_room_for_the_preview")} onClick={toggleTimeline}>
+                <PanelBottomClose size={13} />
+              </ToolbarButton>
+            </>
+          )}
         </div>
       </div>
+      )}
 
       {/* ---------------------------------------------------------------- */}
       {/* CAPTIONS editor (toggled): cue list + SRT/VTT export. Cues render  */}
@@ -5346,14 +5418,14 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       {/* ---------------------------------------------------------------- */}
       <div
         className="flex shrink-0 border-t border-neutral-200 bg-neutral-100"
-        style={{ height: Math.min(RULER_HEIGHT + project.tracks.length * trackH + 12, RULER_HEIGHT + Math.round(trackH * 4.5) + 12) }}
+        style={{ height: Math.min(RULER_HEIGHT + project.tracks.length * trackH + 12, RULER_HEIGHT + Math.round(trackH * (isPhone ? (isShort ? 2 : 3.5) : 4.5)) + 12) }}
       >
       {/* ONE scroller for both axes: the gutter sticks through horizontal
           scrolling and the ruler through vertical, so any number of tracks
           stays reachable with everything aligned. */}
       <div ref={scrollRef} className="relative flex flex-1 overflow-auto">
         {/* left gutter: track headers */}
-        <div className="sticky left-0 z-40 shrink-0 border-r border-neutral-200 bg-neutral-100" style={{ width: GUTTER_WIDTH }}>
+        <div className="sticky left-0 z-40 shrink-0 border-r border-neutral-200 bg-neutral-100" style={{ width: gutterW }}>
           <div
             className="sticky top-0 z-10 flex items-center bg-neutral-100 px-3 text-[10px] uppercase tracking-wide text-neutral-500"
             style={{ height: RULER_HEIGHT }}
@@ -5366,7 +5438,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             return (
               <div
                 key={track.id}
-                className="flex flex-col justify-center gap-1 border-t border-neutral-200/60 px-3"
+                className={`flex flex-col justify-center gap-1 border-t border-neutral-200/60 ${isPhone ? "px-1.5" : "px-3"}`}
                 style={{ height: trackH }}
               >
                 <div className="flex items-center gap-1.5">
@@ -5387,6 +5459,18 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                     }}
                     className="w-0 min-w-0 flex-1 truncate rounded border border-transparent bg-transparent px-0.5 text-xs text-neutral-800 hover:border-neutral-300 focus:border-neutral-400 focus:bg-neutral-50 focus:outline-none"
                   />
+                  {isPhone ? (
+                    <button
+                      type="button"
+                      title={tr("editor.track_options")}
+                      aria-label={tr("editor.track_options")}
+                      onClick={() => { setSheetTrackId(track.id); setPhoneSheet("track"); }}
+                      className="grid h-11 w-8 shrink-0 place-items-center rounded text-neutral-600 hover:bg-neutral-200"
+                    >
+                      <MoreHorizontal size={16} />
+                    </button>
+                  ) : (
+                  <>
                   <button
                     type="button"
                     title={tr("editor.move_track_up")}
@@ -5459,8 +5543,10 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                   >
                     <Trash2 size={11} />
                   </button>
+                  </>
+                  )}
                 </div>
-                {isAudio && (
+                {isAudio && !isPhone && (
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
@@ -5539,7 +5625,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 ruler spans the scrolled content, so clientX - rect.left IS the
                 content x (no scrollLeft term: rect.left moves with scroll). */}
             <div
-              className="sticky top-0 z-20 cursor-ew-resize border-b border-neutral-200 bg-neutral-100"
+              className={`sticky top-0 z-20 cursor-ew-resize border-b border-neutral-200 bg-neutral-100${coarse ? " touch-none" : ""}`}
               style={{ height: RULER_HEIGHT }}
               onPointerDown={(e) => {
                 if (e.button !== 0) return;
@@ -5560,7 +5646,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 if (sc) {
                   const r = sc.getBoundingClientRect();
                   if (e.clientX > r.right - 36) sc.scrollLeft += 14;
-                  else if (e.clientX < r.left + GUTTER_WIDTH + 36) sc.scrollLeft = Math.max(0, sc.scrollLeft - 14);
+                  else if (e.clientX < r.left + gutterW + 36) sc.scrollLeft = Math.max(0, sc.scrollLeft - 14);
                 }
                 const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                 setPlayhead(Math.max(0, Math.min(durationFrames, Math.round((e.clientX - rect.left) / pxPerFrame))));
@@ -5914,12 +6000,12 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                           <div
                             onPointerDown={(e) => onClipPointerDown(e, track, clip, "trim-in")}
                             title={tr("editor.drag_to_trim_the_in_point_cmd_ctrl_drag_reti")}
-                            className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize hover:bg-white/50"
+                            className={`absolute inset-y-0 left-0 cursor-ew-resize hover:bg-white/50 ${coarse ? "w-3 bg-white/30" : "w-1.5"}`}
                           />
                           <div
                             onPointerDown={(e) => onClipPointerDown(e, track, clip, "trim-out")}
                             title={tr("editor.drag_to_trim_the_out_point_cmd_ctrl_drag_ret")}
-                            className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize hover:bg-white/50"
+                            className={`absolute inset-y-0 right-0 cursor-ew-resize hover:bg-white/50 ${coarse ? "w-3 bg-white/30" : "w-1.5"}`}
                           />
                         </>
                       )}
@@ -6037,25 +6123,176 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           </button>
         </div>
       )}
+
+      {/* PHONE ACTION ROW: opens the sheets, plus timeline zoom. Scrolls
+          sideways if a narrow screen cannot fit every action. */}
+      {isPhone && (
+        <nav
+          aria-label={tr("editor.tools")}
+          className="sticky bottom-0 z-[42] flex shrink-0 gap-1 overflow-x-auto border-t border-neutral-200 bg-neutral-100 px-2 py-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))]"
+        >
+          {([
+            { key: "media", label: tr("editor.media"), Icon: Film },
+            { key: "insert", label: tr("editor.insert"), Icon: Plus },
+            { key: "edit", label: tr("editor.edit"), Icon: Scissors },
+            { key: "inspector", label: tr("editor.inspector"), Icon: SlidersHorizontal },
+          ] as const).map(({ key, label, Icon }) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={sheet === key}
+              onClick={() => setPhoneSheet(sheet === key ? null : key)}
+              className={`flex h-11 min-w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg px-2 text-[10px] font-medium ${
+                sheet === key ? "bg-brand-50 text-brand-ink" : "text-neutral-700 hover:bg-neutral-200"
+              }`}
+            >
+              <Icon size={16} className="pointer-events-none" />
+              <span className="pointer-events-none">{label}</span>
+            </button>
+          ))}
+          <span className="mx-1 my-2 w-px shrink-0 bg-neutral-300" aria-hidden />
+          <button
+            type="button"
+            aria-label={tr("editor.zoom_out_playhead_hint")}
+            onClick={() => applyZoom(pxPerFrame / 1.4)}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-neutral-700 hover:bg-neutral-200"
+          >
+            <ZoomOut size={16} />
+          </button>
+          <button
+            type="button"
+            aria-label={tr("editor.zoom_in_playhead_hint")}
+            onClick={() => applyZoom(pxPerFrame * 1.4)}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-neutral-700 hover:bg-neutral-200"
+          >
+            <ZoomIn size={16} />
+          </button>
+          <button
+            type="button"
+            aria-label={tr("editor.zoom_to_fit_the_whole_timeline")}
+            onClick={zoomToFit}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-neutral-700 hover:bg-neutral-200"
+          >
+            <Maximize2 size={16} />
+          </button>
+        </nav>
+      )}
       </div>
+
+      {/* Phone sheets share one backdrop; a tap on it closes the open sheet. */}
+      {sheet && <div aria-hidden className="fixed inset-0 z-[44] bg-black/30" onClick={closeSheet} />}
+
+      {/* TRACK SHEET (phone): the header controls that do not fit the narrow
+          track column. Same actions and undo behaviour as the desktop header. */}
+      {sheet === "track" && (() => {
+        const track = project.tracks.find((t) => t.id === sheetTrackId);
+        if (!track) return null;
+        const isAudio = track.kind === "audio" || track.kind === "video";
+        const idx = project.tracks.findIndex((t) => t.id === track.id);
+        const item = "flex h-11 items-center gap-2 rounded-lg px-3 text-sm text-neutral-800 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40";
+        return (
+          <div role="dialog" aria-label={tr("editor.track_options")} className={`${SHEET_CLS} ${SHEET_TOUCH}`}>
+            <div className="px-3">
+              <SheetHeader title={track.name || track.kind} onClose={closeSheet} />
+            </div>
+            <div className="grid min-h-0 flex-1 grid-cols-2 gap-1 overflow-y-auto px-3 pb-3">
+              <button type="button" className={item} disabled={idx === 0} onClick={() => moveTrack(track.id, -1)}>
+                <ChevronUp size={16} /> {tr("editor.move_track_up")}
+              </button>
+              <button type="button" className={item} disabled={idx === project.tracks.length - 1} onClick={() => moveTrack(track.id, 1)}>
+                <ChevronDown size={16} /> {tr("editor.move_track_down_later_tracks_draw_on_top")}
+              </button>
+              <button type="button" className={item} disabled={track.locked} onClick={() => { addClip(track.id); closeSheet(); }}>
+                <Plus size={16} /> {tr("editor.add_clip_at_playhead")}
+              </button>
+              <button type="button" className={item} onClick={() => { duplicateTrack(track.id); closeSheet(); }}>
+                <CopyIcon size={16} /> {tr("editor.duplicate_track_clips_included")}
+              </button>
+              <button type="button" className={item} aria-pressed={!!track.locked} onClick={() => patchTrack(track.id, { locked: !track.locked })}>
+                {track.locked ? <Lock size={16} /> : <Unlock size={16} />} {track.locked ? tr("editor.unlock_track") : tr("editor.lock_track_block_edits")}
+              </button>
+              {track.kind !== "audio" && (
+                <button type="button" className={item} aria-pressed={!!track.hidden} onClick={() => patchTrack(track.id, { hidden: !track.hidden })}>
+                  {track.hidden ? <EyeOff size={16} /> : <Eye size={16} />} {track.hidden ? tr("editor.show_track") : tr("editor.hide_track")}
+                </button>
+              )}
+              {isAudio && (
+                <>
+                  <button type="button" className={item} aria-pressed={!!track.muted} onClick={() => patchTrack(track.id, { muted: !track.muted })}>
+                    {track.muted ? <VolumeX size={16} /> : <Volume2 size={16} />} {track.muted ? tr("editor.unmute") : tr("editor.mute")}
+                  </button>
+                  <button type="button" className={item} aria-pressed={!!track.solo} onClick={() => patchTrack(track.id, { solo: !track.solo })}>
+                    <span className="w-4 text-center text-xs font-bold">S</span> {tr("editor.solo")}
+                  </button>
+                  <label className="col-span-2 flex items-center gap-3 px-3 py-2 text-sm text-neutral-700">
+                    <span className="w-12 shrink-0">{tr("editor.gain")}</span>
+                    <input
+                      type="range"
+                      min={-60}
+                      max={6}
+                      step={1}
+                      value={track.gainDb ?? 0}
+                      onChange={(e) => draftPatchTrack(track.id, { gainDb: parseInt(e.target.value, 10) })}
+                      onPointerUp={commitDraft}
+                      onBlur={commitDraft}
+                      className="h-11 flex-1 accent-emerald-500"
+                    />
+                    <span className="w-10 text-right font-mono text-xs tabular-nums">
+                      {(track.gainDb ?? 0) > 0 ? "+" : ""}
+                      {track.gainDb ?? 0}
+                    </span>
+                  </label>
+                  <label className="col-span-2 flex items-center gap-3 px-3 py-2 text-sm text-neutral-700">
+                    <span className="w-12 shrink-0">{tr("editor.pan")}</span>
+                    <input
+                      type="range"
+                      min={-1}
+                      max={1}
+                      step={0.1}
+                      value={track.pan ?? 0}
+                      onChange={(e) => draftPatchTrack(track.id, { pan: parseFloat(e.target.value) || undefined })}
+                      onPointerUp={commitDraft}
+                      onBlur={commitDraft}
+                      className="h-11 flex-1 accent-violet-500"
+                    />
+                    <span className="w-10 text-right font-mono text-xs tabular-nums">{track.pan ?? 0}</span>
+                  </label>
+                </>
+              )}
+              <button
+                type="button"
+                className={`${item} col-span-2 text-red-600 dark:text-red-400`}
+                disabled={track.locked}
+                onClick={() => {
+                  closeSheet();
+                  if (track.clips.length) setConfirmDeleteTrack(track);
+                  else removeTrack(track.id);
+                }}
+              >
+                <Trash2 size={16} /> {tr("editor.delete_track")}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ---------------------------------------------------------------- */}
       {/* RIGHT CLIP INSPECTOR: consolidates the selected clip's props.     */}
       {/* Collapses to a slim rail; state persisted per-user (localStorage).*/}
       {/* ---------------------------------------------------------------- */}
-      {inspectorOpen ? (
+      {(isPhone ? sheet === "inspector" : inspectorOpen) ? (
         <aside
           aria-label={tr("editor.inspector")}
-          className="relative flex shrink-0 flex-col border-l border-neutral-200 bg-neutral-100"
-          style={{ width: inspectorW }}
+          className={isPhone ? `${SHEET_CLS} ${SHEET_TOUCH}` : "relative flex shrink-0 flex-col border-l border-neutral-200 bg-neutral-100"}
+          style={isPhone ? undefined : { width: inspectorW }}
         >
-          <div
+          {!isPhone && (<div
             onPointerDown={onSideResizeDown("right")}
             onPointerMove={onSideResizeMove}
             onPointerUp={onSideResizeUp}
             title={tr("editor.drag_resize_inspector")}
             className="absolute inset-y-0 -left-0.5 z-20 w-1.5 cursor-col-resize hover:bg-brand-600/60"
-          />
+          />)}
           <div className="flex items-center justify-between border-b border-neutral-200 px-3 py-2">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-700">
               {selected ? tr("editor.clip_inspector") : tr("editor.project_settings")}
@@ -6066,15 +6303,15 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
               onPointerDown={(e) => {
                 if (e.button !== 0) return;
                 railPressRef.current = performance.now();
-                toggleInspector();
+                collapseInspector();
               }}
               onClick={() => {
                 if (performance.now() - railPressRef.current < 500) return;
-                toggleInspector();
+                collapseInspector();
               }}
               className="rounded p-1 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900"
             >
-              <PanelRightClose size={15} className="pointer-events-none" />
+              {isPhone ? <X size={16} className="pointer-events-none" /> : <PanelRightClose size={15} className="pointer-events-none" />}
             </button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -6396,7 +6633,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             )}
           </div>
         </aside>
-      ) : (
+      ) : isPhone ? null : (
         <button
           type="button"
           title={tr("editor.open_the_clip_inspector")}
@@ -8324,6 +8561,24 @@ function TransportButton(props: {
     >
       {props.children}
     </button>
+  );
+}
+
+// Title row of a phone bottom sheet: a grab bar, the title, and a 44px close
+// button. Sticky so it stays put while the sheet body scrolls.
+function SheetHeader({ title, onClose }: { title: string; onClose: () => void }): React.ReactElement {
+  return (
+    <div className="sticky top-0 z-10 flex w-full basis-full items-center justify-between bg-surface pt-1">
+      <span className="truncate text-xs font-semibold uppercase tracking-wide text-neutral-700">{title}</span>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label={tr("editor.close")}
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-neutral-600 hover:bg-neutral-100"
+      >
+        <X size={18} />
+      </button>
+    </div>
   );
 }
 

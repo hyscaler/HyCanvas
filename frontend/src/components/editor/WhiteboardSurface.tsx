@@ -30,6 +30,8 @@ import {
   Lock,
   Maximize2,
   Minimize2,
+  MoreHorizontal,
+  X,
   Minus,
   Network,
   Pause,
@@ -95,6 +97,8 @@ import { getRealtimeClient } from "@/lib/useRealtime";
 import { Canvas } from "./Canvas";
 import { ZoomControl } from "./ZoomControl";
 import { tr } from "@/lib/i18n";
+import { useMediaQuery } from "@/lib/useMediaQuery";
+import { PHONE_QUERY } from "@/lib/useIsPhone";
 import { copyText } from "@/lib/clipboard";
 
 // Ephemeral reaction palette: a fixed set of one-shot pings.
@@ -145,6 +149,9 @@ const TOOLBAR_POS_KEY = "oc-wb-toolbar-pos";
 // First-run onboarding is shown once per user (FR-33), tracked in localStorage
 // (a per-user UI preference, not the shared doc).
 const ONBOARD_KEY = "oc-wb-onboarded";
+// Primary touch target on the phone toolbar (44px). The extra coarse-pointer
+// classes override IconButton's own 40px touch size.
+const PHONE_BTN = "h-11 w-11 pointer-coarse:h-11 pointer-coarse:w-11";
 function readOnboarded(): boolean {
   if (typeof window === "undefined") return true; // SSR: never flash the card
   try {
@@ -457,6 +464,9 @@ function Popover(props: {
   onClose: () => void;
   children: React.ReactNode;
   className?: string;
+  /** Phone layout: the anchor wrappers drop `relative`, so the popover spans
+   *  the toolbar's width just below it and scrolls when it is tall. */
+  phone?: boolean;
 }): React.ReactElement | null {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -480,7 +490,7 @@ function Popover(props: {
       ref={ref}
       className={
         "absolute z-20 mt-2 rounded-xl border border-neutral-200 bg-surface p-3 shadow-xl " +
-        (props.className ?? "")
+        (props.phone ? "inset-x-0 top-full max-h-[60dvh] overflow-y-auto" : (props.className ?? ""))
       }
     >
       {props.children}
@@ -634,6 +644,72 @@ export function WhiteboardSurface(props: {
       /* ignore quota/availability */
     }
   }, []);
+
+  // Phone layout: the toolbar starts as one compact row of the core tools
+  // (sticky, text, pen, eraser) with a More toggle that reveals the rest, it
+  // is pinned top-start instead of draggable, and first-run tips shrink to a
+  // chip. Desktop and tablet keep the full floating toolbar.
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  const [toolsExpanded, setToolsExpanded] = useState(false);
+  const showMore = !isPhone || toolsExpanded;
+  const phoneBtn = isPhone ? PHONE_BTN : undefined;
+  // Anchor wrapper for a toolbar popover. On a phone it drops `relative`, so
+  // the popover spans the toolbar's width instead of running off the screen.
+  const anchorCls = isPhone ? "" : "relative";
+
+  // Frame the board for a phone once, on open. The generic fit shows the
+  // whole 1920px artboard at roughly 15%, where nothing is legible. Instead,
+  // frame the existing content, or on an empty board fit the page height so
+  // a new sticky is a readable size; the infinite dot grid fills the rest.
+  // The band under the top toolbar is left out of the framing. A ?view= or
+  // ?focus= deep link frames itself and wins.
+  const phoneFramedRef = useRef(false);
+  useEffect(() => {
+    if (!isPhone || phoneFramedRef.current || !router.isReady) return;
+    if (typeof router.query.view === "string" || typeof router.query.focus === "string") return;
+    let raf = 0;
+    let tries = 0;
+    const frame = () => {
+      const st = useEditor.getState();
+      const { width: vw, height: vh } = st.viewportSize;
+      const page = st.doc.pages[0];
+      if (!vw || !vh || !page) {
+        if (++tries < 120) raf = requestAnimationFrame(frame);
+        return;
+      }
+      phoneFramedRef.current = true;
+      if (st.activePage !== 0) return;
+      const top = 64; // the compact toolbar row
+      const availH = Math.max(1, vh - top);
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const n of page.children as Node[]) {
+        if (n.type === "connector") continue;
+        const { x, y } = nodeXY(n);
+        const { width, height } = nodeSize(n);
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x + width);
+        maxY = Math.max(maxY, y + height);
+      }
+      const hasContent = Number.isFinite(minX);
+      const b = hasContent
+        ? { x: minX, y: minY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) }
+        : { x: 0, y: 0, width: page.width, height: page.height };
+      const zoom = hasContent
+        ? Math.min(1, Math.min(vw / b.width, availH / b.height) * 0.85)
+        : Math.min(0.5, (availH / b.height) * 0.9);
+      st.setViewport({
+        zoom,
+        panX: b.x + b.width / 2 - vw / 2 / zoom,
+        panY: b.y + b.height / 2 - (top + availH / 2) / zoom,
+      });
+    };
+    // Two frames: the canvas runs its own fit on its first sized render.
+    raf = requestAnimationFrame(() => {
+      raf = requestAnimationFrame(frame);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [isPhone, router.isReady, router.query.view, router.query.focus]);
 
   // Draggable floating toolbar (so the user can move it out of the way). Position
   // is null until first dragged (then it defaults to the top-left); the grip
@@ -1206,7 +1282,51 @@ export function WhiteboardSurface(props: {
 
       {/* First-run guided start (FR-33): one-time, on an empty board. Three quick
           starts plus a pointer to the facilitation tools, dismissed per-user. */}
-      {isEmpty && !onboarded && (
+      {/* On a phone the welcome card shrinks to a dismissible chip at the
+          bottom-start of the board, clear of the toolbar and the zoom pill. */}
+      {isEmpty && !onboarded && isPhone && (
+        <div
+          role="group"
+          aria-label={tr("editor.welcome_to_your_whiteboard")}
+          className="absolute bottom-3 start-3 z-10 flex max-w-[calc(100%-1.5rem)] items-center gap-0.5 rounded-full border border-neutral-200 bg-surface/95 py-0.5 ps-3 pe-0.5 shadow-md backdrop-blur"
+        >
+          <span className="me-1 truncate text-xs font-medium text-neutral-700">{tr("editor.quick_start")}</span>
+          <button
+            type="button"
+            onClick={() => { addSticky(); dismissOnboarding(); }}
+            aria-label={tr("editor.add_a_sticky")}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-brand-ink hover:bg-neutral-100"
+          >
+            <StickyNote size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={() => { dismissOnboarding(); setToolsExpanded(true); setMenu("templates"); }}
+            aria-label={tr("editor.use_a_template")}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-brand-ink hover:bg-neutral-100"
+          >
+            <LayoutTemplate size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={() => { pickInk("pen"); dismissOnboarding(); }}
+            aria-label={tr("editor.draw")}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-brand-ink hover:bg-neutral-100"
+          >
+            <Pen size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={dismissOnboarding}
+            aria-label={tr("editor.dismiss")}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-neutral-500 hover:bg-neutral-100"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {isEmpty && !onboarded && !isPhone && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center p-4">
           <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-neutral-200 bg-surface/95 p-5 shadow-xl backdrop-blur">
             <div className="flex items-start justify-between gap-3">
@@ -1301,12 +1421,25 @@ export function WhiteboardSurface(props: {
           events on its own controls; draggable by the grip handle (defaults to
           the top-left until moved). On phones it wraps onto more rows rather
           than running off the screen; wrapping, unlike a scroll box, does not
-          clip the toolbar's own popovers. */}
+          clip the toolbar's own popovers. On a phone it is pinned top-start,
+          leaves the top-end corner to the zoom pill, and shows the core tools
+          plus a More toggle; its raw buttons grow to 44px touch targets. */}
       <div
         ref={toolbarRef}
-        className="absolute z-10 flex items-center gap-1 rounded-2xl border border-neutral-200 bg-surface/95 p-1.5 shadow-lg backdrop-blur max-md:max-w-[calc(100%-1.5rem)] max-md:flex-wrap"
-        style={toolbarPos ? { left: toolbarPos.x, top: toolbarPos.y } : { left: 12, top: 12 }}
+        data-wb-toolbar
+        className={
+          "absolute z-10 flex items-center rounded-2xl border border-neutral-200 bg-surface/95 shadow-lg backdrop-blur max-md:max-w-[calc(100%-1.5rem)] max-md:flex-wrap " +
+          (isPhone ? "gap-0.5 p-1 [&>div>button]:min-h-11 [&>div>button]:min-w-11" : "gap-1 p-1.5")
+        }
+        style={
+          isPhone
+            ? { insetInlineStart: 8, top: 8, maxWidth: "calc(100% - 7rem)" }
+            : toolbarPos
+              ? { left: toolbarPos.x, top: toolbarPos.y }
+              : { left: 12, top: 12 }
+        }
       >
+        {!isPhone && (
         <button
           onPointerDown={onToolbarHandleDown}
           onPointerMove={onToolbarHandleMove}
@@ -1317,30 +1450,43 @@ export function WhiteboardSurface(props: {
         >
           <GripVertical size={16} />
         </button>
-        <IconButton onClick={addSticky} tooltip={tr("editor.add_sticky_note_s")} aria-label={tr("editor.add_sticky_note")}>
+        )}
+        <IconButton className={phoneBtn} onClick={addSticky} tooltip={tr("editor.add_sticky_note_s")} aria-label={tr("editor.add_sticky_note")}>
           <StickyNote size={18} />
         </IconButton>
-        <IconButton onClick={addStickyGrid} tooltip={tr("editor.add_a_grid_of_sticky_notes")} aria-label={tr("editor.add_sticky_grid")}>
-          <LayoutGrid size={18} />
-        </IconButton>
-        <IconButton onClick={addFrame} tooltip={tr("editor.add_frame_section_f")} aria-label={tr("editor.add_frame")}>
-          <LayoutTemplate size={18} />
-        </IconButton>
-        <IconButton onClick={addTextBox} tooltip={tr("editor.add_text_t")} aria-label={tr("editor.add_text")}>
+        {showMore && (
+          <>
+            <IconButton className={phoneBtn} onClick={addStickyGrid} tooltip={tr("editor.add_a_grid_of_sticky_notes")} aria-label={tr("editor.add_sticky_grid")}>
+              <LayoutGrid size={18} />
+            </IconButton>
+            <IconButton className={phoneBtn} onClick={addFrame} tooltip={tr("editor.add_frame_section_f")} aria-label={tr("editor.add_frame")}>
+              <LayoutTemplate size={18} />
+            </IconButton>
+          </>
+        )}
+        <IconButton className={phoneBtn} onClick={addTextBox} tooltip={tr("editor.add_text_t")} aria-label={tr("editor.add_text")}>
           <Type size={18} />
         </IconButton>
 
         {/* Ink tools (F30): pen / marker / highlighter. Each selects the board
-            `ink` tool and sets the brush mode; drawing commits an ink node. */}
+            `ink` tool and sets the brush mode; drawing commits an ink node.
+            On a phone a second tap on the active pen returns to select, since
+            there is no keyboard to leave ink mode with. */}
         <IconButton
+          className={phoneBtn}
           active={tool === "ink" && inkMode === "pen"}
-          onClick={() => pickInk("pen")}
+          onClick={() =>
+            isPhone && tool === "ink" && inkMode === "pen" ? useEditor.getState().setTool("select") : pickInk("pen")
+          }
           tooltip={tr("editor.pen_p_thin_opaque")}
           aria-label={tr("editor.pen")}
         >
           <Pen size={18} />
         </IconButton>
+        {showMore && (
+          <>
         <IconButton
+          className={phoneBtn}
           active={tool === "ink" && inkMode === "marker"}
           onClick={() => pickInk("marker")}
           tooltip={tr("editor.marker_thick_opaque")}
@@ -1349,6 +1495,7 @@ export function WhiteboardSurface(props: {
           <Brush size={18} />
         </IconButton>
         <IconButton
+          className={phoneBtn}
           active={tool === "ink" && inkMode === "highlighter"}
           onClick={() => pickInk("highlighter")}
           tooltip={tr("editor.highlighter_wide_semi_transparent")}
@@ -1357,6 +1504,7 @@ export function WhiteboardSurface(props: {
           <Highlighter size={18} />
         </IconButton>
         <IconButton
+          className={phoneBtn}
           active={tool === "laser"}
           onClick={() => useEditor.getState().setTool(tool === "laser" ? "select" : "laser")}
           tooltip={tr("editor.laser_pointer_l_ephemeral_never_saved")}
@@ -1364,7 +1512,10 @@ export function WhiteboardSurface(props: {
         >
           <Pointer size={18} />
         </IconButton>
+          </>
+        )}
         <IconButton
+          className={phoneBtn}
           active={tool === "eraser"}
           onClick={() => useEditor.getState().setTool(tool === "eraser" ? "select" : "eraser")}
           tooltip={tr("editor.eraser_click_or_drag_over_strokes_objects_to")}
@@ -1373,10 +1524,12 @@ export function WhiteboardSurface(props: {
           <Eraser size={18} />
         </IconButton>
 
+        {showMore && (
+          <>
         {/* Emoji / vote stamp (FR-21): pick a glyph, then click the board to drop
             stamps for dot-voting and sentiment. The button shows the active glyph;
             the popover is the stamp wheel. */}
-        <div className="relative">
+        <div className={anchorCls}>
           <button
             type="button"
             onClick={() => {
@@ -1391,7 +1544,7 @@ export function WhiteboardSurface(props: {
           >
             <span aria-hidden>{stampGlyph || "👍"}</span>
           </button>
-          <Popover open={menu === "stamp"} onClose={closeMenu} className="left-0 w-44">
+          <Popover phone={isPhone} open={menu === "stamp"} onClose={closeMenu} className="left-0 w-44">
             <div className="grid grid-cols-6 gap-1 p-1">
               {STAMP_GLYPHS.map((g) => (
                 <button
@@ -1414,6 +1567,7 @@ export function WhiteboardSurface(props: {
         {canFacilitate && (
           <>
             <IconButton
+              className={phoneBtn}
               active={presentingSelf}
               onClick={togglePresent}
               tooltip={presentingSelf ? tr("editor.stop_presenting") : tr("editor.present_to_everyone_drive_their_view")}
@@ -1422,6 +1576,7 @@ export function WhiteboardSurface(props: {
               <Presentation size={18} />
             </IconButton>
             <IconButton
+              className={phoneBtn}
               onClick={summonEveryone}
               tooltip={tr("editor.bring_everyone_to_my_view")}
               aria-label={tr("editor.bring_everyone_to_my_view")}
@@ -1429,6 +1584,7 @@ export function WhiteboardSurface(props: {
               <Users size={18} />
             </IconButton>
             <IconButton
+              className={phoneBtn}
               active={privateActive}
               onClick={privateActive ? revealPrivate : startPrivate}
               tooltip={privateActive ? tr("editor.reveal_end_private_mode") : tr("editor.private_mode_hide_others_new_notes_until_rev")}
@@ -1437,6 +1593,7 @@ export function WhiteboardSurface(props: {
               <EyeOff size={18} />
             </IconButton>
             <IconButton
+              className={phoneBtn}
               active={amFacilitator}
               disabled={otherFacilitator}
               onClick={toggleFacilitate}
@@ -1447,6 +1604,7 @@ export function WhiteboardSurface(props: {
             </IconButton>
             {canProtect && (
               <IconButton
+                className={phoneBtn}
                 active={selProtected}
                 disabled={selection.length === 0}
                 onClick={toggleProtect}
@@ -1460,8 +1618,9 @@ export function WhiteboardSurface(props: {
         )}
 
         {/* Shapes menu */}
-        <div className="relative">
+        <div className={anchorCls}>
           <IconButton
+            className={phoneBtn}
             active={menu === "shapes"}
             onClick={() => setMenu(menu === "shapes" ? null : "shapes")}
             tooltip={tr("editor.add_shape")}
@@ -1469,7 +1628,7 @@ export function WhiteboardSurface(props: {
           >
             <Square size={18} />
           </IconButton>
-          <Popover open={menu === "shapes"} onClose={closeMenu} className="left-0 w-40">
+          <Popover phone={isPhone} open={menu === "shapes"} onClose={closeMenu} className="left-0 w-40">
             <button
               type="button"
               className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
@@ -1496,7 +1655,7 @@ export function WhiteboardSurface(props: {
         <span className="mx-1 h-6 w-px bg-neutral-200" aria-hidden />
 
         {/* Templates menu */}
-        <div className="relative">
+        <div className={anchorCls}>
           <button
             type="button"
             className={
@@ -1510,7 +1669,7 @@ export function WhiteboardSurface(props: {
             {tr("editor.templates")}
             <ChevronDown size={14} />
           </button>
-          <Popover open={menu === "templates"} onClose={closeMenu} className="left-0 w-56">
+          <Popover phone={isPhone} open={menu === "templates"} onClose={closeMenu} className="left-0 w-56">
             <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">
               {tr("editor.templates")}
             </p>
@@ -1536,6 +1695,7 @@ export function WhiteboardSurface(props: {
 
         {/* Connect: join the two selected nodes with an elbow connector. */}
         <IconButton
+          className={phoneBtn}
           onClick={addConnector}
           disabled={!canConnect}
           tooltip={canConnect ? tr("editor.connect_the_two_selected_nodes_c") : tr("editor.select_two_nodes_to_connect_or_drag_a_nodes")}
@@ -1553,6 +1713,7 @@ export function WhiteboardSurface(props: {
               { route: "curved" as const, icon: Spline, label: tr("editor.curved") },
             ]).map(({ route, icon: Icon, label }) => (
               <IconButton
+                className={phoneBtn}
                 key={route}
                 active={selectedRoute === route}
                 onClick={() => useEditor.getState().setConnectorRoute(route)}
@@ -1569,16 +1730,17 @@ export function WhiteboardSurface(props: {
 
         {/* Auto-layout */}
         <IconButton
+          className={phoneBtn}
           onClick={runFlowchart}
           tooltip={tr("editor.auto_layout_flowchart_arranges_connected_nod")}
           aria-label={tr("editor.auto_layout_flowchart")}
         >
           <Workflow size={18} />
         </IconButton>
-        <IconButton onClick={runMindMap} tooltip={tr("editor.mind_map_layout_arranges_connected_nodes")} aria-label={tr("editor.mind_map_layout")}>
+        <IconButton className={phoneBtn} onClick={runMindMap} tooltip={tr("editor.mind_map_layout_arranges_connected_nodes")} aria-label={tr("editor.mind_map_layout")}>
           <Network size={18} />
         </IconButton>
-        <IconButton onClick={copyAsMermaid} tooltip={tr("editor.copy_as_mermaid_selection_or_the_whole_board")} aria-label={tr("editor.copy_as_mermaid_code")}>
+        <IconButton className={phoneBtn} onClick={copyAsMermaid} tooltip={tr("editor.copy_as_mermaid_selection_or_the_whole_board")} aria-label={tr("editor.copy_as_mermaid_code")}>
           <FileCode2 size={18} />
         </IconButton>
 
@@ -1586,6 +1748,7 @@ export function WhiteboardSurface(props: {
           <>
             <span className="mx-1 h-6 w-px bg-neutral-200" aria-hidden />
             <IconButton
+              className={phoneBtn}
               onClick={convertToDeck}
               disabled={converting}
               tooltip={tr("editor.convert_this_board_into_a_presentation_deck")}
@@ -1601,6 +1764,7 @@ export function WhiteboardSurface(props: {
         {/* Focus / full-screen: hide the editor chrome so only the board canvas
             and this toolbar remain (also drives the browser Fullscreen API). */}
         <IconButton
+          className={phoneBtn}
           active={boardFocus}
           onClick={toggleBoardFocus}
           tooltip={boardFocus ? tr("editor.exit_focus_mode_esc") : tr("editor.focus_mode_hide_panels_full_screen_2")}
@@ -1614,7 +1778,7 @@ export function WhiteboardSurface(props: {
         {/* Participants + moderation (FR-32): editors can remove/ban a participant
             (server-enforced kick + rejoin ban). Shown only to editors with peers. */}
         {canFacilitate && Object.keys(peers).length > 0 && (
-          <div className="relative">
+          <div className={anchorCls}>
             <button
               type="button"
               className={
@@ -1626,7 +1790,7 @@ export function WhiteboardSurface(props: {
             >
               <UserX size={16} />
             </button>
-            <Popover open={menu === "participants"} onClose={closeMenu} className="left-0 w-64">
+            <Popover phone={isPhone} open={menu === "participants"} onClose={closeMenu} className="left-0 w-64">
               <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
                 {tr("editor.participants")}
               </p>
@@ -1660,7 +1824,7 @@ export function WhiteboardSurface(props: {
         )}
 
         {/* Saved views + agenda + deep-links (FR-3, FR-34) */}
-        <div className="relative">
+        <div className={anchorCls}>
           <button
             type="button"
             className={
@@ -1672,7 +1836,7 @@ export function WhiteboardSurface(props: {
           >
             <Bookmark size={16} />
           </button>
-          <Popover open={menu === "views"} onClose={closeMenu} className="left-0 w-64">
+          <Popover phone={isPhone} open={menu === "views"} onClose={closeMenu} className="left-0 w-64">
             <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
               {tr("editor.saved_views")}
             </p>
@@ -1713,7 +1877,7 @@ export function WhiteboardSurface(props: {
         </div>
 
         {/* Timer */}
-        <div className="relative">
+        <div className={anchorCls}>
           <button
             type="button"
             className={
@@ -1726,7 +1890,7 @@ export function WhiteboardSurface(props: {
             <TimerIcon size={16} />
             {fmt2(remMin)}:{fmt2(remSec)}
           </button>
-          <Popover open={menu === "timer"} onClose={closeMenu} className="left-0 w-64">
+          <Popover phone={isPhone} open={menu === "timer"} onClose={closeMenu} className="left-0 w-64">
             <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
               {tr("editor.countdown_timer")}
             </p>
@@ -1764,7 +1928,7 @@ export function WhiteboardSurface(props: {
         </div>
 
         {/* Dot voting */}
-        <div className="relative">
+        <div className={anchorCls}>
           <button
             type="button"
             className={
@@ -1782,7 +1946,7 @@ export function WhiteboardSurface(props: {
               </span>
             )}
           </button>
-          <Popover open={menu === "vote"} onClose={closeMenu} className="left-0 w-72">
+          <Popover phone={isPhone} open={menu === "vote"} onClose={closeMenu} className="left-0 w-72">
             <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
               Dot voting{canServerVote ? "" : " (offline)"}
             </p>
@@ -1869,7 +2033,25 @@ export function WhiteboardSurface(props: {
             </button>
           ))}
         </div>
+          </>
+        )}
 
+        {/* Phone only: reveal or fold the rest of the tools. */}
+        {isPhone && (
+          <IconButton
+            className={phoneBtn}
+            active={toolsExpanded}
+            onClick={() => {
+              setToolsExpanded((v) => !v);
+              setMenu(null);
+            }}
+            aria-expanded={toolsExpanded}
+            aria-label={toolsExpanded ? tr("editor.fewer_tools") : tr("editor.more_tools")}
+            title={toolsExpanded ? tr("editor.fewer_tools") : tr("editor.more_tools")}
+          >
+            {toolsExpanded ? <X size={18} /> : <MoreHorizontal size={18} />}
+          </IconButton>
+        )}
       </div>
 
       {/* Local reaction echo: the sender's own emoji floats up from the bottom

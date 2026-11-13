@@ -1,14 +1,16 @@
-// Vertical tool rail + the active slide-out panel. Switches
+// Tool rail + the active slide-out panel (a bottom tab bar and bottom sheet
+// on a phone in portrait). Switches
 // between Elements, Text, Uploads, Stock, and Layers.
 
 import { useCallback, useEffect, useState } from "react";
-import { Shapes, Type, Upload, ImagePlus, Layers, Sparkles, LayoutGrid, LayoutTemplate, Palette } from "lucide-react";
+import { Shapes, Type, Upload, ImagePlus, Layers, Sparkles, LayoutGrid, LayoutTemplate, Palette, X } from "lucide-react";
 import { LayerPanel } from "./LayerPanel";
 import { ReadingOrderPane } from "./ReadingOrderPane";
 import { ElementsPanel, TextPanel, UploadsPanel, StockPanel, AppsPanel, AiPanel, TemplatesPanel, PanelShell } from "./EditorPanels";
 import { BrandPanel } from "./BrandPanel";
 import { useEditorFileDropTarget } from "./EditorFileDrop";
 import { subscribeAiBusy } from "@/lib/aiRequests";
+import { useEditor } from "@/store/editor";
 import { tr } from "@/lib/i18n";
 
 type Tool = "templates" | "elements" | "text" | "ai" | "uploads" | "stock" | "apps" | "brand" | "layers";
@@ -25,12 +27,70 @@ const tools = (): { id: Tool; icon: typeof Shapes; label: string }[] => [
   { id: "layers", icon: Layers, label: tr("editor.layers") },
 ];
 
-export function ToolRail({ workspaceId, designId = null, overlay = false, defaultCollapsed = false, kind = "design", openTool }: { workspaceId: string | null; designId?: string | null; overlay?: boolean; defaultCollapsed?: boolean; kind?: "design" | "whiteboard"; openTool?: Tool }) {
+// Tools whose panels exist to insert something: on a phone the sheet closes
+// once the insert lands, so the new element is visible instead of hidden
+// under the sheet that created it.
+const INSERT_TOOLS: ReadonlySet<Tool> = new Set(["templates", "elements", "text", "uploads", "stock", "apps"]);
+
+export function ToolRail({
+  workspaceId,
+  designId = null,
+  overlay = false,
+  defaultCollapsed = false,
+  kind = "design",
+  openTool,
+  phone = null,
+  onPanelOpen,
+  closeSignal = 0,
+  leading,
+}: {
+  workspaceId: string | null;
+  designId?: string | null;
+  overlay?: boolean;
+  defaultCollapsed?: boolean;
+  kind?: "design" | "whiteboard";
+  openTool?: Tool;
+  /** Phone layout: a bottom tab bar with bottom sheets in portrait, a slim
+   *  icon rail with side sheets in landscape. null keeps the desktop rail. */
+  phone?: "portrait" | "landscape" | null;
+  /** Called when a panel opens, so the shell can close other overlays. */
+  onPanelOpen?: () => void;
+  /** Bumped by the shell to close the open panel (another overlay opened). */
+  closeSignal?: number;
+  /** An extra tab rendered first on a phone (the shell's Edit tab, which opens
+   *  the properties sheet). */
+  leading?: { icon: typeof Shapes; label: string; active: boolean; onClick: () => void };
+}) {
   // null = panel collapsed (just the icon rail shows). Clicking the active tab
   // toggles it closed. Boards open with the panel collapsed for a canvas-first
   // start; the icon rail stays so any tool is one click away. openTool lets the
-  // route decide (arriving from the dashboard with a brief opens AI).
-  const [active, setActive] = useState<Tool | null>(openTool ?? (defaultCollapsed ? null : "elements"));
+  // route decide (arriving from the dashboard with a brief opens AI). A phone
+  // always starts canvas-first: an open panel there covers the whole canvas.
+  const [active, setActive] = useState<Tool | null>(openTool ?? (defaultCollapsed || phone ? null : "elements"));
+  // Tell the shell a panel opened so it can close its own overlays.
+  useEffect(() => {
+    if (active) onPanelOpen?.();
+  }, [active, onPanelOpen]);
+  // The shell asks the rail to close when it opens another overlay (the
+  // properties sheet), so only one sheet covers the canvas at a time.
+  const [seenSignal, setSeenSignal] = useState(closeSignal);
+  if (seenSignal !== closeSignal) {
+    setSeenSignal(closeSignal);
+    setActive(null);
+  }
+  // On a phone an insert panel closes as soon as its insert lands, which the
+  // store reports as a new selection.
+  useEffect(() => {
+    if (!phone || !active || !INSERT_TOOLS.has(active)) return;
+    let prev = useEditor.getState().selection;
+    return useEditor.subscribe((s) => {
+      if (s.selection !== prev) {
+        const grew = s.selection.length > 0 && s.selection.some((id) => !prev.includes(id));
+        prev = s.selection;
+        if (grew) setActive(null);
+      }
+    });
+  }, [phone, active]);
   // The AI panel stays mounted once opened (its conversation must survive a
   // tool switch), but mounting it before that would make every editor load pay
   // for its provider-config and session-history fetches even when the user
@@ -80,17 +140,145 @@ export function ToolRail({ workspaceId, designId = null, overlay = false, defaul
     }
   })();
 
+  const visibleTools = tools().filter((t) => kind === "design" || t.id !== "templates");
+  const toolLabel = (t: { id: Tool; label: string }) =>
+    t.id === "ai" && aiBusy ? tr("editor.ai_working") : active === t.id ? `Hide ${t.label}` : `Open ${t.label}`;
+  const busyDot = (
+    <span className="absolute -end-1.5 -top-0.5 flex h-2 w-2">
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-75" />
+      <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-600" />
+    </span>
+  );
+
+  const sheetFrame =
+    "absolute inset-x-0 bottom-full z-30 flex h-[min(58dvh,30rem)] flex-col rounded-t-2xl border-t border-neutral-200 bg-surface shadow-2xl";
+  // The AI panel is a CONVERSATION with in-flight work (a planner call, a
+  // pending confirm, a running generation): it stays MOUNTED at one stable
+  // tree position (the aside's first child, in every layout) and is hidden,
+  // never unmounted, while another tool is active, the viewport crosses the
+  // overlay breakpoint, or a phone rotates. Unmounting would silently drop the
+  // busy state, the confirm gate, and the response of a message already sent.
+  const aiPanel = (shownClass: string, extra?: React.ReactNode) =>
+    aiUsed ? (
+      <div className={active === "ai" ? shownClass : "hidden"}>
+        <AiPanel workspaceId={workspaceId} designId={designId} />
+        {extra}
+      </div>
+    ) : null;
+
+  if (phone === "portrait") {
+    // Phone portrait: the tools are a bottom tab bar and the active panel is a
+    // bottom sheet over the lower part of the canvas, so the page stays in
+    // view above it and every tool is reachable with a thumb.
+    const activeTool = visibleTools.find((t) => t.id === active);
+    const sheet = (body: React.ReactNode) => (
+      <div
+        role="dialog"
+        aria-label={activeTool?.label}
+        className={sheetFrame}
+      >
+        <div className="flex shrink-0 items-center justify-between ps-4 pe-1 pt-1">
+          <span aria-hidden className="h-1 w-10 rounded-full bg-neutral-300" />
+          <button
+            type="button"
+            onClick={() => setActive(null)}
+            aria-label={tr("editor.close")}
+            className="grid h-11 w-11 place-items-center rounded-lg text-neutral-500 hover:bg-neutral-100"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="oc-sheet min-h-0 flex-1">{body}</div>
+      </div>
+    );
+    return (
+      <aside aria-label={tr("editor.editor_tools")} className="relative order-last w-full shrink-0">
+        {aiPanel(
+          `${sheetFrame} oc-sheet pt-11`,
+          <button
+            type="button"
+            onClick={() => setActive(null)}
+            aria-label={tr("editor.close")}
+            className="absolute end-1 top-1 grid h-11 w-11 place-items-center rounded-lg text-neutral-500 hover:bg-neutral-100"
+          >
+            <X size={18} />
+          </button>,
+        )}
+        {panel && sheet(panel)}
+        <div
+          role="toolbar"
+          aria-label={tr("editor.editor_tools")}
+          aria-orientation="horizontal"
+          // A fixed height (--oc-tabbar-h) so the shell can stack its own
+          // sheet exactly on top of the bar.
+          className="oc-scroll-none flex h-[var(--oc-tabbar-h)] items-stretch gap-0.5 overflow-x-auto border-t border-neutral-200 bg-surface px-1 pb-[env(safe-area-inset-bottom)]"
+        >
+          {leading && (
+            <button
+              type="button"
+              onClick={leading.onClick}
+              aria-pressed={leading.active}
+              className={`my-1 flex min-w-[3.75rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                leading.active ? "bg-brand-50 text-brand-ink" : "text-neutral-500"
+              }`}
+            >
+              <leading.icon size={20} />
+              {leading.label}
+            </button>
+          )}
+          {visibleTools.map((t) => {
+            const isActive = active === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActive((cur) => (cur === t.id ? null : t.id))}
+                aria-label={toolLabel(t)}
+                aria-pressed={isActive}
+                className={`my-1 flex min-w-[3.75rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                  isActive ? "bg-brand-50 text-brand-ink" : "text-neutral-500"
+                }`}
+              >
+                <span className="relative">
+                  <t.icon size={20} />
+                  {t.id === "ai" && aiBusy && busyDot}
+                </span>
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      </aside>
+    );
+  }
+
+  const slim = phone === "landscape";
   return (
     // A landmark, so the rail and its slide-out panel are reachable as a
     // region rather than announced as loose content outside any landmark.
     <aside aria-label={tr("editor.editor_tools")} className="relative flex h-full shrink-0">
+      {aiPanel(overlay ? "absolute start-full top-0 z-30 h-full shadow-xl" : "contents")}
       <div
         role="toolbar"
         aria-label={tr("editor.editor_tools")}
         aria-orientation="vertical"
-        className="flex w-[68px] shrink-0 flex-col items-center gap-1 border-e max-lg:overflow-y-auto border-neutral-200 bg-surface py-3"
+        // order-first: the AI panel is the aside's first child (see aiPanel)
+        // but the rail must still lead the row.
+        className={`order-first flex shrink-0 flex-col items-center gap-1 border-e max-lg:overflow-y-auto border-neutral-200 bg-surface ${slim ? "oc-scroll-none w-[52px] py-1" : "w-[68px] py-3"}`}
       >
-        {tools().filter((t) => kind === "design" || t.id !== "templates").map((t) => {
+        {slim && leading && (
+          <button
+            type="button"
+            onClick={leading.onClick}
+            title={leading.label}
+            aria-label={leading.label}
+            aria-pressed={leading.active}
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${leading.active ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}
+          >
+            <leading.icon size={20} />
+          </button>
+        )}
+        {visibleTools.map((t) => {
           const isActive = active === t.id;
           return (
             <button
@@ -98,22 +286,19 @@ export function ToolRail({ workspaceId, designId = null, overlay = false, defaul
               type="button"
               onClick={() => setActive((cur) => (cur === t.id ? null : t.id))}
               title={isActive ? `Hide ${t.label}` : t.label}
-              aria-label={t.id === "ai" && aiBusy ? tr("editor.ai_working") : isActive ? `Hide ${t.label}` : `Open ${t.label}`}
+              aria-label={toolLabel(t)}
               aria-pressed={isActive}
-              className={`flex w-14 flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 ${
-                isActive ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"
-              }`}
+              // A phone in landscape has the height of a toolbar to spare, not
+              // a column: icon-only 44px targets so every tool fits or scrolls.
+              className={`flex shrink-0 flex-col items-center rounded-xl text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 ${
+                slim ? "h-11 w-11 justify-center" : "w-14 gap-1 py-2"
+              } ${isActive ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}
             >
               <span className="relative">
                 <t.icon size={20} />
-                {t.id === "ai" && aiBusy && (
-                  <span className="absolute -end-1.5 -top-0.5 flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-600" />
-                  </span>
-                )}
+                {t.id === "ai" && aiBusy && busyDot}
               </span>
-              {t.label}
+              {!slim && t.label}
             </button>
           );
         })}
@@ -125,17 +310,6 @@ export function ToolRail({ workspaceId, designId = null, overlay = false, defaul
         <div className="absolute start-full top-0 z-30 h-full shadow-xl">{panel}</div>
       ) : (
         panel
-      )}
-      {/* The AI panel is a CONVERSATION with in-flight work (a planner call, a
-          pending confirm, a running generation): it stays MOUNTED at this one
-          stable tree position and is hidden, never unmounted, while another
-          tool is active or the viewport crosses the overlay breakpoint -
-          unmounting would silently drop the busy state, the confirm gate, and
-          the response of a message already sent. */}
-      {aiUsed && (
-        <div className={active === "ai" ? (overlay ? "absolute start-full top-0 z-30 h-full shadow-xl" : "contents") : "hidden"}>
-          <AiPanel workspaceId={workspaceId} designId={designId} />
-        </div>
       )}
     </aside>
   );

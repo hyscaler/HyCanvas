@@ -1,5 +1,5 @@
-// Web push subscription helper for the browser. Registers the
-// service worker (/sw.js, shipped from public/), requests Notification
+// Web push subscription helper for the browser. Uses the app's single
+// service worker registration (lib/sw.ts), requests Notification
 // permission, fetches the public VAPID key from the backend (so no build-time
 // env is needed), subscribes via the PushManager, and POSTs the subscription to
 // the API. Also exposes the current device state and an unsubscribe path. Every
@@ -8,6 +8,7 @@
 
 import { oc } from "@/lib/sdk";
 import { tr } from "@/lib/i18n";
+import { existingRegistration, readyRegistration } from "@/lib/sw";
 
 /** The push capability state for this device, surfaced in the settings UI. */
 export type PushState =
@@ -40,14 +41,6 @@ function urlBase64ToUint8Array(base64: string): ArrayBuffer {
   return buffer;
 }
 
-/** Register the service worker once and return its ready registration. */
-async function getRegistration(): Promise<ServiceWorkerRegistration> {
-  const existing = await navigator.serviceWorker.getRegistration("/sw.js");
-  if (existing) return existing;
-  await navigator.serviceWorker.register("/sw.js");
-  return navigator.serviceWorker.ready;
-}
-
 /** Map a PushSubscription to the API body (endpoint + base64 keys). */
 function toApiSubscription(
   sub: PushSubscription,
@@ -74,7 +67,7 @@ export async function getPushState(): Promise<PushState> {
   if (!key) return "unconfigured";
   if (Notification.permission === "denied") return "denied";
   try {
-    const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+    const reg = await existingRegistration();
     const sub = reg ? await reg.pushManager.getSubscription() : null;
     if (sub) return "subscribed";
   } catch {
@@ -84,7 +77,7 @@ export async function getPushState(): Promise<PushState> {
 }
 
 /**
- * Enable push on this device: register the SW, request permission, fetch the
+ * Enable push on this device: ensure the SW is registered, request permission, fetch the
  * VAPID key, subscribe, and store the subscription server-side. Returns the
  * resulting state. Throws only on an unexpected failure; "denied"/"unsupported"/
  * "unconfigured" are returned as states so the caller can message the user.
@@ -99,7 +92,7 @@ export async function enablePush(): Promise<PushState> {
     return permission === "denied" ? "denied" : "default";
   }
 
-  const reg = await getRegistration();
+  const reg = await readyRegistration();
   // Reuse an existing subscription if present, else create one.
   let sub = await reg.pushManager.getSubscription();
   if (!sub) {
@@ -121,7 +114,7 @@ export async function enablePush(): Promise<PushState> {
 export async function disablePush(): Promise<PushState> {
   if (!isPushSupported()) return "unsupported";
   try {
-    const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+    const reg = await existingRegistration();
     const sub = reg ? await reg.pushManager.getSubscription() : null;
     if (sub) {
       const endpoint = sub.endpoint;
