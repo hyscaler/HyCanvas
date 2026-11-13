@@ -5,7 +5,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -75,7 +75,9 @@ func mountStaticFS(r chi.Router, root http.FileSystem, gaID string) {
 			return
 		}
 
-		clean := filepath.Clean("/" + strings.TrimPrefix(p, "/"))
+		// URL paths always use "/": path.Clean, not filepath.Clean, which
+		// rewrites them with backslashes on Windows so no file is ever found.
+		clean := path.Clean("/" + strings.TrimPrefix(p, "/"))
 		if clean == "/" {
 			serve("/index.html")
 			return
@@ -296,7 +298,7 @@ type localesOverlay struct {
 const localesPrefix = "/locales/"
 
 func (o localesOverlay) Open(name string) (http.File, error) {
-	clean := filepath.Clean("/" + strings.TrimPrefix(name, "/"))
+	clean := path.Clean("/" + strings.TrimPrefix(name, "/"))
 	if o.dir != nil && strings.HasPrefix(clean, localesPrefix) && strings.HasSuffix(clean, ".json") {
 		rel := strings.TrimPrefix(clean, localesPrefix)
 		// Clean already removed any "..", so rel cannot escape the directory.
