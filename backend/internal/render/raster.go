@@ -964,6 +964,7 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 		// fallback keeps text legible and positioned.
 		fnt := lookupFont(asStr(style["fontFamily"]), int(asNum(asObj(style["axes"])["wght"])))
 		if fnt == nil {
+			noteMissingFamily(asStr(style["fontFamily"]))
 			fnt = rc.font
 		}
 		face, err := opentype.NewFace(fnt, &opentype.FaceOptions{Size: size * scale, DPI: 72, Hinting: font.HintingFull})

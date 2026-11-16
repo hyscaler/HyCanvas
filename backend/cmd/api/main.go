@@ -176,6 +176,13 @@ func main() {
 		}
 		logger.Info("fonts registered for export", "count", n, "families", render.RegisteredFamilies(), "dir", dir)
 	}
+	logger.Info("fonts: stock template fonts built in", "families", render.StockFontFamilies())
+	// Name each design font the server had to substitute, once, so an operator
+	// can see which files to put in FONTS_DIR (#85).
+	render.SetMissingFamilyReporter(func(family string) {
+		logger.Warn("export: font not available on the server, text in it is drawn in the fallback font",
+			"family", family, "hint", "add this family's .ttf files to FONTS_DIR, named Family-Weight.ttf")
+	})
 	// Say it once per script when a glyph cannot be drawn at all: a design that
 	// exports blank text is otherwise almost undiagnosable from the outside.
 	render.SetMissingGlyphReporter(func(r rune) {

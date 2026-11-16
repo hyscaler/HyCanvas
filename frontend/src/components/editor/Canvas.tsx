@@ -47,6 +47,7 @@ import { useBrand } from "@/store/brand";
 import { useComments } from "@/store/comments";
 import { designSurfaceDir } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
+import { subscribeStickyEditRequests } from "@/lib/stickyEditRequests";
 
 
 // The crop overlay assumes an axis-aligned, unit-scaled node (it positions an
@@ -1185,6 +1186,9 @@ export function Canvas() {
     useEditor.getState().setViewport(prev);
   }, [editing]);
   const [editingSticky, setEditingSticky] = useState<string | null>(null);
+  // The whiteboard toolbar and its S shortcut add a sticky outside the canvas;
+  // they ask here to open it for typing (#84).
+  useEffect(() => subscribeStickyEditRequests((id) => setEditingSticky(id)), []);
   // Connector whose label is being edited (F30 FR-8); opened by double-click.
   const [editingConnectorLabel, setEditingConnectorLabel] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
@@ -1247,6 +1251,17 @@ export function Canvas() {
   useEffect(() => () => {
     if (longPress.current) window.clearTimeout(longPress.current.timer);
   }, []);
+  // The current (or last) finger contact, and whether it travelled past the
+  // long-press slop (#89). A slow drag can rest past the long-press delay
+  // before it moves; once the finger travels, the menu that hold opened closes
+  // and a native contextmenu (Android and desktop Chromium fire one on lift
+  // after a held touch) is dropped. Reset on every pointerdown, so a later
+  // mouse right-click still works.
+  const touchContact = useRef<{ x: number; y: number; moved: boolean; menuFromHold?: boolean } | null>(null);
+  // Lifting the finger that opened the menu by holding makes the browser fire
+  // a click right there, which is on the menu's first item, so it ran Copy and
+  // closed the menu. That one click is swallowed (deadline in ms).
+  const swallowMenuClickUntil = useRef(0);
   // Coalesce move-drag updates to one apply per animation frame: pointermove can
   // fire several times per frame (esp. on 120Hz trackpads), and each apply bumps
   // the store rev (re-rendering the gizmo, panels, and canvas), so processing
@@ -1567,6 +1582,7 @@ export function Canvas() {
 
   function onContextMenu(e: React.MouseEvent) {
     e.preventDefault();
+    if (touchContact.current?.moved) return;
     const store = useEditor.getState();
     const pt = api.toPage(localPoint(e));
     // Locked nodes are right-clickable too, so the menu can offer Unlock.
@@ -1595,6 +1611,7 @@ export function Canvas() {
 
     // --- Touch / stylus input (FR-31) -------------------------------------
     pointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY, type: e.pointerType });
+    touchContact.current = e.pointerType === "touch" ? { x: e.clientX, y: e.clientY, moved: false } : null;
     if (e.pointerType === "pen") penSeen.current = true;
     const touchPts = [...pointers.current.values()].filter((p) => p.type === "touch");
     const penDown = [...pointers.current.values()].some((p) => p.type === "pen");
@@ -1635,8 +1652,12 @@ export function Canvas() {
         y: clientY,
         timer: window.setTimeout(() => {
           longPress.current = null;
-          cancelInteraction();
+          // Holding an element keeps its move alive: if the finger then drags
+          // on, the menu closes and the element follows (#89). Anything else
+          // (a marquee, a pan) ends here, as before.
+          if (gesture.current.type !== "move") cancelInteraction();
           onContextMenu({ preventDefault() {}, clientX, clientY } as React.MouseEvent);
+          if (touchContact.current) touchContact.current.menuFromHold = true;
         }, 550),
       };
     }
@@ -2058,6 +2079,13 @@ export function Canvas() {
     // zoom by the finger-distance ratio and pan so the start page-anchor stays
     // under the moving midpoint (the wheel-zoom-about-cursor math).
     if (longPress.current && Math.hypot(e.clientX - longPress.current.x, e.clientY - longPress.current.y) > 8) clearLongPress();
+    const tc = touchContact.current;
+    if (tc && !tc.moved && e.pointerType === "touch" && Math.hypot(e.clientX - tc.x, e.clientY - tc.y) > 8) {
+      tc.moved = true;
+      // The finger rested long enough to open the menu, then dragged: it was a
+      // slow drag, not a long press, so the menu goes away (#89).
+      if (tc.menuFromHold) setCtxMenu(null);
+    }
     if (pointers.current.has(e.pointerId)) {
       pointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY, type: e.pointerType });
     }
@@ -2188,6 +2216,9 @@ export function Canvas() {
 
   function onPointerUp(e: React.PointerEvent) {
     clearLongPress();
+    if (e.pointerType === "touch" && touchContact.current?.menuFromHold && !touchContact.current.moved) {
+      swallowMenuClickUntil.current = performance.now() + 500;
+    }
     // Apply any move frame still queued from the last pointermove, so the commit
     // below records the exact final position (not one frame behind the cursor).
     flushMove();
@@ -3412,6 +3443,13 @@ export function Canvas() {
             className="oc-scroll absolute z-30 max-h-[80vh] w-56 overflow-y-auto rounded-xl border border-neutral-200 bg-surface p-1.5 shadow-xl ring-1 ring-black/5"
             style={{ left: ctxMenu.x, top: ctxMenu.y }}
             onClick={(e) => e.stopPropagation()}
+            onClickCapture={(e) => {
+              if (performance.now() < swallowMenuClickUntil.current) {
+                swallowMenuClickUntil.current = 0;
+                e.stopPropagation();
+                e.preventDefault();
+              }
+            }}
             // Menu keyboard model (a11y): arrows move between items, Home/End
             // jump, Escape closes. Stop propagation so the canvas surface's own
             // arrow (nudge) and Escape (clear selection) handlers stay out of it.

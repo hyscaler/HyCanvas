@@ -9,7 +9,7 @@
 // persisted under doc.meta.whiteboard as a WhiteboardMeta. Tailwind is used for
 // chrome only; the design surface itself is rendered by @hc/engine.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark,
   Brush,
@@ -83,6 +83,7 @@ import {
   type EditCommand,
 } from "@hc/editor";
 import { createNode, newId, type ConnectorNode, type Node, type Transform } from "@hc/schema";
+import { requestStickyEdit } from "@/lib/stickyEditRequests";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
@@ -273,6 +274,9 @@ function addSticky(): void {
   const c = viewportCenter();
   setNodeXY(node, c.x - 90, c.y - 90);
   insertNodes([node]);
+  // Open it for typing, so keys go into the note instead of the board's
+  // single-key shortcuts (#84).
+  requestStickyEdit(node.id);
 }
 
 /** Lay a block of blank stickies (3x2) near the viewport center as one undo
@@ -752,6 +756,28 @@ export function WhiteboardSurface(props: {
     dragRef.current = null;
     (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
   }, []);
+  // Tell Fit how much of the viewport top the toolbar covers, so the board is
+  // framed below it with room for the page label row (#84). Only while the
+  // toolbar sits along the top edge; one dragged elsewhere covers no top band.
+  useLayoutEffect(() => {
+    const tb = toolbarRef.current;
+    const surf = surfaceRef.current;
+    if (!tb || !surf) return;
+    const measure = () => {
+      const t = tb.getBoundingClientRect();
+      const top = t.top - surf.getBoundingClientRect().top;
+      // 40px: the page label row above the page (32px) plus breathing room.
+      useEditor.getState().setFitTopInset(top < 80 ? Math.round(top + t.height + 40) : 0);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(tb);
+    ro.observe(surf);
+    return () => {
+      ro.disconnect();
+      useEditor.getState().setFitTopInset(0);
+    };
+  }, [toolbarPos]);
 
   // Live-collab gate for ephemeral presence affordances (reactions + cursor
   // chat). These only make sense with an active realtime client; we mirror the
@@ -1419,8 +1445,8 @@ export function WhiteboardSurface(props: {
 
       {/* Floating toolbar. Absolutely positioned so it only captures pointer
           events on its own controls; draggable by the grip handle (defaults to
-          the top-left until moved). On phones it wraps onto more rows rather
-          than running off the screen; wrapping, unlike a scroll box, does not
+          the top-left until moved). Where it does not fit (phones, narrow
+          windows) it wraps onto more rows rather than running off the screen; wrapping, unlike a scroll box, does not
           clip the toolbar's own popovers. On a phone it is pinned top-start,
           leaves the top-end corner to the zoom pill, and shows the core tools
           plus a More toggle; its raw buttons grow to 44px touch targets. */}
@@ -1428,7 +1454,12 @@ export function WhiteboardSurface(props: {
         ref={toolbarRef}
         data-wb-toolbar
         className={
-          "absolute z-10 flex items-center rounded-2xl border border-neutral-200 bg-surface/95 shadow-lg backdrop-blur max-md:max-w-[calc(100%-1.5rem)] max-md:flex-wrap " +
+          // z-30: above the canvas's page label row (z-20), which otherwise
+          // took clicks meant for the toolbar's timer and vote buttons (#84).
+          // It wraps at any width it does not fit: on a laptop-width window the
+          // single row ran past the right edge, taking the timer and vote
+          // buttons off screen.
+          "absolute z-30 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center rounded-2xl border border-neutral-200 bg-surface/95 shadow-lg backdrop-blur " +
           (isPhone ? "gap-0.5 p-1 [&>div>button]:min-h-11 [&>div>button]:min-w-11" : "gap-1 p-1.5")
         }
         style={

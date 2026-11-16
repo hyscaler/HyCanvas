@@ -71,6 +71,7 @@ import { ApiKeysPanel } from "./ApiKeysPanel";
 import { WorkspaceAiPanel } from "./WorkspaceAiPanel";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
+import { InstallAppButton } from "@/components/InstallAppButton";
 import { HeroArt, EmptyArt, RailArt } from "@/components/ui/CanvasBackdrop";
 import { attachableAccept, extractAiSources, maxAiSources, type AiSource } from "@/lib/aiAttachments";
 import { stageAiSources } from "@/lib/aiRequests";
@@ -942,6 +943,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
               onCustom={() => setSizeOpen(true)}
               onBulk={() => setBulkOpen(true)}
             />
+            <InstallAppButton />
             <NotificationsBell />
             <UserMenu user={user} onSettings={() => void router.push("/settings")} onSignOut={() => void logout()} />
           </div>

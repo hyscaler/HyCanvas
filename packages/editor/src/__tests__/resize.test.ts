@@ -158,4 +158,98 @@ describe("resizePage (F22 FR-1/FR-2)", () => {
     expect(g.children[0].transform.x).toBe(20);
     expect(g.children[0].size.width).toBe(60);
   });
+
+  // #83: a post resized to a story stacked the subtitle on the title, because
+  // each block was anchored on its own and the centered title grew downward.
+  const boxOf = (n: Node) => ({ x: n.transform.x, y: n.transform.y, w: n.size.width, h: n.size.height });
+  const overlaps = (a: Node, b: Node) => {
+    const p = boxOf(a);
+    const q = boxOf(b);
+    return Math.min(p.x + p.w, q.x + q.w) > Math.max(p.x, q.x) && Math.min(p.y + p.h, q.y + q.h) > Math.max(p.y, q.y);
+  };
+
+  it("keeps stacked text blocks apart and in order on post -> story (#83)", () => {
+    // The "We're Hiring" layout: kicker near the top, a big centered title, a
+    // subtitle below it, a button (pill + label) near the bottom.
+    const src = pageOf(1080, 1080, [
+      text("kicker", 140, 150, 800, 40, 30),
+      text("title", 110, 280, 860, 340, 100),
+      text("sub", 190, 710, 700, 40, 28),
+      shape("pill", 360, 840, 360, 92),
+      text("cta", 360, 840, 360, 92, 28),
+    ]);
+    const out = resizePage(src, { width: 1080, height: 1920 });
+    const byId = Object.fromEntries(out.children.map((n) => [n.id, n]));
+    const order = ["kicker", "title", "sub", "pill"];
+    for (let i = 0; i < order.length - 1; i++) {
+      const a = byId[order[i]];
+      const b = byId[order[i + 1]];
+      expect(overlaps(a, b)).toBe(false);
+      expect(a.transform.y + a.size.height).toBeLessThanOrEqual(b.transform.y + 1e-6);
+    }
+    // The label stays on its pill.
+    expect(boxOf(byId.cta)).toEqual(boxOf(byId.pill));
+    // Everything stays on the page.
+    for (const n of out.children) {
+      expect(n.transform.x).toBeGreaterThanOrEqual(-1e-6);
+      expect(n.transform.x + n.size.width).toBeLessThanOrEqual(1080 + 1e-6);
+      expect(n.transform.y + n.size.height).toBeLessThanOrEqual(1920 + 1e-6);
+    }
+  });
+
+  it("never widens text past the target's proportional side margins (#83)", () => {
+    // 860 wide with 110 margins on a 1080 page; a story is just as wide, so
+    // growing the font by the area factor would push the box off both sides.
+    const src = pageOf(1080, 1080, [text("t", 110, 280, 860, 340, 100)]);
+    const out = resizePage(src, { width: 1080, height: 1920 });
+    const n = out.children[0] as TextNode;
+    expect(n.transform.x).toBeGreaterThanOrEqual(110 - 1e-6);
+    expect(n.transform.x + n.size.width).toBeLessThanOrEqual(970 + 1e-6);
+    // Font, width and height share one scale, so the text wraps as before.
+    const k = n.size.width / 860;
+    expect(n.content[0].runs[0].style.fontSize).toBeCloseTo(100 * k, 3);
+    expect(n.size.height).toBeCloseTo(340 * k, 3);
+  });
+
+  it("puts side-by-side columns back apart on slide -> story (#83)", () => {
+    const src = pageOf(1920, 1080, [text("left", 150, 300, 480, 40, 32), text("right", 710, 300, 480, 40, 32), text("far", 1270, 300, 480, 40, 32)]);
+    const out = resizePage(src, { width: 1080, height: 1920 });
+    const [l, r, f] = out.children;
+    expect(overlaps(l, r)).toBe(false);
+    expect(overlaps(r, f)).toBe(false);
+    expect(l.transform.x).toBeLessThan(r.transform.x);
+    expect(r.transform.x).toBeLessThan(f.transform.x);
+    expect(f.transform.x + f.size.width).toBeLessThanOrEqual(1080 + 1e-6);
+  });
+
+  it("keeps two stacked bleed lines apart (#83)", () => {
+    // Big outline words hanging off the left edge, one under the other.
+    const src = pageOf(1080, 1920, [text("a", -75, 609, 1200, 170, 150), text("b", -57, 779, 1200, 170, 150)]);
+    for (const [w, h] of [[1080, 1080], [1920, 1080], [1200, 628]]) {
+      const [a, b] = resizePage(src, { width: w, height: h }).children;
+      expect(overlaps(a, b)).toBe(false);
+      expect(a.transform.y).toBeLessThan(b.transform.y);
+    }
+  });
+
+  it("never makes content overlap that did not overlap in the source (#83)", () => {
+    // A dense slide: a title and a 4x3 grid of labelled cards.
+    const kids: Node[] = [text("title", 96, 80, 1500, 90, 64)];
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 4; c++) {
+        kids.push(shape(`card${r}${c}`, 96 + c * 440, 220 + r * 270, 400, 240));
+        kids.push(text(`label${r}${c}`, 116 + c * 440, 240 + r * 270, 360, 40, 28));
+      }
+    }
+    const src = pageOf(1920, 1080, kids);
+    for (const [w, h] of [[1080, 1920], [1080, 1080], [1200, 628], [1080, 1350]]) {
+      const out = resizePage(src, { width: w, height: h });
+      for (let i = 0; i < kids.length; i++) {
+        for (let j = i + 1; j < kids.length; j++) {
+          if (overlaps(kids[i], kids[j])) continue;
+          expect(overlaps(out.children[i], out.children[j]), `${kids[i].id} x ${kids[j].id} at ${w}x${h}`).toBe(false);
+        }
+      }
+    }
+  });
 });
