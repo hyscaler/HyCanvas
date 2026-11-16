@@ -2191,6 +2191,7 @@
   "editor.page_n_name": "Page {n} : {name}",
   "editor.page_n_of_total": "Page {n} sur {total}",
   "editor.page_objects_use_arrows_enter_selects": "Objets de la page ; utilisez les flèches pour parcourir et Entrée pour sélectionner",
+  "editor.page_actions": "Actions de la page",
   "editor.page_size": "Taille de page",
   "editor.pages": "Pages",
   "editor.palette": "Palette",

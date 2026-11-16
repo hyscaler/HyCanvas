@@ -2191,6 +2191,7 @@
   "editor.page_n_name": "第{n}页：{name}",
   "editor.page_n_of_total": "第{n}页，共{total}页",
   "editor.page_objects_use_arrows_enter_selects": "页面对象；使用方向键浏览，按Enter选择",
+  "editor.page_actions": "页面操作",
   "editor.page_size": "页面尺寸",
   "editor.pages": "页面",
   "editor.palette": "调色板",

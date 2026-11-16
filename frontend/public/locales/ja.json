@@ -2191,6 +2191,7 @@
   "editor.page_n_name": "{n}ページ：{name}",
   "editor.page_n_of_total": "{total}ページ中{n}ページ目",
   "editor.page_objects_use_arrows_enter_selects": "ページのオブジェクト。矢印キーで移動し、Enterで選択します",
+  "editor.page_actions": "ページの操作",
   "editor.page_size": "ページサイズ",
   "editor.pages": "ページ",
   "editor.palette": "パレット",

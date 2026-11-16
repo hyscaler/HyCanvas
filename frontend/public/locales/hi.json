@@ -2191,6 +2191,7 @@
   "editor.page_n_name": "पृष्ठ {n}: {name}",
   "editor.page_n_of_total": "पृष्ठ {n} / {total}",
   "editor.page_objects_use_arrows_enter_selects": "पृष्ठ के ऑब्जेक्ट; ब्राउज़ करने के लिए तीर कुंजियाँ और चुनने के लिए Enter दबाएँ",
+  "editor.page_actions": "पृष्ठ क्रियाएँ",
   "editor.page_size": "पृष्ठ आकार",
   "editor.pages": "पृष्ठ",
   "editor.palette": "पैलेट",

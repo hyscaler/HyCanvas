@@ -2191,6 +2191,7 @@
   "editor.page_n_name": "Seite {n}: {name}",
   "editor.page_n_of_total": "Seite {n} von {total}",
   "editor.page_objects_use_arrows_enter_selects": "Seitenobjekte; mit den Pfeiltasten durchblättern, mit Eingabe auswählen",
+  "editor.page_actions": "Seitenaktionen",
   "editor.page_size": "Seitengröße",
   "editor.pages": "Seiten",
   "editor.palette": "Palette",

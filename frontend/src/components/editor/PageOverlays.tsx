@@ -4,7 +4,7 @@
 // screen space over the canvas; positions track scroll/zoom via the base viewport.
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { ChevronUp, ChevronDown, Eye, EyeOff, Lock, LockOpen, CopyPlus, Trash2, Plus, Sparkles } from "lucide-react";
+import { ChevronUp, ChevronDown, Eye, EyeOff, Lock, LockOpen, CopyPlus, Trash2, Plus, Sparkles, MoreHorizontal } from "lucide-react";
 import { pageToScreen } from "@hc/engine";
 import { useEditor } from "@/store/editor";
 import { promptText } from "@/lib/promptDialog";
@@ -42,9 +42,13 @@ function HdrBtn({ icon: Icon, title, onClick, disabled, danger }: { icon: typeof
   );
 }
 
+type PageAction = { icon: typeof ChevronUp; title: string; onClick: () => void; disabled?: boolean; danger?: boolean };
+
 export function PageOverlays({ api }: { api: CanvasApi }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [zoomBox, setZoomBox] = useState<Rect | null>(null);
+  // Page whose actions menu is open (phone layout only).
+  const [menuFor, setMenuFor] = useState<string | null>(null);
   useEditor((s) => s.rev);
   useEditor((s) => s.viewport);
   const activePage = useEditor((s) => s.activePage);
@@ -108,11 +112,41 @@ export function PageOverlays({ api }: { api: CanvasApi }) {
         const hidden = !!(p as { hidden?: boolean }).hidden;
         const isActive = i === activePage;
         const allLocked = p.children.length > 0 && p.children.every((c) => (c as { locked?: boolean }).locked);
+        const actions: PageAction[] = [
+          { icon: ChevronUp, title: tr("editor.move_up"), disabled: i === 0, onClick: () => st.movePage(i, i - 1) },
+          { icon: ChevronDown, title: tr("editor.move_down"), disabled: i === n - 1, onClick: () => st.movePage(i, i + 1) },
+          { icon: hidden ? EyeOff : Eye, title: hidden ? tr("editor.unhide_while_presenting") : tr("editor.hide_while_presenting"), onClick: () => st.setPageHidden(!hidden, i) },
+          { icon: allLocked ? Lock : LockOpen, title: allLocked ? tr("editor.unlock_all_on_page") : tr("editor.lock_all_on_page"), onClick: () => st.setPageLocked(i, !allLocked) },
+          // Per-slide regeneration is a full tool - it keeps the layout, the
+          // slide's identity and any images whose prompts did not change - but
+          // it had no button anywhere, so it could only be reached by typing
+          // "redo slide 3" and hoping the planner routed it. The assistant
+          // panel performs the request.
+          {
+            icon: Sparkles,
+            title: tr("editor.regenerate_this_slide_with_ai"),
+            onClick: async () => {
+              const instruction = await promptText({
+                title: tr("editor.regenerate_slide_n", { n: i + 1 }),
+                label: tr("editor.what_should_change"),
+                placeholder: tr("editor.eg_more_data_driven_shorter"),
+                defaultValue: "",
+                confirmText: tr("editor.regenerate"),
+              });
+              if (instruction === null) return;
+              st.setActivePage(i);
+              requestAi({ kind: "action", action: "regenerateSlide", pageIndex: i, instruction: instruction.trim() || tr("editor.improve_this_slide") });
+            },
+          },
+          { icon: CopyPlus, title: tr("editor.duplicate_page"), onClick: () => st.duplicatePage(i) },
+          { icon: Trash2, title: tr("editor.delete_page"), danger: true, disabled: n <= 1, onClick: () => st.deletePage(i) },
+        ];
         return (
           <div
             key={p.id}
             className="group pointer-events-auto absolute flex items-center gap-1.5 text-xs"
-            style={{ left: x, top: top - 32, width }}
+            // A phone's 36px touch button needs a taller row to clear the page.
+            style={{ left: x, top: top - (isPhone ? 40 : 32), width }}
           >
             <button onClick={() => st.setActivePage(i)} className={`shrink-0 font-semibold ${isActive ? "text-neutral-800" : "text-neutral-400 hover:text-neutral-700"}`}>Page {i + 1}</button>
             <button
@@ -121,35 +155,34 @@ export function PageOverlays({ api }: { api: CanvasApi }) {
               title={tr("editor.rename_page")}
             >{p.name ? `- ${p.name}` : "- Add page title"}</button>
             <span className="flex-1" />
-            <div className={`flex shrink-0 items-center gap-0.5 rounded-lg bg-surface/90 px-0.5 shadow-sm ring-1 ring-black/5 transition-opacity ${isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-              <HdrBtn icon={ChevronUp} title={tr("editor.move_up")} disabled={i === 0} onClick={() => st.movePage(i, i - 1)} />
-              <HdrBtn icon={ChevronDown} title={tr("editor.move_down")} disabled={i === n - 1} onClick={() => st.movePage(i, i + 1)} />
-              <HdrBtn icon={hidden ? EyeOff : Eye} title={hidden ? tr("editor.unhide_while_presenting") : tr("editor.hide_while_presenting")} onClick={() => st.setPageHidden(!hidden, i)} />
-              <HdrBtn icon={allLocked ? Lock : LockOpen} title={allLocked ? tr("editor.unlock_all_on_page") : tr("editor.lock_all_on_page")} onClick={() => st.setPageLocked(i, !allLocked)} />
-              {/* Per-slide regeneration is a full tool - it keeps the layout,
-                  the slide's identity and any images whose prompts did not
-                  change - but it had no button anywhere, so it could only be
-                  reached by typing "redo slide 3" and hoping the planner
-                  routed it. The assistant panel performs the request. */}
-              <HdrBtn
-                icon={Sparkles}
-                title={tr("editor.regenerate_this_slide_with_ai")}
-                onClick={async () => {
-                  const instruction = await promptText({
-                    title: tr("editor.regenerate_slide_n", { n: i + 1 }),
-                    label: tr("editor.what_should_change"),
-                    placeholder: tr("editor.eg_more_data_driven_shorter"),
-                    defaultValue: "",
-                    confirmText: tr("editor.regenerate"),
-                  });
-                  if (instruction === null) return;
-                  st.setActivePage(i);
-                  requestAi({ kind: "action", action: "regenerateSlide", pageIndex: i, instruction: instruction.trim() || tr("editor.improve_this_slide") });
-                }}
-              />
-              <HdrBtn icon={CopyPlus} title={tr("editor.duplicate_page")} onClick={() => st.duplicatePage(i)} />
-              <HdrBtn icon={Trash2} title={tr("editor.delete_page")} danger disabled={n <= 1} onClick={() => st.deletePage(i)} />
-            </div>
+            {isPhone ? (
+              // A phone row has no room for seven 36px buttons beside the page
+              // label, so they would squeeze the label away (#88). One menu
+              // button holds them instead.
+              <div className="relative shrink-0">
+                <HdrBtn icon={MoreHorizontal} title={tr("editor.page_actions")} onClick={() => setMenuFor(menuFor === p.id ? null : p.id)} />
+                {menuFor === p.id && (
+                  <div role="menu" aria-label={tr("editor.page_actions")} className="absolute right-0 top-full z-10 mt-1 min-w-48 rounded-xl bg-surface py-1 shadow-lg ring-1 ring-black/10">
+                    {actions.map((a) => (
+                      <button
+                        key={a.title}
+                        type="button"
+                        role="menuitem"
+                        disabled={a.disabled}
+                        onClick={() => { setMenuFor(null); a.onClick(); }}
+                        className={`flex min-h-11 w-full items-center gap-3 px-3 text-left text-sm disabled:opacity-30 ${a.danger ? "text-red-600" : "text-neutral-700"}`}
+                      >
+                        <a.icon size={16} /> {a.title}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className={`flex shrink-0 items-center gap-0.5 rounded-lg bg-surface/90 px-0.5 shadow-sm ring-1 ring-black/5 transition-opacity ${isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                {actions.map((a) => <HdrBtn key={a.title} {...a} />)}
+              </div>
+            )}
           </div>
         );
       })}
