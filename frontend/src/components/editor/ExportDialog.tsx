@@ -273,7 +273,9 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   // of rasterized here, so the text stays real text and carries a structure tree.
   const [taggedPdf, setTaggedPdf] = useState(false);
   const [scale, setScale] = useState(1);
-  const [transparent, setTransparent] = useState(true);
+  // Opaque by default so the file matches the canvas, page background included;
+  // transparency is opt-in (#86).
+  const [transparent, setTransparent] = useState(false);
   const [quality, setQuality] = useState(92); // jpg quality 0..100
   const [zipBatch, setZipBatch] = useState(true); // bundle multi-page non-PDF exports into one .zip
   const [selected, setSelected] = useState<number[]>([]); // page indices to export
@@ -760,8 +762,8 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
           </div>
         )}
 
-        {/* PNG transparency. */}
-        {format === "png" && (
+        {/* Transparency, for the formats that carry alpha. */}
+        {(format === "png" || format === "apng" || format === "gif") && (
           <label className="mb-3 flex cursor-pointer items-center justify-between text-sm">
             <span className="text-neutral-600">{tr("editor.transparent_background")}</span>
             <input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} className="h-4 w-4 accent-brand-600" />
