@@ -9,6 +9,9 @@ import { watchSystemTheme } from "@/lib/theme";
 import { applyLocale, getLocalePreference, setLocalePreference } from "@/lib/locale";
 import { initI18n, loadCatalog, useI18nVersion } from "@/lib/i18n";
 import { useAuth } from "@/store/auth";
+// Side effect: catch the browser's install prompt as early as it fires, so the
+// "Install app" button can open it later.
+import "@/lib/installPrompt";
 
 // Runs at import, before any handler can mint an id: an instance served over
 // plain HTTP at a LAN address gets no crypto.randomUUID from the browser, and
@@ -51,7 +54,7 @@ export default function App({ Component, pageProps }: AppProps) {
   // language is deliberate and rare, so a remount is the right trade.
   const i18nVersion = useI18nVersion();
   return (
-    <div className={`${brand.variable} font-sans`}>
+    <div data-app-root className={`${brand.variable} font-sans`}>
       <ToastProvider>
         <Component key={i18nVersion} {...pageProps} />
         {/* Service worker: offline shell and the "new version" reload offer.
