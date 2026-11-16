@@ -4145,5 +4145,9 @@
   "brands.contrast_value": "对比度 {ratio}:1",
   "brands.type_sample": "文字",
   "pwa.update_available": "有新版本可用",
-  "pwa.reload": "重新加载"
+  "pwa.reload": "重新加载",
+  "editor.remove_my_vote": "撤回我的投票",
+  "editor.vote_taken_back": "已撤回投票",
+  "editor.vote_deleted_item": "已删除的项目",
+  "editor.vote_item_without_text": "无文字的项目"
 }

@@ -4145,5 +4145,9 @@
   "brands.contrast_value": "コントラスト {ratio}:1",
   "brands.type_sample": "あア",
   "pwa.update_available": "新しいバージョンが利用可能です",
-  "pwa.reload": "再読み込み"
+  "pwa.reload": "再読み込み",
+  "editor.remove_my_vote": "自分の投票を取り消す",
+  "editor.vote_taken_back": "投票を取り消しました",
+  "editor.vote_deleted_item": "削除された項目",
+  "editor.vote_item_without_text": "テキストのない項目"
 }

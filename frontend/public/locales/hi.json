@@ -4145,5 +4145,9 @@
   "brands.contrast_value": "{ratio}:1 कंट्रास्ट",
   "brands.type_sample": "अआ",
   "pwa.update_available": "नया संस्करण उपलब्ध है",
-  "pwa.reload": "फिर से लोड करें"
+  "pwa.reload": "फिर से लोड करें",
+  "editor.remove_my_vote": "मेरा वोट हटाएँ",
+  "editor.vote_taken_back": "वोट वापस लिया गया",
+  "editor.vote_deleted_item": "हटाया गया आइटम",
+  "editor.vote_item_without_text": "बिना टेक्स्ट का आइटम"
 }

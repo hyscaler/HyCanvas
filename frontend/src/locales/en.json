@@ -4145,5 +4145,9 @@
   "brands.contrast_value": "{ratio}:1 contrast",
   "brands.type_sample": "Aa",
   "pwa.update_available": "A new version is available",
-  "pwa.reload": "Reload"
+  "pwa.reload": "Reload",
+  "editor.remove_my_vote": "Remove my vote",
+  "editor.vote_taken_back": "Vote taken back",
+  "editor.vote_deleted_item": "Deleted item",
+  "editor.vote_item_without_text": "Item without text"
 }
