@@ -202,6 +202,30 @@ Started on local-disk storage and want object storage later? The binary migrates
 The S3 target (AWS, MinIO, R2, ...) is taken from `S3_*` in the environment when present, or asked interactively with a connectivity check; `--dry-run` previews the object count and size, and `--yes` makes it non-interactive for scripts. The copy is idempotent (already-present objects are skipped, so re-runs are safe), the database needs no changes (it stores storage keys, not URLs), and the local files are kept as a rollback until you delete them.
 
 
+### Fonts in server-side exports
+
+The editor draws each design in its own fonts, which the browser loads. Exports the server renders itself (video and MP4 deck exports, and PNG or JPEG exports made through the API) draw text from font files on the server:
+
+- **Stock template fonts are built in.** Every font the stock templates use (Outfit, Caveat, Playfair Display and about 110 more) ships inside the binary, so those templates export in their own fonts with no setup. Each family is loaded the first time an export uses it.
+- **Any other font needs a file.** A design set in a font that is not built in exports in the fallback (Liberation Sans, which covers Latin, Greek and Cyrillic) unless you give the server the font with `FONTS_DIR`. The server logs `export: font not available on the server` once per such family, naming it.
+- The accessibility-tagged PDF is written differently: it embeds fonts uploaded with the design and otherwise uses the PDF standard fonts.
+
+To add fonts, put `.ttf` or `.otf` files in a directory and set `FONTS_DIR` to it. A file there wins over a built-in face of the same family and weight.
+
+- Name each file `Family-Weight.ttf`, dropping spaces from the family: `Lobster-400.ttf`, `PlayfairDisplay-700.ttf`. A file without a weight counts as 400.
+- Use static files, one weight per file. A variable font is drawn at its default weight only.
+- Google Fonts are released under licenses that allow this. Static files are on [fonts.google.com](https://fonts.google.com) and in [github.com/google/fonts](https://github.com/google/fonts).
+- For text in Hebrew, Arabic, Indic or CJK scripts, add a font that covers the script (for example `NotoSansHebrew-400.ttf`). The server uses any registered font per character where the design's font has no glyph.
+
+With Docker, mount the folder read-only and point `FONTS_DIR` at it, in the `app` service of your compose file:
+
+```yaml
+    environment:
+      FONTS_DIR: /app/fonts
+    volumes:
+      - ./fonts:/app/fonts:ro
+```
+
 ## Environment Variables
 
 All configuration is read from the root `.env` (copy `.env.example`). The most important keys:
@@ -223,6 +247,7 @@ All configuration is read from the root `.env` (copy `.env.example`). The most i
 | `S3_*` | optional | S3-compatible object storage (endpoint, bucket, keys) when `STORAGE_DRIVER=s3`. |
 | `ASSET_QUOTA_BYTES` | optional | Per-workspace upload cap in bytes (default 2 GiB). |
 | `USER_STORAGE_QUOTA_BYTES` | optional | Global per-user upload cap across all workspaces; unset/0 = unlimited. For public instances. |
+| `FONTS_DIR` | optional | Directory of extra `.ttf`/`.otf` files, named `Family-Weight.ttf`, for the exports the server renders. The stock template fonts are built in; this is for any other font. See [Fonts in server-side exports](#fonts-in-server-side-exports). |
 | `BRAND_STARTER_KIT` | optional | `hycanvas` (default) seeds HyCanvas's own brand kit into workspaces that have none; `off` disables it. See [Branding and theming](#branding-and-theming). |
 | `AI_SECRET` | optional | Encrypts stored AI keys (workspace and personal); falls back to `JWT_SECRET`. |
 | `OIDC_*` | optional | OIDC single sign-on (issuer, client id/secret). |

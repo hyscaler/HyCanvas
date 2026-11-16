@@ -45,8 +45,19 @@ func RegisterFont(family string, weight int, data []byte) error {
 }
 
 // lookupFont returns the registered font nearest in weight for the family, or
-// nil when the family has no registered faces (caller falls back).
+// nil when the family has no registered faces (caller falls back). A family
+// built into the binary (stockfonts.go) is registered on first use.
 func lookupFont(family string, weight int) *opentype.Font {
+	if f := lookupRegistered(family, weight); f != nil {
+		return f
+	}
+	if family != "" && loadStockFamily(family) {
+		return lookupRegistered(family, weight)
+	}
+	return nil
+}
+
+func lookupRegistered(family string, weight int) *opentype.Font {
 	fontMu.RLock()
 	defer fontMu.RUnlock()
 	fam := normFamily(family)
@@ -205,6 +216,39 @@ func SetMissingGlyphReporter(fn func(r rune)) {
 	missingMu.Lock()
 	defer missingMu.Unlock()
 	missingLog = fn
+}
+
+// Missing-family reporting. A design names its fonts (Outfit, Caveat, ...) but
+// the server only has the ones an operator registered with FONTS_DIR, so text
+// in any other family exports in the embedded fallback while the editor shows
+// the real face (#85). Said once per family, so the operator can see which
+// fonts to supply.
+var (
+	missingFamilySeen = map[string]bool{}
+	missingFamilyLog  func(family string)
+)
+
+// SetMissingFamilyReporter installs a callback invoked once per font family a
+// design asked for that has no registered face.
+func SetMissingFamilyReporter(fn func(family string)) {
+	missingMu.Lock()
+	defer missingMu.Unlock()
+	missingFamilyLog = fn
+}
+
+// noteMissingFamily records that family fell back to the embedded font.
+func noteMissingFamily(family string) {
+	if family == "" {
+		return
+	}
+	key := normFamily(family)
+	missingMu.Lock()
+	defer missingMu.Unlock()
+	if missingFamilySeen[key] || missingFamilyLog == nil {
+		return
+	}
+	missingFamilySeen[key] = true
+	missingFamilyLog(family)
 }
 
 func noteMissingGlyph(r rune) {

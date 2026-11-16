@@ -179,6 +179,16 @@ If the storage directory is not writable, the server refuses to start and logs t
 
 To check a locally built image against all of these cases, run `sh scripts/check-image.sh <image>`.
 
+### Fonts for server-side exports
+
+Exports the server renders (video and MP4 deck exports, PNG or JPEG exports through the API) draw text from font files in the image. The fonts the stock templates use are built in. For any other font, mount a folder of `.ttf`/`.otf` files named `Family-Weight.ttf` (for example `Lobster-400.ttf`) and set `FONTS_DIR`:
+
+```
+-v "$PWD/fonts:/app/fonts:ro" -e FONTS_DIR=/app/fonts
+```
+
+The server logs each design font it could not find, once, so you can see which files to add. See [Fonts in server-side exports](docs/self-hosting.md#fonts-in-server-side-exports) for naming and where to get the files.
+
 ## Environment variable reference
 
 `JWT_SECRET` is the only strictly required value; the API refuses to start without it. Real environment variables always override any `.env` file.
@@ -224,6 +234,7 @@ All three compose files set `REDIS_URL: ""` on the `app` service, so a `REDIS_UR
 | `STORAGE_DRIVER` | `local` | `local` filesystem storage, or `s3` for S3-compatible object storage (see `S3_*`). Left blank, S3 is used when `S3_ENDPOINT` + credentials are set, else local. Compose reads this from `.env` (defaulting to `local`), so setting `STORAGE_DRIVER=s3` there is enough. |
 | `LOCAL_STORAGE_PATH` | `.data/storage` | Where uploads/exports/snapshots are written. In the image this is `/app/.data/storage` - mount a volume there. Use an absolute path outside Docker. |
 | `BACKEND_PUBLIC_URL` | (relative) | Absolute base URL used to build asset delivery links. Set to your public URL behind a proxy/CDN. |
+| `FONTS_DIR` | (unset) | Directory of extra `.ttf`/`.otf` files (`Family-Weight.ttf`) for the exports the server renders. The stock template fonts are built in; this is for other fonts. Mount one read-only, for example at `/app/fonts`. See [Fonts for server-side exports](#fonts-for-server-side-exports). |
 | `ASSET_QUOTA_BYTES` | (unset) | Caps per-workspace upload storage in bytes (e.g. `5368709120` = 5 GiB). |
 | `S3_*` | - | S3-compatible object storage when `STORAGE_DRIVER=s3`: `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_FORCE_PATH_STYLE` (set `true` for MinIO/non-AWS). The bucket is created if missing. |
 

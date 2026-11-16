@@ -38,6 +38,7 @@ const maxTableAxis = 1000
 func (rc *rctx) face(family string, weight int, sizePx float64) font.Face {
 	fnt := lookupFont(family, weight)
 	if fnt == nil {
+		noteMissingFamily(family)
 		fnt = rc.font
 	}
 	if fnt == nil || sizePx <= 0 {

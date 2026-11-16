@@ -61,8 +61,14 @@ services:
       # the browser drops the session. Behind a TLS proxy, set this to "true"
       # and APP_URL to your https origin.
       COOKIE_SECURE: "false"
+      # Extra fonts for the exports the server renders (video, API PNG/JPEG).
+      # The stock template fonts are built in; for any other font, put its
+      # files in ./fonts as Family-Weight.ttf (for example Lobster-400.ttf)
+      # and uncomment this line and the ./fonts volume below.
+      # FONTS_DIR: /app/fonts
     volumes:
       - storage:/app/.data/storage
+      # - ./fonts:/app/fonts:ro
 
 volumes:
   pgdata:
