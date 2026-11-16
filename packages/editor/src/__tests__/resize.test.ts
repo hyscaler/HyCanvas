@@ -252,4 +252,29 @@ describe("resizePage (F22 FR-1/FR-2)", () => {
       }
     }
   });
+
+  it("keeps the text on a large card inside the card on landscape -> story (#92)", () => {
+    // A link card covering most of a 1200x630 social card, with a title,
+    // a subtitle and a button on it.
+    const kids: Node[] = [
+      shape("bg", 0, 0, 1200, 630),
+      shape("card", 90, 80, 1020, 470),
+      text("title", 150, 248, 530, 64, 48),
+      text("subtitle", 150, 338, 500, 64, 22),
+      shape("button", 150, 444, 250, 56),
+    ];
+    const src = pageOf(1200, 630, kids);
+    const inside = (outer: Node, inner: Node) => {
+      const cx = inner.transform.x + inner.size.width / 2;
+      const cy = inner.transform.y + inner.size.height / 2;
+      return (
+        cx >= outer.transform.x && cx <= outer.transform.x + outer.size.width &&
+        cy >= outer.transform.y && cy <= outer.transform.y + outer.size.height
+      );
+    };
+    for (const [w, h] of [[1080, 1920], [1080, 1080], [1080, 1350]]) {
+      const out = resizePage(src, { width: w, height: h }).children;
+      for (const i of [2, 3, 4]) expect(inside(out[1], out[i]), `${kids[i].id} at ${w}x${h}`).toBe(true);
+    }
+  });
 });
