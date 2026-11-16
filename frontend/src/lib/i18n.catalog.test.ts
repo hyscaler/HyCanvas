@@ -170,7 +170,9 @@ describe("no hard-coded user-visible strings", () => {
       found = count(out);
     }
     expect(found, `${found} hard-coded strings:\n${out}`).toBe(0);
-  });
+    // Scans the whole source tree: 3 to 5 s alone, so the 5 s default timed
+    // out whenever the full suite ran in parallel.
+  }, 30_000);
 
   it("never calls tr() at module scope, where it would freeze at import", () => {
     // A module-level `tr()` is evaluated once, before any catalog has loaded,
