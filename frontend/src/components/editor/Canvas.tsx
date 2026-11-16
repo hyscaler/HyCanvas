@@ -47,6 +47,7 @@ import { useBrand } from "@/store/brand";
 import { useComments } from "@/store/comments";
 import { designSurfaceDir } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
+import { subscribeStickyEditRequests } from "@/lib/stickyEditRequests";
 
 
 // The crop overlay assumes an axis-aligned, unit-scaled node (it positions an
@@ -1185,6 +1186,9 @@ export function Canvas() {
     useEditor.getState().setViewport(prev);
   }, [editing]);
   const [editingSticky, setEditingSticky] = useState<string | null>(null);
+  // The whiteboard toolbar and its S shortcut add a sticky outside the canvas;
+  // they ask here to open it for typing (#84).
+  useEffect(() => subscribeStickyEditRequests((id) => setEditingSticky(id)), []);
   // Connector whose label is being edited (F30 FR-8); opened by double-click.
   const [editingConnectorLabel, setEditingConnectorLabel] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
@@ -1247,10 +1251,6 @@ export function Canvas() {
   useEffect(() => () => {
     if (longPress.current) window.clearTimeout(longPress.current.timer);
   }, []);
-  // Coalesce move-drag updates to one apply per animation frame: pointermove can
-  // fire several times per frame (esp. on 120Hz trackpads), and each apply bumps
-  // the store rev (re-rendering the gizmo, panels, and canvas), so processing
-  // every event makes the dragged element and its handles trail the cursor.
   // The current (or last) finger contact, and whether it travelled past the
   // long-press slop (#89). A slow drag can rest past the long-press delay
   // before it moves; once the finger travels, the menu that hold opened closes
@@ -1262,6 +1262,10 @@ export function Canvas() {
   // a click right there, which is on the menu's first item, so it ran Copy and
   // closed the menu. That one click is swallowed (deadline in ms).
   const swallowMenuClickUntil = useRef(0);
+  // Coalesce move-drag updates to one apply per animation frame: pointermove can
+  // fire several times per frame (esp. on 120Hz trackpads), and each apply bumps
+  // the store rev (re-rendering the gizmo, panels, and canvas), so processing
+  // every event makes the dragged element and its handles trail the cursor.
   const moveRaf = useRef<number | null>(null);
   const movePending = useRef<{ clientX: number; clientY: number; shift: boolean } | null>(null);
   // Drives the grab/grabbing cursor while Space is held or a pan is in flight.
@@ -1578,11 +1582,11 @@ export function Canvas() {
 
   function onContextMenu(e: React.MouseEvent) {
     e.preventDefault();
+    if (touchContact.current?.moved) return;
     const store = useEditor.getState();
     const pt = api.toPage(localPoint(e));
     // Locked nodes are right-clickable too, so the menu can offer Unlock.
     const hit = api.scene()?.hitTest(pt) ?? api.scene()?.hitTest(pt, { ignoreLocked: false });
-    if (touchContact.current?.moved) return;
     if (hit && !store.selection.includes(hit.id)) store.select([hit.id]);
     // Clamp the menu so it stays fully on-canvas even near the right/bottom edge
     // (estimate its size from whether there is a selection).
@@ -1607,11 +1611,11 @@ export function Canvas() {
 
     // --- Touch / stylus input (FR-31) -------------------------------------
     pointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY, type: e.pointerType });
+    touchContact.current = e.pointerType === "touch" ? { x: e.clientX, y: e.clientY, moved: false } : null;
     if (e.pointerType === "pen") penSeen.current = true;
     const touchPts = [...pointers.current.values()].filter((p) => p.type === "touch");
     const penDown = [...pointers.current.values()].some((p) => p.type === "pen");
     // Palm rejection: ignore touch contacts while a pen is down (pen draws, the
-    touchContact.current = e.pointerType === "touch" ? { x: e.clientX, y: e.clientY, moved: false } : null;
     // resting palm/finger does not).
     if (e.pointerType === "touch" && penDown) {
       pointers.current.delete(e.pointerId);
@@ -1653,11 +1657,11 @@ export function Canvas() {
           // (a marquee, a pan) ends here, as before.
           if (gesture.current.type !== "move") cancelInteraction();
           onContextMenu({ preventDefault() {}, clientX, clientY } as React.MouseEvent);
+          if (touchContact.current) touchContact.current.menuFromHold = true;
         }, 550),
       };
     }
     if (e.pointerType === "touch" && touchPts.length === 1 && penSeen.current) {
-          if (touchContact.current) touchContact.current.menuFromHold = true;
       const dt = useEditor.getState().tool;
       const drawTool = dt === "pen" || dt === "pencil" || dt === "ink" || dt === "line" || dt === "arrow" || dt === "rect" || dt === "ellipse";
       if (drawTool) {
@@ -2075,10 +2079,6 @@ export function Canvas() {
     // zoom by the finger-distance ratio and pan so the start page-anchor stays
     // under the moving midpoint (the wheel-zoom-about-cursor math).
     if (longPress.current && Math.hypot(e.clientX - longPress.current.x, e.clientY - longPress.current.y) > 8) clearLongPress();
-    if (pointers.current.has(e.pointerId)) {
-      pointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY, type: e.pointerType });
-    }
-    if (pinch.current) {
     const tc = touchContact.current;
     if (tc && !tc.moved && e.pointerType === "touch" && Math.hypot(e.clientX - tc.x, e.clientY - tc.y) > 8) {
       tc.moved = true;
@@ -2086,6 +2086,10 @@ export function Canvas() {
       // slow drag, not a long press, so the menu goes away (#89).
       if (tc.menuFromHold) setCtxMenu(null);
     }
+    if (pointers.current.has(e.pointerId)) {
+      pointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY, type: e.pointerType });
+    }
+    if (pinch.current) {
       const touchPts = [...pointers.current.values()].filter((p) => p.type === "touch");
       if (touchPts.length >= 2) {
         const [a, b] = touchPts;
@@ -2212,13 +2216,13 @@ export function Canvas() {
 
   function onPointerUp(e: React.PointerEvent) {
     clearLongPress();
+    if (e.pointerType === "touch" && touchContact.current?.menuFromHold && !touchContact.current.moved) {
+      swallowMenuClickUntil.current = performance.now() + 500;
+    }
     // Apply any move frame still queued from the last pointermove, so the commit
     // below records the exact final position (not one frame behind the cursor).
     flushMove();
     // End any live-transform fade (a move gesture just ended or never started).
-    if (e.pointerType === "touch" && touchContact.current?.menuFromHold && !touchContact.current.moved) {
-      swallowMenuClickUntil.current = performance.now() + 500;
-    }
     useEditor.getState().setTransforming(false);
     // Multi-touch bookkeeping: drop the lifted pointer and end the pinch once
     // fewer than two fingers remain (FR-31).
@@ -3439,10 +3443,6 @@ export function Canvas() {
             className="oc-scroll absolute z-30 max-h-[80vh] w-56 overflow-y-auto rounded-xl border border-neutral-200 bg-surface p-1.5 shadow-xl ring-1 ring-black/5"
             style={{ left: ctxMenu.x, top: ctxMenu.y }}
             onClick={(e) => e.stopPropagation()}
-            // Menu keyboard model (a11y): arrows move between items, Home/End
-            // jump, Escape closes. Stop propagation so the canvas surface's own
-            // arrow (nudge) and Escape (clear selection) handlers stay out of it.
-            onKeyDown={(e) => {
             onClickCapture={(e) => {
               if (performance.now() < swallowMenuClickUntil.current) {
                 swallowMenuClickUntil.current = 0;
@@ -3450,6 +3450,10 @@ export function Canvas() {
                 e.preventDefault();
               }
             }}
+            // Menu keyboard model (a11y): arrows move between items, Home/End
+            // jump, Escape closes. Stop propagation so the canvas surface's own
+            // arrow (nudge) and Escape (clear selection) handlers stay out of it.
+            onKeyDown={(e) => {
               const items = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>("button"));
               const idx = items.indexOf(document.activeElement as HTMLButtonElement);
               const focusAt = (i: number) => {

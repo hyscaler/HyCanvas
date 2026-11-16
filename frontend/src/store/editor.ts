@@ -415,6 +415,11 @@ interface EditorState {
   /** Canvas pixel size, reported by the renderer; drives fit/zoom-to-selection. */
   viewportSize: { width: number; height: number };
   setViewportSize(width: number, height: number): void;
+  /** Screen pixels at the top of the viewport that floating chrome covers (the
+   *  whiteboard toolbar). Fit frames the page below it, so the toolbar does not
+   *  sit on the page or its label row. 0 when nothing floats there. */
+  fitTopInset: number;
+  setFitTopInset(px: number): void;
   /** Fit the active page within the viewport (centered). */
   fitToScreen(): void;
   /** Page-space AABB of everything on the active page: the union of all node
@@ -1890,6 +1895,7 @@ export const useEditor = create<EditorState>((set, get) => {
     transforming: false,
     hoverId: null,
     viewportSize: { width: 0, height: 0 },
+    fitTopInset: 0,
     undoStack: [],
     redoStack: [],
     collabUndo: null,
@@ -3353,6 +3359,7 @@ export const useEditor = create<EditorState>((set, get) => {
       }),
     setViewportSize: (width, height) =>
       set((s) => (s.viewportSize.width === width && s.viewportSize.height === height ? {} : { viewportSize: { width, height } })),
+    setFitTopInset: (px) => set((s) => (s.fitTopInset === px ? {} : { fitTopInset: px })),
     contentBounds: () => get().pageContentBounds(curPageIndex()),
     pageContentBounds: (index) => {
       const rev = get().rev;
@@ -3388,8 +3395,12 @@ export const useEditor = create<EditorState>((set, get) => {
       // contentBounds is in the active page's LOCAL space (y from 0); shift it into
       // the page's stacked band so Fit frames the page being viewed, not page 1.
       const offY = pageTop(get().doc, curPageIndex());
-      const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(vw / b.width, vh / b.height) * 0.9));
-      get().setViewport({ zoom, panX: b.x + b.width / 2 - vw / 2 / zoom, panY: b.y + offY + b.height / 2 - vh / 2 / zoom });
+      // Frame the page in the area below any floating top chrome (capped so a
+      // tall toolbar on a short screen cannot squeeze the page away).
+      const top = Math.min(Math.max(0, get().fitTopInset), vh / 3);
+      const avail = vh - top;
+      const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(vw / b.width, avail / b.height) * 0.9));
+      get().setViewport({ zoom, panX: b.x + b.width / 2 - vw / 2 / zoom, panY: b.y + offY + b.height / 2 - (top + avail / 2) / zoom });
     },
     zoomToSelection: () => {
       const { doc, selection, viewportSize } = get();
