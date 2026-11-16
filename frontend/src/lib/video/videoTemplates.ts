@@ -52,6 +52,10 @@ function text(
   },
 ): Node {
   const fontSize = Math.max(14, Math.round(height * opts.sizeFrac));
+  // Inter rather than "system": the browser draws "system" in the viewer's own
+  // UI font, which no server export can match, so the MP4 broke and sized lines
+  // differently from the preview. Inter is a catalog web font here and built
+  // into the server's renderer, so both draw the same glyphs (#90).
   const boxH = Math.round(height * (opts.hFrac ?? 0.2));
   const node = createNode("text", {
     transform: { x: Math.round(width * 0.08), y: Math.round(height * opts.yFrac), scaleX: 1, scaleY: 1, rotation: 0 },
@@ -59,7 +63,7 @@ function text(
     box: { mode: "fixed", width: Math.round(width * 0.84), height: boxH, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "middle" },
     content: [
       {
-        runs: [{ text: opts.text, style: { fontFamily: "system", fontStyle: "Regular", fontSize, axes: { wght: opts.weight ?? 700 }, fill: { type: "solid", color: { srgb: opts.color } } } }],
+        runs: [{ text: opts.text, style: { fontFamily: "Inter", fontStyle: "Regular", fontSize, axes: { wght: opts.weight ?? 700 }, fill: { type: "solid", color: { srgb: opts.color } } } }],
         style: { align: opts.align ?? "center", direction: "auto" },
       },
     ],

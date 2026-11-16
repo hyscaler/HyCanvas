@@ -207,7 +207,7 @@ The S3 target (AWS, MinIO, R2, ...) is taken from `S3_*` in the environment when
 The editor draws each design in its own fonts, which the browser loads. Exports the server renders itself (video and MP4 deck exports, and PNG or JPEG exports made through the API) draw text from font files on the server:
 
 - **Stock template fonts are built in.** Every font the stock templates use (Outfit, Caveat, Playfair Display and about 110 more) ships inside the binary, so those templates export in their own fonts with no setup. Each family is loaded the first time an export uses it.
-- **Any other font needs a file.** A design set in a font that is not built in exports in the fallback (Liberation Sans, which covers Latin, Greek and Cyrillic) unless you give the server the font with `FONTS_DIR`. The server logs `export: font not available on the server` once per such family, naming it.
+- **Any other font needs a file.** A design set in a font that is not built in exports in the fallback (Liberation Sans, regular and bold, which covers Latin, Greek and Cyrillic) unless you give the server the font with `FONTS_DIR`. The server logs `export: font not available on the server` once per such family, naming it.
 - The accessibility-tagged PDF is written differently: it embeds fonts uploaded with the design and otherwise uses the PDF standard fonts.
 
 To add fonts, put `.ttf` or `.otf` files in a directory and set `FONTS_DIR` to it. A file there wins over a built-in face of the same family and weight.

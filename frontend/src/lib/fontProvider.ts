@@ -6,6 +6,12 @@
 
 import type { DesignFile, Node } from "@hc/schema";
 import { getFontEntry, fontCssUrl, isSystemFont } from "@hc/text";
+import { weightFromFontStyle } from "@hc/engine";
+
+/** The weight a run draws at: its wght axis, else its named style. */
+export function runWeight(style: { fontStyle?: string; axes?: Record<string, number> } | undefined): number {
+  return style?.axes?.wght ?? weightFromFontStyle(style?.fontStyle);
+}
 
 const CUSTOM_FONTS_KEY = "oc-custom-fonts";
 
@@ -28,6 +34,8 @@ function isAllowedFontCssHref(href: string): boolean {
 class FontProvider {
   private loaded = new Set<string>();
   private loading = new Set<string>();
+  // Extra weights fetched per family ("family|weight"), beyond the probe face.
+  private faces = new Set<string>();
   private subs = new Set<() => void>();
   // Uploaded fonts (FR-6): key (lowercased family) -> { family, src (data URL) }.
   private custom = new Map<string, { family: string; src: string }>();
@@ -128,6 +136,28 @@ class FontProvider {
     document.head.appendChild(link);
   }
 
+  /** Ensure a family AND one of its weights is loaded. ensure() fetches a
+   *  single probe face (400), and canvas text never triggers a load on its
+   *  own, so a bold title drew in a fallback font until something else
+   *  happened to load that weight (#90). */
+  ensureWeight(family: string | undefined, weight: number): void {
+    this.ensure(family);
+    if (isSystemFont(family) || typeof document === "undefined" || !weight || weight === 400) return;
+    const key = family!.toLowerCase();
+    const fk = `${key}|${weight}`;
+    if (this.faces.has(fk)) return;
+    this.faces.add(fk);
+    const load = () => {
+      void document.fonts.load(`${weight} 16px "${family}"`).then(
+        (list) => { if (list.length) this.notify(); },
+        () => this.faces.delete(fk),
+      );
+    };
+    const link = document.getElementById(`oc-font-${key.replace(/\s+/g, "-")}`) as HTMLLinkElement | null;
+    if (link && !link.sheet) link.addEventListener("load", load, { once: true });
+    else load();
+  }
+
   /** Preload every font family referenced by a design's text nodes. */
   ensureForDoc(doc: DesignFile): void {
     // Cross-device uploaded fonts: register any FontRef that carries a URL (an
@@ -144,8 +174,8 @@ class FontProvider {
     const walk = (nodes: Node[]) => {
       for (const n of nodes) {
         if (n.type === "text") {
-          for (const para of (n as unknown as { content: { runs: { style: { fontFamily?: string } }[] }[] }).content) {
-            for (const run of para.runs) this.ensure(run.style.fontFamily);
+          for (const para of (n as unknown as { content: { runs: { style: { fontFamily?: string; fontStyle?: string; axes?: Record<string, number> } }[] }[] }).content) {
+            for (const run of para.runs) this.ensureWeight(run.style.fontFamily, runWeight(run.style as Parameters<typeof runWeight>[0]));
           }
         }
         const kids = (n as unknown as { children?: Node[] }).children;
