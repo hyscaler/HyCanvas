@@ -84,6 +84,7 @@ import {
 } from "@hc/editor";
 import { createNode, newId, type ConnectorNode, type Node, type Transform } from "@hc/schema";
 import { requestStickyEdit } from "@/lib/stickyEditRequests";
+import { freeStickySpot } from "@/lib/stickyPlacement";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
@@ -269,10 +270,22 @@ function placeTemplate(nodes: Node[]): void {
 
 // --- toolbar node builders --------------------------------------------------
 
+function stickyBoxes(): { x: number; y: number; w: number; h: number }[] {
+  const page = useEditor.getState().doc.pages[0];
+  return (page?.children ?? [])
+    .filter((n) => n.type === "sticky")
+    .map((n) => {
+      const p = nodeXY(n);
+      const s = nodeSize(n);
+      return { x: p.x, y: p.y, w: s.width, h: s.height };
+    });
+}
+
 function addSticky(): void {
   const node = createNode("sticky", { id: newId(), size: { width: 180, height: 180 } });
   const c = viewportCenter();
-  setNodeXY(node, c.x - 90, c.y - 90);
+  const spot = freeStickySpot(stickyBoxes(), c.x - 90, c.y - 90, 180, 180);
+  setNodeXY(node, spot.x, spot.y);
   insertNodes([node]);
   // Open it for typing, so keys go into the note instead of the board's
   // single-key shortcuts (#84).
