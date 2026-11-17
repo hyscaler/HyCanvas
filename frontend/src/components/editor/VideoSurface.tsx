@@ -127,7 +127,7 @@ import { fontCatalog } from "@hc/text";
 import { imageAssets } from "@/lib/assetProvider";
 import type { UploadedAsset, StockAssetSummary } from "@hc/sdk";
 import { useEditor } from "@/store/editor";
-import { fonts } from "@/lib/fontProvider";
+import { fonts, runWeight } from "@/lib/fontProvider";
 import { directUploadWithProgress, oc, resolveAssetUrl } from "@/lib/sdk";
 import { useEditorFileDropTarget } from "./EditorFileDrop";
 import { promptText } from "@/lib/promptDialog";
@@ -432,15 +432,18 @@ const videoTextPairings = (): { name: string; headFont: string; headWeight: numb
 /** Non-system font families used by a project's text element clips, so the video
  *  editor can lazy-load their webfonts (the canvas renderer needs them in
  *  document.fonts to draw the real face instead of a fallback). */
-function collectElementFonts(project: VideoProject | undefined): Set<string> {
-  const out = new Set<string>();
+function collectElementFonts(project: VideoProject | undefined): Map<string, Set<number>> {
+  const out = new Map<string, Set<number>>();
   const walk = (n: unknown): void => {
     if (!n || typeof n !== "object") return;
-    const node = n as { type?: string; content?: { runs?: { style?: { fontFamily?: string } }[] }[]; children?: unknown[] };
+    const node = n as { type?: string; content?: { runs?: { style?: { fontFamily?: string; fontStyle?: string; axes?: Record<string, number> } }[] }[]; children?: unknown[] };
     if (node.type === "text" && Array.isArray(node.content)) {
       for (const p of node.content) for (const r of p.runs ?? []) {
         const f = r.style?.fontFamily;
-        if (f && f !== "system") out.add(f);
+        if (!f || f === "system") continue;
+        const ws = out.get(f) ?? new Set<number>();
+        ws.add(runWeight(r.style));
+        out.set(f, ws);
       }
     }
     for (const c of node.children ?? []) walk(c);
@@ -1234,7 +1237,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
     return off;
   }, [getPlayer]);
   useEffect(() => {
-    for (const f of collectElementFonts(project)) fonts.ensure(f);
+    for (const [f, ws] of collectElementFonts(project)) for (const w of ws) fonts.ensureWeight(f, w);
   }, [project]);
   // Preload the curated pairing fonts so the +Text menu previews render in-font.
   useEffect(() => {
@@ -4639,16 +4642,32 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       {/* STAGE PREVIEW (top): the live compositor canvas.                  */}
       {/* ---------------------------------------------------------------- */}
       <div className={`flex flex-1 items-center justify-center overflow-hidden ${isPhone ? (isShort ? "min-h-60 shrink-0 p-2" : "min-h-0 p-2") : "min-h-0 p-4"}`}>
-        <div className="flex h-full max-h-full w-full max-w-4xl flex-col items-center justify-center">
+        <div
+          className="flex h-full max-h-full w-full max-w-4xl flex-col items-center justify-center"
+          style={isPhone ? undefined : { containerType: "size" }}
+        >
           <div
             ref={stageBoxRef}
-            className={`relative w-full rounded-lg border border-neutral-200 bg-black shadow-inner ${
-              stageActualSize ? "overflow-auto" : "flex items-center justify-center overflow-hidden"
+            className={`relative rounded-lg border border-neutral-200 bg-black shadow-inner ${
+              stageActualSize ? "w-full overflow-auto" : `flex items-center justify-center overflow-hidden ${isPhone ? "w-full" : ""}`
             }`}
             style={
               stageActualSize
                 ? { maxHeight: "100%" }
-                : { aspectRatio: `${project.stage.width} / ${project.stage.height}`, maxHeight: "100%" }
+                : {
+                    // Fit the stage on both axes: a full-width box capped only by
+                    // max-height came out wider than the stage whenever height was
+                    // the limit, and the canvas showed black bars beside it (#90).
+                    // The height left for it is the column's less the transport
+                    // row below. Phones keep the full-width box: their column has
+                    // no fixed height to measure, and a phone stage is limited by
+                    // width anyway.
+                    width: isPhone
+                      ? undefined
+                      : `min(100cqw, (100cqh - 3.5rem) * ${project.stage.width / Math.max(1, project.stage.height)})`,
+                    aspectRatio: `${project.stage.width} / ${project.stage.height}`,
+                    maxHeight: "100%",
+                  }
             }
             data-stage-size={`${project.stage.width}x${project.stage.height}`}
           >

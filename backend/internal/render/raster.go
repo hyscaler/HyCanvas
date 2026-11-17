@@ -883,7 +883,9 @@ type textChunk struct {
 
 // wrapChunks splits text into alternating word and whitespace chunks so greedy
 // word wrapping can break between words, matching @hc/text's layout. A newline
-// inside a run is treated as whitespace (not a hard break), as on the browser.
+// inside a run is treated as whitespace (not a hard break), as on the browser,
+// and is drawn as a space the way Canvas2D draws it: drawn as itself it has no
+// glyph, so "need,\nnothing" came out as "need,nothing" (#90).
 func wrapChunks(s string) []textChunk {
 	var out []textChunk
 	if s == "" {
@@ -898,6 +900,9 @@ func wrapChunks(s string) []textChunk {
 		if started && w != curWS {
 			out = append(out, textChunk{text: b.String(), ws: curWS})
 			b.Reset()
+		}
+		if w {
+			r = ' '
 		}
 		b.WriteRune(r)
 		curWS = w
@@ -934,7 +939,7 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 			if adv, ok := face.GlyphAdvance(r); ok {
 				return float64(adv>>6)/scale + ls, true
 			}
-			if alt := faceCovering(r, fam, wght, size*scale, rc.font); alt != nil {
+			if alt := faceCovering(r, fam, wght, size*scale, rc.fallbackFor(wght)); alt != nil {
 				adv, _ := alt.GlyphAdvance(r)
 				_ = alt.Close()
 				return float64(adv>>6)/scale + ls, true
@@ -962,10 +967,11 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 		}
 		// Registered real fonts win (glyph-true export); otherwise the embedded
 		// fallback keeps text legible and positioned.
-		fnt := lookupFont(asStr(style["fontFamily"]), int(asNum(asObj(style["axes"])["wght"])))
+		wght := int(asNum(asObj(style["axes"])["wght"]))
+		fnt := lookupFont(asStr(style["fontFamily"]), wght)
 		if fnt == nil {
 			noteMissingFamily(asStr(style["fontFamily"]))
-			fnt = rc.font
+			fnt = rc.fallbackFor(wght)
 		}
 		face, err := opentype.NewFace(fnt, &opentype.FaceOptions{Size: size * scale, DPI: 72, Hinting: font.HintingFull})
 		if err != nil {
@@ -1172,7 +1178,7 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 			drawRune := func(r rune) bool {
 				glyphFace := face
 				if _, ok := face.GlyphAdvance(r); !ok {
-					if alt := faceCovering(r, fam, wght, size*scale, rc.font); alt != nil {
+					if alt := faceCovering(r, fam, wght, size*scale, rc.fallbackFor(wght)); alt != nil {
 						glyphFace = alt
 					} else {
 						return false

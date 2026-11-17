@@ -6,6 +6,8 @@ import (
 	"image/png"
 	"math"
 	"testing"
+
+	"golang.org/x/image/font/opentype"
 )
 
 func TestToPNG(t *testing.T) {
@@ -266,5 +268,42 @@ func TestDashPolyline(t *testing.T) {
 	}
 	if got := dashPattern(map[string]any{"dash": []any{4.0, 2.0}}, 2); len(got) != 2 || got[0] != 8 || got[1] != 4 {
 		t.Fatalf("dash lengths must scale to device space, got %v", got)
+	}
+}
+
+// An in-run newline lays out as whitespace and draws as a space, as Canvas2D
+// draws it; drawn as itself it has no glyph and "need,\nnothing" exported as
+// "need,nothing" (#90).
+func TestWrapChunksDrawsNewlineAsSpace(t *testing.T) {
+	got := wrapChunks("need,\nnothing")
+	if len(got) != 3 || got[1].text != " " || !got[1].ws {
+		t.Fatalf("chunks = %+v, want the newline as a single-space whitespace chunk", got)
+	}
+}
+
+// Unregistered ("system") text at weight 600 and above uses the embedded bold
+// face, not the regular one (#90).
+func TestSystemTextBoldUsesBoldFallback(t *testing.T) {
+	if fallbackBoldFont == nil {
+		t.Fatal("embedded bold fallback failed to parse")
+	}
+	rc := &rctx{font: fallbackFont}
+	if rc.fallbackFor(700) != fallbackBoldFont || rc.fallbackFor(600) != fallbackBoldFont {
+		t.Fatal("weight 600+ should use the bold fallback")
+	}
+	if rc.fallbackFor(400) != fallbackFont || rc.fallbackFor(0) != fallbackFont {
+		t.Fatal("regular weights should keep the regular fallback")
+	}
+	// The bold face is wider than the regular one at the same size.
+	wide := func(f *opentype.Font) float64 {
+		face, err := opentype.NewFace(f, &opentype.FaceOptions{Size: 76, DPI: 72})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer face.Close()
+		return measureFace(face, "Everything you need")
+	}
+	if wide(fallbackBoldFont) <= wide(fallbackFont) {
+		t.Fatal("bold fallback should measure wider than regular")
 	}
 }

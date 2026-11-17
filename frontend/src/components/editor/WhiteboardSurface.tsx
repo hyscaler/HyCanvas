@@ -63,6 +63,7 @@ import {
   remainingBudget,
   removeSavedView,
   resetTimer,
+  nodeSearchText,
   searchNodes,
   startTimer,
   stepSavedView,
@@ -80,10 +81,12 @@ import {
 } from "@hc/whiteboard";
 import {
   applyCommand,
+  worldAABB,
   type EditCommand,
 } from "@hc/editor";
 import { createNode, newId, type ConnectorNode, type Node, type Transform } from "@hc/schema";
 import { requestStickyEdit } from "@/lib/stickyEditRequests";
+import { freeStickySpot } from "@/lib/stickyPlacement";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
@@ -269,10 +272,22 @@ function placeTemplate(nodes: Node[]): void {
 
 // --- toolbar node builders --------------------------------------------------
 
+function stickyBoxes(): { x: number; y: number; w: number; h: number }[] {
+  const page = useEditor.getState().doc.pages[0];
+  return (page?.children ?? [])
+    .filter((n) => n.type === "sticky")
+    .map((n) => {
+      const p = nodeXY(n);
+      const s = nodeSize(n);
+      return { x: p.x, y: p.y, w: s.width, h: s.height };
+    });
+}
+
 function addSticky(): void {
   const node = createNode("sticky", { id: newId(), size: { width: 180, height: 180 } });
   const c = viewportCenter();
-  setNodeXY(node, c.x - 90, c.y - 90);
+  const spot = freeStickySpot(stickyBoxes(), c.x - 90, c.y - 90, 180, 180);
+  setNodeXY(node, spot.x, spot.y);
   insertNodes([node]);
   // Open it for typing, so keys go into the note instead of the board's
   // single-key shortcuts (#84).
@@ -488,6 +503,19 @@ function Popover(props: {
       window.removeEventListener("keydown", onKey);
     };
   }, [props.open, props]);
+  // Keep the panel inside the board: a popover anchored near the toolbar's
+  // right end ran off the edge and cut off its buttons (#91).
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || !props.open || props.phone) return;
+    el.style.translate = "";
+    const r = el.getBoundingClientRect();
+    const box = el.closest("[data-board-root]")?.getBoundingClientRect();
+    const left = Math.max(box?.left ?? 0, 0) + 8;
+    const right = Math.min(box?.right ?? Infinity, document.documentElement.clientWidth) - 8;
+    const dx = r.right > right ? Math.max(right - r.right, left - r.left) : r.left < left ? left - r.left : 0;
+    if (dx) el.style.translate = `${dx}px 0`;
+  }, [props.open, props.phone]);
   if (!props.open) return null;
   return (
     <div
@@ -911,6 +939,7 @@ export function WhiteboardSurface(props: {
   const selfClientIdF = usePresence((s) => s.self?.clientId ?? null);
   const protectedNodes = usePresence((s) => s.protectedNodes);
   const selection = useEditor((s) => s.selection);
+  const selectedId: string | undefined = selection[0];
   const amFacilitator = !!facilitator && facilitator.clientId === selfClientIdF;
   const otherFacilitator = !!facilitator && facilitator.clientId !== selfClientIdF;
   // Protect actions are accepted server-side only from the facilitator (or any
@@ -1259,15 +1288,30 @@ export function WhiteboardSurface(props: {
   const roundBudget = canServerVote ? (liveTally?.session.budgetPerUser ?? 0) : (vote?.budgetPerUser ?? 0);
   const displayCounts = canServerVote ? (liveTally?.counts ?? {}) : tallies;
   const displayRemaining = canServerVote ? (liveTally?.remainingBudget ?? 0) : myRemaining;
+  const roundRevealed = canServerVote ? !!liveTally?.session.revealed : !!vote?.revealed;
+  const myVotes: string[] = canServerVote
+    ? (liveTally?.mine ?? [])
+    : (vote?.votes.filter((v) => v.userId === userId).map((v) => v.nodeId) ?? []);
+  // Counts go on the board once the round is revealed (always after Close &
+  // reveal; from the start in a round that is not anonymous) (#91).
+  const showBoardVotes = hasRound && !roundPending && (roundRevealed || !roundOpen);
   const doOpenVote = canServerVote ? openServerVote : openVoteRound;
   const doVoteSelection = canServerVote ? castServerVoteSelection : voteForSelection;
   const doCloseVote = canServerVote ? closeServerVote : closeVoteRound;
   const doNewRound = canServerVote ? newServerRound : clearVoteRound;
+  // Voting again for the same node takes the vote back; say so, and name the
+  // button for what it will do, instead of doing it silently (#91).
+  const votedSelected = !!selectedId && myVotes.includes(selectedId);
+  const onVoteSelection = () => {
+    if (!selectedId) return;
+    doVoteSelection();
+    if (votedSelected) toast.toast(tr("editor.vote_taken_back"));
+  };
 
   const fmt2 = (n: number) => String(n).padStart(2, "0");
 
   return (
-    <div ref={surfaceRef} className="relative flex min-w-0 flex-1">
+    <div ref={surfaceRef} data-board-root className="relative flex min-w-0 flex-1">
       {/* Infinite-surface dot grid (F30 FR-1): sits behind the engine canvas, which
           is transparent outside the page, so panning anywhere shows a continuous
           board. Dots scale with zoom and scroll with pan. Non-interactive. */}
@@ -1284,6 +1328,8 @@ export function WhiteboardSurface(props: {
       {/* The board: the existing design canvas (engine-rendered). It owns pan,
           zoom, marquee-select, and move for the whiteboard nodes. */}
       <Canvas />
+
+      {showBoardVotes && <BoardVoteBadges counts={displayCounts} />}
 
       {/* Zoom control (parity with the design editor): zoom in/out, %, fit, and
           zoom-to-selection. Pan/zoom also work via wheel/trackpad/shortcuts. */}
@@ -2000,8 +2046,8 @@ export function WhiteboardSurface(props: {
                 </div>
 
                 {roundOpen && (
-                  <Button size="sm" block variant="secondary" onClick={doVoteSelection}>
-                    <Share2 size={14} /> {tr("editor.vote_for_selected_node")}
+                  <Button size="sm" block variant="secondary" onClick={onVoteSelection} disabled={!selectedId}>
+                    <Share2 size={14} /> {votedSelected ? tr("editor.remove_my_vote") : tr("editor.vote_for_selected_node")}
                   </Button>
                 )}
 
@@ -2015,15 +2061,25 @@ export function WhiteboardSurface(props: {
                       {Object.entries(displayCounts)
                         .sort((a, b) => b[1] - a[1])
                         .map(([nodeId, count]) => (
-                          <li
-                            key={nodeId}
-                            className="flex items-center justify-between px-2 py-1.5 text-xs"
-                          >
-                            <span className="truncate text-neutral-600">{nodeId.slice(0, 12)}…</span>
-                            <span className="ml-2 inline-flex items-center gap-1 font-semibold text-neutral-800">
-                              <span className="h-2 w-2 rounded-full bg-brand-500" aria-hidden />
-                              {count}
-                            </span>
+                          <li key={nodeId}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const st = useEditor.getState();
+                                if (!findNode(st.doc.pages[0]?.children ?? [], nodeId)) return;
+                                st.select([nodeId]);
+                                st.jumpToNode(nodeId);
+                              }}
+                              className="flex w-full items-center justify-between px-2 py-1.5 text-left text-xs hover:bg-neutral-50"
+                            >
+                              <span className={"truncate " + (myVotes.includes(nodeId) ? "font-medium text-neutral-800" : "text-neutral-600")}>
+                                {voteTargetLabel(nodeId)}
+                              </span>
+                              <span className="ml-2 inline-flex items-center gap-1 font-semibold text-neutral-800">
+                                <span className="h-2 w-2 rounded-full bg-brand-500" aria-hidden />
+                                {count}
+                              </span>
+                            </button>
                           </li>
                         ))}
                     </ul>
@@ -2104,6 +2160,55 @@ export function WhiteboardSurface(props: {
 // On-board find overlay (FR-2): live-filters board content via @hc/whiteboard
 // searchNodes and jumps the viewport to a chosen match. Self-contained: owns its
 // query state and reads the live doc; re-runs as content changes (rev).
+function findNode(nodes: Node[], id: string): Node | null {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    const kids = (n as unknown as { children?: Node[] }).children;
+    if (Array.isArray(kids)) {
+      const hit = findNode(kids, id);
+      if (hit) return hit;
+    }
+  }
+  return null;
+}
+
+/** What a dot-vote tally row calls a node: its text, so people can tell which
+ *  idea won, rather than its id (#91). */
+function voteTargetLabel(id: string): string {
+  const node = findNode(useEditor.getState().doc.pages[0]?.children ?? [], id);
+  if (!node) return tr("editor.vote_deleted_item");
+  const text = nodeSearchText(node).replace(/\s+/g, " ").trim();
+  return text || tr("editor.vote_item_without_text");
+}
+
+/** Vote counts drawn on the board at each voted node's top-right corner, once
+ *  the round is revealed (#91). Follows pan, zoom and edits; never takes input. */
+function BoardVoteBadges({ counts }: { counts: Record<string, number> }): React.ReactElement {
+  useEditor((s) => s.rev);
+  const doc = useEditor((s) => s.doc);
+  const { zoom, panX, panY } = useEditor((s) => s.viewport);
+  const badges: { id: string; x: number; y: number; count: number }[] = [];
+  for (const [id, count] of Object.entries(counts)) {
+    if (count <= 0) continue;
+    const box = worldAABB(doc, id);
+    if (!box) continue;
+    badges.push({ id, x: (box.x + box.width - panX) * zoom, y: (box.y - panY) * zoom, count });
+  }
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
+      {badges.map((b) => (
+        <span
+          key={b.id}
+          className="absolute flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-1 rounded-full bg-brand-500 px-2 text-xs font-semibold text-white shadow-md ring-2 ring-white"
+          style={{ left: b.x, top: b.y }}
+        >
+          {b.count}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function BoardSearch({ onClose }: { onClose: () => void }): React.ReactElement {
   const [q, setQ] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);

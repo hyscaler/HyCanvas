@@ -39,7 +39,7 @@ func (rc *rctx) face(family string, weight int, sizePx float64) font.Face {
 	fnt := lookupFont(family, weight)
 	if fnt == nil {
 		noteMissingFamily(family)
-		fnt = rc.font
+		fnt = rc.fallbackFor(weight)
 	}
 	if fnt == nil || sizePx <= 0 {
 		return nil

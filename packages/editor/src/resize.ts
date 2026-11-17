@@ -322,6 +322,19 @@ export function resizePage(page: Page, target: ResizeTarget): Page {
     return { node, src, xPlan, yPlan, free };
   });
 
+  // A panel (a card, a window frame) is content too, however much of the page
+  // it covers, when it holds other content: mapped on its own, it stayed put
+  // while the text on it moved as blocks, so a subtitle ended up off the card
+  // on a dark background (#92). Promote it into the blocks, so it travels with
+  // what sits on it. A panel holding nothing stays a backdrop.
+  for (const it of items) {
+    if (it.free || it.xPlan.anchor === "stretch" || it.yPlan.anchor === "stretch") continue;
+    const inPage = it.src.x >= -1 && it.src.y >= -1 && it.src.x + it.src.w <= sW + 1 && it.src.y + it.src.h <= sH + 1;
+    if (!inPage) continue;
+    const held = items.filter((o) => o.free && containsCenter(it.src, o.src));
+    if (held.some((o) => o.node.type === "text")) it.free = true;
+  }
+
   // Nodes outside any block: mapped one by one on their own anchors. A
   // decoration that stretches on neither axis (a giant quote mark, a circle
   // bleeding off a corner) grows by the smaller axis ratio only, so a post

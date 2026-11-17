@@ -4145,5 +4145,9 @@
   "brands.contrast_value": "Contraste {ratio}:1",
   "brands.type_sample": "Aa",
   "pwa.update_available": "Hay una nueva versión disponible",
-  "pwa.reload": "Recargar"
+  "pwa.reload": "Recargar",
+  "editor.remove_my_vote": "Quitar mi voto",
+  "editor.vote_taken_back": "Voto retirado",
+  "editor.vote_deleted_item": "Elemento eliminado",
+  "editor.vote_item_without_text": "Elemento sin texto"
 }
