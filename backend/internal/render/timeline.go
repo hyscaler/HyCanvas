@@ -20,6 +20,7 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -308,6 +309,10 @@ type TimelineOptions struct {
 	// server MP4 animates the element exactly like the browser preview. Takes
 	// precedence over ElementFiles for the same clip id.
 	ElementSeqs map[string]ElementSeq
+	// TextFonts maps a font weight to a staged font file for title and caption
+	// burn-in (see StageTextFonts), so the export draws them in the same face
+	// and weight as the preview. Empty falls back to fontconfig's "Sans".
+	TextFonts map[int]string
 }
 
 // ElementSeq is a staged, posed PNG sequence for one animated element clip.
@@ -383,6 +388,28 @@ func escapeDrawtext(s string) string {
 	s = strings.ReplaceAll(s, `:`, `\:`)
 	s = strings.ReplaceAll(s, `%`, `\%`)
 	return s
+}
+
+// drawtextFont is the font option for a drawtext filter: the staged file for
+// weight (or the nearest staged weight) when there is one, otherwise
+// fontconfig's generic "Sans".
+func drawtextFont(files map[int]string, weight int) string {
+	best, bestD := "", 0
+	for w, f := range files {
+		d := w - weight
+		if d < 0 {
+			d = -d
+		}
+		if best == "" || d < bestD {
+			best, bestD = f, d
+		}
+	}
+	if best == "" {
+		return "font=Sans"
+	}
+	// Forward slashes work on every platform ffmpeg runs on and leave only the
+	// drive colon on Windows to escape ("C\:/Users/...").
+	return "fontfile='" + escapeDrawtext(filepath.ToSlash(best)) + "'"
 }
 
 // fadeFilters builds the ffmpeg fade filter(s) for one transition edge on a clip
@@ -799,13 +826,18 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 			startS := c.StartFrame / fps
 			endS := c.endFrame() / fps
 			color := cssColorToFF(c.Title.Color, "white")
+			// The preview draws titles bold unless the card says "normal".
+			titleWeight := 700
+			if c.Title.Weight == "normal" {
+				titleWeight = 400
+			}
 			offX := int(c.Title.OffsetX * float64(W))
 			offY := int(c.Title.OffsetY * float64(H))
 			for i := len(lines) - 1; i >= 0; i-- {
 				y := lastBaseTop - (len(lines)-1-i)*lineH + offY
 				dt := fmt.Sprintf(
-					"drawtext=font=Sans:text='%s':fontsize=%d:fontcolor=%s:x=(w-text_w)/2+%d:y=%d:expansion=none:enable='between(t,%.4f,%.4f)'",
-					escapeDrawtext(lines[i]), fontPx, color, offX, y, startS, endS)
+					"drawtext=%s:text='%s':fontsize=%d:fontcolor=%s:x=(w-text_w)/2+%d:y=%d:expansion=none:enable='between(t,%.4f,%.4f)'",
+					drawtextFont(opts.TextFonts, titleWeight), escapeDrawtext(lines[i]), fontPx, color, offX, y, startS, endS)
 				if c.Title.Background != "" {
 					dt += fmt.Sprintf(":box=1:boxcolor=%s:boxborderw=%d", cssColorToFF(c.Title.Background, "black@0.6"), fontPx/3)
 				}
@@ -844,8 +876,8 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 				}
 				for i, line := range strings.Split(cue.Text, "\n") {
 					dt := fmt.Sprintf(
-						"drawtext=font=Sans:text='%s':fontsize=%d:fontcolor=%s:x=(w-text_w)/2:y=%d:box=1:boxcolor=%s:boxborderw=%d:expansion=none:enable='between(t,%.4f,%.4f)'",
-						escapeDrawtext(line), fontPx, color, y+i*int(float64(fontPx)*1.25), bg, fontPx/3,
+						"drawtext=%s:text='%s':fontsize=%d:fontcolor=%s:x=(w-text_w)/2:y=%d:box=1:boxcolor=%s:boxborderw=%d:expansion=none:enable='between(t,%.4f,%.4f)'",
+						drawtextFont(opts.TextFonts, 600), escapeDrawtext(line), fontPx, color, y+i*int(float64(fontPx)*1.25), bg, fontPx/3,
 						cue.StartFrame/fps, cue.EndFrame/fps)
 					drawtexts = append(drawtexts, dt)
 				}
@@ -1119,6 +1151,14 @@ func RenderTimeline(ctx context.Context, p *TimelineProject, assetFile func(stri
 	_ = tmp.Close()
 	defer func() { _ = os.Remove(outPath) }()
 
+	if opts.DrawText && opts.TextFonts == nil {
+		dir, err := os.MkdirTemp("", "oc-timeline-fonts-*")
+		if err != nil {
+			return nil, err
+		}
+		defer func() { _ = os.RemoveAll(dir) }()
+		opts.TextFonts = StageTextFonts(dir)
+	}
 	args, err := BuildTimelineArgs(p, assetFile, opts, outPath)
 	if err != nil {
 		return nil, err

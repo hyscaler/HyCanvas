@@ -19,6 +19,8 @@ import (
 	"compress/gzip"
 	"embed"
 	"io"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -98,6 +100,34 @@ func loadStockFamily(family string) bool {
 		_ = RegisterFont(f.family, f.weight, data)
 	}
 	return true
+}
+
+// TextFontFamily is the face the video editor draws title cards and captions
+// in, and that timeline exports burn them in with.
+const TextFontFamily = "Inter"
+
+// StageTextFonts writes the built-in TextFontFamily faces used for title and
+// caption burn-in (regular, semibold, bold) into dir, for ffmpeg's drawtext,
+// which reads fonts from files. It returns weight -> path for the faces it
+// wrote; an empty map leaves drawtext on its generic default.
+func StageTextFonts(dir string) map[int]string {
+	stockOnce.Do(buildStockIndex)
+	out := map[int]string{}
+	for _, f := range stockIndex[normFamily(TextFontFamily)] {
+		if f.weight != 400 && f.weight != 600 && f.weight != 700 {
+			continue
+		}
+		data, err := readGzip(f.file)
+		if err != nil {
+			continue
+		}
+		path := filepath.Join(dir, f.family+"-"+strconv.Itoa(f.weight)+".ttf")
+		if os.WriteFile(path, data, 0o600) != nil {
+			continue
+		}
+		out[f.weight] = path
+	}
+	return out
 }
 
 func readGzip(name string) ([]byte, error) {
