@@ -59,7 +59,7 @@ func TestMagicLinkSignupCreatesOnRedeem(t *testing.T) {
 	}
 
 	// Redeem: now the account exists and a session is issued.
-	u, tokens, err := svc.LoginWithMagicLink(ctx, tok, "d", "ip", true)
+	u, tokens, _, err := svc.LoginWithMagicLink(ctx, tok, "d", "ip", true)
 	if err != nil || u == nil || tokens == nil || tokens.Access == "" {
 		t.Fatalf("redeem should create + sign in: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestMagicLinkSignupCreatesOnRedeem(t *testing.T) {
 
 	// Redeeming the same signup token again just signs the now-existing user in
 	// (idempotent replay), not a duplicate account.
-	u2, _, err := svc.LoginWithMagicLink(ctx, tok, "d", "ip", true)
+	u2, _, _, err := svc.LoginWithMagicLink(ctx, tok, "d", "ip", true)
 	if err != nil || u2 == nil || u2.ID != u.ID {
 		t.Fatalf("replay should reuse the account: %v (u2=%v)", err, u2)
 	}
@@ -95,7 +95,7 @@ func TestMagicLinkSignupDisabled(t *testing.T) {
 	}
 	// Even a hand-built valid signup token is refused at redeem when signup is off.
 	tok := svc.signMagicSignupToken(email)
-	if _, _, err := svc.LoginWithMagicLink(ctx, tok, "d", "ip", false); !errors.Is(err, ErrToken) {
+	if _, _, _, err := svc.LoginWithMagicLink(ctx, tok, "d", "ip", false); !errors.Is(err, ErrToken) {
 		t.Errorf("redeem with signup disabled should fail with ErrToken, got %v", err)
 	}
 	if userExists(ctx, svc, email) {
