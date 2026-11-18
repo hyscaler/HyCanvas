@@ -69,6 +69,13 @@ export class TimelinePlayer {
   /** Offscreen canvas per element clip (footage-free design elements), keyed by
    *  content so a static element rasterizes once and is reused every frame. */
   private elementCanvases = new Map<string, { canvas: HTMLCanvasElement; key: string }>();
+  /** Last decoded frame of each video clip, copied just before a seek, so the
+   *  stage keeps showing a picture while the element is seeking (#95). */
+  private held = new Map<string, HTMLCanvasElement>();
+  /** Newest seek target per clip that arrived while a seek was in flight;
+   *  applied when that seek lands, so a fast scrub or trim drag lets each seek
+   *  finish (and show its frame) instead of restarting it on every event. */
+  private pendingSeek = new Map<string, number>();
   /** Latest stage size (set each syncAt), so drawSource can size element frames. */
   private lastStage: { width: number; height: number } | null = null;
   private gains = new Map<string, GainNode>();
@@ -286,16 +293,22 @@ export class TimelinePlayer {
     }
     if (this.kindOf(active.clip) !== "video") return null;
     const el = this.elementFor(active.clip) as HTMLVideoElement | null;
-    if (!el || el.readyState < 2) return null;
-    const w = el.videoWidth || 1;
-    const h = el.videoHeight || 1;
+    if (!el) return null;
+    // While seeking (or before the first frame decodes) the element has no
+    // current frame: draw the frame held from before the seek instead of
+    // leaving the stage blank (#95).
+    const live = el.readyState >= 2 && !el.seeking;
+    const src: HTMLVideoElement | HTMLCanvasElement | undefined = live ? el : this.held.get(active.clip.id);
+    if (!src) return null;
+    const w = el.videoWidth || src.width || 1;
+    const h = el.videoHeight || src.height || 1;
     const key = active.clip.chromaKey;
     if (key) {
       if (!this.keyer) this.keyer = new ChromaKeyer();
-      const keyed = this.keyer.apply(el, w, h, key);
+      const keyed = this.keyer.apply(src, w, h, key);
       if (keyed) return { el: keyed, width: w, height: h };
     }
-    return { el, width: w, height: h };
+    return { el: src, width: w, height: h };
   }
 
   /** Rasterize a clip's embedded element node to a cached stage-sized offscreen.
@@ -418,13 +431,13 @@ export class TimelinePlayer {
       }
       if (playing && !reversed) {
         el.playbackRate = Math.min(16, Math.max(0.0625, Math.abs(clip.speed) * this.rate));
-        if (Math.abs(el.currentTime - wantS) > DRIFT_PLAYING_S) el.currentTime = wantS;
+        if (Math.abs(this.seekTarget(clip.id, el) - wantS) > DRIFT_PLAYING_S) this.seek(clip.id, el, wantS);
         if (el.paused) void el.play().catch(() => undefined);
       } else {
         // Paused, scrubbing, or reverse playback (elements cannot play
         // backwards: reverse renders by per-frame seeking, audio muted).
         if (!el.paused) el.pause();
-        if (Math.abs(el.currentTime - wantS) > DRIFT_PAUSED_S) el.currentTime = wantS;
+        if (Math.abs(this.seekTarget(clip.id, el) - wantS) > DRIFT_PAUSED_S) this.seek(clip.id, el, wantS);
       }
     }
     // Everything not under the playhead: pause + silence.
@@ -432,6 +445,58 @@ export class TimelinePlayer {
       if (activeIds.has(clipId)) continue;
       if (!el.paused) el.pause();
       this.applyGain(clipId, el, 0);
+    }
+  }
+
+  /** Where the element is, or is about to be once queued seeks land. */
+  private seekTarget(clipId: string, el: HTMLVideoElement | HTMLAudioElement): number {
+    return (el.seeking ? this.pendingSeek.get(clipId) : undefined) ?? el.currentTime;
+  }
+
+  /** Seek an element to `t` seconds. The visible frame is held first, so the
+   *  stage never goes blank while the seek decodes; a seek requested while one
+   *  is in flight is queued (newest wins) and issued when the current lands. */
+  private seek(clipId: string, el: HTMLVideoElement | HTMLAudioElement, t: number): void {
+    if (el.seeking) {
+      if (!this.pendingSeek.has(clipId)) {
+        el.addEventListener(
+          "seeked",
+          () => {
+            const next = this.pendingSeek.get(clipId);
+            this.pendingSeek.delete(clipId);
+            if (next !== undefined && this.els.get(clipId) === el && Math.abs(el.currentTime - next) > 1e-3) {
+              this.seek(clipId, el, next);
+            }
+          },
+          { once: true },
+        );
+      }
+      this.pendingSeek.set(clipId, t);
+      return;
+    }
+    this.pendingSeek.delete(clipId); // a queue left behind by a seek that never landed
+    if (el instanceof HTMLVideoElement && el.readyState >= 2) this.holdFrame(clipId, el);
+    el.currentTime = t;
+  }
+
+  /** Copy the element's current frame into the clip's hold canvas. */
+  private holdFrame(clipId: string, el: HTMLVideoElement): void {
+    const w = el.videoWidth;
+    const h = el.videoHeight;
+    if (!w || !h) return;
+    let c = this.held.get(clipId);
+    if (!c) {
+      c = document.createElement("canvas");
+      this.held.set(clipId, c);
+    }
+    if (c.width !== w || c.height !== h) {
+      c.width = w;
+      c.height = h;
+    }
+    try {
+      c.getContext("2d")?.drawImage(el, 0, 0, w, h);
+    } catch {
+      this.held.delete(clipId);
     }
   }
 
@@ -477,6 +542,8 @@ export class TimelinePlayer {
       el.src = "";
       this.els.delete(clipId);
       this.elAssets.delete(clipId);
+      this.held.delete(clipId);
+      this.pendingSeek.delete(clipId);
       const g = this.gains.get(clipId);
       if (g) {
         g.disconnect();
