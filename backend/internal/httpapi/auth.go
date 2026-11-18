@@ -433,7 +433,13 @@ func magicLinkHandler(svc *accounts.Service, secure bool, policy config.AuthPoli
 		}
 		// A redeem may create the account (sign-up link for a new email) only when
 		// magic-link signup is enabled; existing-user links always work.
-		user, tokens, err := svc.LoginWithMagicLink(r.Context(), body.Token, r.UserAgent(), clientIP(r), policy.MagicLinkSignup)
+		user, tokens, mfaToken, err := svc.LoginWithMagicLink(r.Context(), body.Token, r.UserAgent(), clientIP(r), policy.MagicLinkSignup)
+		if errors.Is(err, accounts.ErrMFARequired) {
+			// The link is only the first factor: answer with the MFA challenge
+			// and set no cookies, as password login does.
+			writeJSON(w, http.StatusOK, map[string]any{"mfaRequired": true, "mfaToken": mfaToken})
+			return
+		}
 		if err != nil {
 			problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "invalid or expired link", "invalid_or_expired_link")
 			return

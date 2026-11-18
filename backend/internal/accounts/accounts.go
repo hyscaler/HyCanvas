@@ -508,19 +508,7 @@ func (s *Service) Login(ctx context.Context, email, password, device, ip string)
 	if !secrets.VerifyPassword(password, *u.PasswordHash) {
 		return nil, nil, "", ErrInvalidCredentials
 	}
-	if u.MFAEnabled {
-		mfaToken, err := s.mfaChallengeToken(u.ID)
-		if err != nil {
-			return nil, nil, "", err
-		}
-		return nil, nil, mfaToken, ErrMFARequired
-	}
-
-	v, tokens, err := s.issueSession(ctx, u, device, ip)
-	if err != nil {
-		return nil, nil, "", err
-	}
-	return v, tokens, "", nil
+	return s.firstFactorSession(ctx, u, device, ip)
 }
 
 // issueSession creates a session row and signs the access/refresh tokens.

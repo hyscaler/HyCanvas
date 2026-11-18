@@ -256,26 +256,28 @@ func (s *Service) RequestMagicLink(ctx context.Context, email string, allowSignu
 }
 
 // LoginWithMagicLink consumes a magic token, marks the email verified (clicking
-// the link proves inbox control), and issues a normal session.
+// the link proves inbox control), and signs in. The link is a first factor
+// only: an account with MFA enabled gets ErrMFARequired and a challenge token
+// (see firstFactorSession) instead of a session.
 //
 // A signed sign-up token (no stored row) is accepted only when allowSignup is
 // set: on redeem it creates a passwordless account for the token's email, or, if
 // one already exists (a replayed link, or a race), signs that account in. This
 // is the create-on-redeem path, so an un-clicked sign-up link creates nothing.
-func (s *Service) LoginWithMagicLink(ctx context.Context, raw, device, ip string, allowSignup bool) (*AuthUser, *Tokens, error) {
+func (s *Service) LoginWithMagicLink(ctx context.Context, raw, device, ip string, allowSignup bool) (*AuthUser, *Tokens, string, error) {
 	// Stored sign-in token for an existing account.
 	if id, userID, ok := s.usableToken(ctx, raw, "magic"); ok {
 		if err := s.consumeToken(ctx, id); err != nil {
-			return nil, nil, err
+			return nil, nil, "", err
 		}
 		if _, err := s.db.Exec(ctx, `UPDATE "users" SET "email_verified" = true, "updated_at" = now() WHERE id = $1`, userID); err != nil {
-			return nil, nil, err
+			return nil, nil, "", err
 		}
 		row, err := s.findUserByID(ctx, userID)
 		if err != nil || row == nil {
-			return nil, nil, ErrToken
+			return nil, nil, "", ErrToken
 		}
-		return s.issueSession(ctx, row, device, ip)
+		return s.firstFactorSession(ctx, row, device, ip)
 	}
 
 	// Signed sign-up token: create-or-login by email, only when signup is enabled.
@@ -284,23 +286,42 @@ func (s *Service) LoginWithMagicLink(ctx context.Context, raw, device, ip string
 		switch {
 		case err == nil && u != nil:
 			// The email already has an account (replayed link / race): just sign in.
-			return s.issueSession(ctx, u, device, ip)
+			return s.firstFactorSession(ctx, u, device, ip)
 		case errors.Is(err, pgx.ErrNoRows):
 			userID, err := s.createUserWithWorkspace(ctx, email, "", true, nil)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, "", err
 			}
 			row, err := s.findUserByID(ctx, userID)
 			if err != nil || row == nil {
-				return nil, nil, ErrToken
+				return nil, nil, "", ErrToken
 			}
-			return s.issueSession(ctx, row, device, ip)
+			return s.firstFactorSession(ctx, row, device, ip)
 		default:
-			return nil, nil, err
+			return nil, nil, "", err
 		}
 	}
 
-	return nil, nil, ErrToken
+	return nil, nil, "", ErrToken
+}
+
+// firstFactorSession finishes a sign-in whose first factor (a password or a
+// magic link) has succeeded. An account with MFA enabled gets ErrMFARequired and a
+// challenge token to redeem through VerifyMfaLogin, exactly as password login
+// does; no session is issued until the second factor is checked.
+func (s *Service) firstFactorSession(ctx context.Context, u *UserRow, device, ip string) (*AuthUser, *Tokens, string, error) {
+	if u.MFAEnabled {
+		mfaToken, err := s.mfaChallengeToken(u.ID)
+		if err != nil {
+			return nil, nil, "", err
+		}
+		return nil, nil, mfaToken, ErrMFARequired
+	}
+	v, tokens, err := s.issueSession(ctx, u, device, ip)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	return v, tokens, "", nil
 }
 
 // Outbox returns a copy of the captured dev mail (newest last).

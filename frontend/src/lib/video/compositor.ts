@@ -694,6 +694,20 @@ export function activeTitleClipsAt(project: VideoProject, frame: number, opts: A
   );
 }
 
+/** The face title cards and captions are drawn in. The server export burns them
+ *  in with the same built-in face (render.TextFontFamily), so the fast MP4
+ *  matches the preview (#94). The editor loads its weights (see VideoSurface). */
+export const TITLE_FONT_FAMILY = "Inter";
+const TITLE_FONT_STACK = `${TITLE_FONT_FAMILY}, system-ui, sans-serif`;
+
+/** Font weight a title card is drawn at: bold unless the card says normal. */
+export function titleWeight(title: Pick<TitleCard, "weight">): number {
+  return title.weight === "normal" ? 400 : 700;
+}
+
+/** Captions are drawn semibold. */
+export const CAPTION_WEIGHT = 600;
+
 /** Draw one title card (titles/lower-thirds) at the given opacity, optionally
  *  offset/truncated by an entrance/exit animation. */
 export function drawTitleCard(
@@ -721,7 +735,7 @@ export function drawTitleCard(
   ctx.save();
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
   ctx.translate((title.offsetX ?? 0) * W, (title.offsetY ?? 0) * H + (anim?.offsetY ?? 0) * H);
-  ctx.font = `${title.weight === "normal" ? 400 : 700} ${fontPx}px system-ui, sans-serif`;
+  ctx.font = `${titleWeight(title)} ${fontPx}px ${TITLE_FONT_STACK}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
   const pad = Math.round(fontPx * 0.35);
@@ -768,7 +782,7 @@ export function titleBounds(
     : pos === "lower-third" ? Math.round(H * 0.8)
     : Math.round(H / 2 + fontPx / 2) + Math.round(blockH / 2);
   ctx.save();
-  ctx.font = `${title.weight === "normal" ? 400 : 700} ${fontPx}px system-ui, sans-serif`;
+  ctx.font = `${titleWeight(title)} ${fontPx}px ${TITLE_FONT_STACK}`;
   let maxW = 0;
   for (const line of lines) maxW = Math.max(maxW, ctx.measureText(line).width);
   ctx.restore();
@@ -792,7 +806,7 @@ export function drawCaption(
   const { width: W, height: H } = project.stage;
   const fontPx = Math.max(12, Math.round(H * (style?.sizePct ?? 0.045)));
   ctx.save();
-  ctx.font = `600 ${fontPx}px system-ui, sans-serif`;
+  ctx.font = `${CAPTION_WEIGHT} ${fontPx}px ${TITLE_FONT_STACK}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
   const lines = text.split("\n");

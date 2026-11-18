@@ -95,7 +95,7 @@ func TestEmailFlows_DB(t *testing.T) {
 	if err := svc.RequestMagicLink(ctx, email, false); err != nil {
 		t.Fatalf("RequestMagicLink: %v", err)
 	}
-	mu, tokens, err := svc.LoginWithMagicLink(ctx, lastToken(svc), "d", "ip", false)
+	mu, tokens, _, err := svc.LoginWithMagicLink(ctx, lastToken(svc), "d", "ip", false)
 	if err != nil || mu == nil || tokens == nil || tokens.Access == "" {
 		t.Fatalf("LoginWithMagicLink: user=%v tokens=%v err=%v", mu, tokens, err)
 	}

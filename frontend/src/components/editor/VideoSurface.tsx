@@ -146,6 +146,9 @@ import {
   applyMotionPreset,
   setTrackEasing,
   fitRect,
+  TITLE_FONT_FAMILY,
+  titleWeight,
+  CAPTION_WEIGHT,
 } from "@/lib/video/compositor";
 import { TimelinePlayer } from "@/lib/video/playback";
 import { probeMedia, filmstrip, waveformDataUrl, decodeMono } from "@/lib/video/mediaCache";
@@ -448,7 +451,19 @@ function collectElementFonts(project: VideoProject | undefined): Map<string, Set
     }
     for (const c of node.children ?? []) walk(c);
   };
-  for (const t of project?.tracks ?? []) for (const c of t.clips) if (c.element) walk(c.element);
+  const add = (family: string, weight: number): void => {
+    const ws = out.get(family) ?? new Set<number>();
+    ws.add(weight);
+    out.set(family, ws);
+  };
+  for (const t of project?.tracks ?? []) {
+    for (const c of t.clips) {
+      if (c.element) walk(c.element);
+      // Title cards and captions are drawn in TITLE_FONT_FAMILY (#94).
+      if (t.kind === "text" && c.title?.text) add(TITLE_FONT_FAMILY, titleWeight(c.title));
+    }
+  }
+  if (project?.captions?.some((c) => c.cues.length > 0)) add(TITLE_FONT_FAMILY, CAPTION_WEIGHT);
   return out;
 }
 

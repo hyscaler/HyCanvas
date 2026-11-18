@@ -1284,8 +1284,10 @@ export class HyCanvasClient {
   requestMagicLink(email: string, captchaToken?: string): Promise<void> {
     return this.request("POST", "/v1/auth/magic-link/request", { email }, captchaHeaders(captchaToken));
   }
-  /** Complete a magic-link sign-in; sets the session cookies like login. */
-  magicLink(token: string): Promise<{ user: User }> {
+  /** Complete a magic-link sign-in; sets the session cookies like login. For an
+   *  account with MFA enabled it sets no cookies and returns the challenge to
+   *  finish with `verifyMfa`, as `login` does. */
+  magicLink(token: string): Promise<{ user: User } | { mfaRequired: true; mfaToken: string }> {
     return this.request("POST", "/v1/auth/magic-link", { token });
   }
   /** Enabled social sign-in providers (empty unless configured server-side).

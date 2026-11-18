@@ -24,6 +24,21 @@ const chips = () => [tr("auth.templates"), tr("auth.photos_video"), tr("auth.ai_
 
 // Monochrome Google "G" glyph (single path, fills currentColor) so the social
 // button reads as one system with the rest of the outline UI.
+// One redemption per magic-link token for the life of the page. The form can
+// unmount and mount again while the request is in flight (its own ref guard
+// then starts over), and a second redeem of the single-use token fails, which
+// used to replace a pending MFA prompt with "link no longer valid". Every
+// mount awaits the same request instead.
+const magicRedemptions = new Map<string, ReturnType<typeof oc.magicLink>>();
+function redeemMagicLink(token: string): ReturnType<typeof oc.magicLink> {
+  let p = magicRedemptions.get(token);
+  if (!p) {
+    p = oc.magicLink(token);
+    magicRedemptions.set(token, p);
+  }
+  return p;
+}
+
 function GoogleGlyph({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -135,7 +150,17 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     redeemedRef.current = true;
     void (async () => {
       try {
-        await oc.magicLink(magicToken);
+        const res = await redeemMagicLink(magicToken);
+        if ("mfaRequired" in res && res.mfaRequired) {
+          // The link is the first factor only. Hand the challenge over the same
+          // way SSO does (/login?mfa=...), which also drops the spent token from
+          // the URL, so the code prompt shows and a re-render cannot redeem the
+          // link a second time.
+          const { token: _spent, ...rest } = router.query;
+          void _spent;
+          await router.replace({ pathname: "/login", query: { ...rest, mfa: res.mfaToken } });
+          return;
+        }
         await bootstrap(); // hydrate the session from the new cookies
         await router.replace(afterAuthPath);
       } catch {
