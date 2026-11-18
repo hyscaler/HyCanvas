@@ -135,7 +135,8 @@ type Format = { label: string; icon: typeof Plus; w: number; h: number; kind?: s
  *  shelf sits directly below for everything else. */
 const briefFormats = (): Format[] => [
   { label: tr("dashboard.presentation_16_9"), icon: Plus, w: 1920, h: 1080 },
-  { label: tr("dashboard.instagram_post_2"), icon: Plus, w: 1080, h: 1080 },
+  { label: tr("dashboard.instagram_post_square"), icon: Plus, w: 1080, h: 1080 },
+  { label: tr("dashboard.instagram_post_portrait"), icon: Plus, w: 1080, h: 1350 },
   { label: tr("dashboard.instagram_story_2"), icon: Plus, w: 1080, h: 1920 },
   { label: tr("dashboard.linkedin_post_2"), icon: Plus, w: 1200, h: 627 },
   { label: tr("dashboard.poster"), icon: Plus, w: 1080, h: 1350 },
@@ -149,7 +150,8 @@ const formatGroups = (): { title: string; items: Format[] }[] => [
   {
     title: tr("dashboard.social_media"),
     items: [
-      { label: tr("dashboard.instagram_post_2"), icon: Instagram, w: 1080, h: 1080 },
+      { label: tr("dashboard.instagram_post_square"), icon: Instagram, w: 1080, h: 1080 },
+      { label: tr("dashboard.instagram_post_portrait"), icon: Instagram, w: 1080, h: 1350 },
       { label: tr("dashboard.instagram_story_2"), icon: Smartphone, w: 1080, h: 1920 },
       { label: tr("dashboard.facebook_post_2"), icon: Facebook, w: 1200, h: 630 },
       { label: tr("dashboard.linkedin_post_2"), icon: Linkedin, w: 1200, h: 627 },
@@ -195,7 +197,8 @@ const formatGroups = (): { title: string; items: Format[] }[] => [
 
 // Preset canvas sizes offered in the "Create a design" size picker.
 const sizePresets = (): { label: string; w: number; h: number }[] => [
-  { label: tr("dashboard.instagram_post"), w: 1080, h: 1080 },
+  { label: tr("dashboard.instagram_post_square"), w: 1080, h: 1080 },
+  { label: tr("dashboard.instagram_post_portrait"), w: 1080, h: 1350 },
   { label: tr("dashboard.instagram_story"), w: 1080, h: 1920 },
   { label: tr("dashboard.presentation_16_9"), w: 1920, h: 1080 },
   { label: tr("dashboard.facebook_post"), w: 1200, h: 630 },
