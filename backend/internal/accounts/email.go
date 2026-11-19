@@ -270,7 +270,7 @@ func (s *Service) LoginWithMagicLink(ctx context.Context, raw, device, ip string
 		if err := s.consumeToken(ctx, id); err != nil {
 			return nil, nil, "", err
 		}
-		if _, err := s.db.Exec(ctx, `UPDATE "users" SET "email_verified" = true, "updated_at" = now() WHERE id = $1`, userID); err != nil {
+		if err := s.proveEmailOwnership(ctx, userID); err != nil {
 			return nil, nil, "", err
 		}
 		row, err := s.findUserByID(ctx, userID)
@@ -286,6 +286,13 @@ func (s *Service) LoginWithMagicLink(ctx context.Context, raw, device, ip string
 		switch {
 		case err == nil && u != nil:
 			// The email already has an account (replayed link / race): just sign in.
+			// The signed link reached that inbox, so it proves the address too.
+			if err := s.proveEmailOwnership(ctx, u.ID); err != nil {
+				return nil, nil, "", err
+			}
+			if u, err = s.findUserByID(ctx, u.ID); err != nil || u == nil {
+				return nil, nil, "", ErrToken
+			}
 			return s.firstFactorSession(ctx, u, device, ip)
 		case errors.Is(err, pgx.ErrNoRows):
 			userID, err := s.createUserWithWorkspace(ctx, email, "", true, nil)
@@ -303,6 +310,44 @@ func (s *Service) LoginWithMagicLink(ctx context.Context, raw, device, ip string
 	}
 
 	return nil, nil, "", ErrToken
+}
+
+// proveEmailOwnership marks a user's email verified after a link that only the
+// inbox could have received. When this is the FIRST proof for the address, the
+// account was created by someone who never showed they own it (password signup
+// does not check the email), and it may be a squatter's account waiting for the
+// real owner. The inbox owner now takes it over, so what the creator set up to
+// keep access is dropped: the password, every session, and the API keys the
+// account created. Already-verified accounts are left untouched.
+//
+// An account with MFA enabled is also left untouched, and stays unverified: its
+// second factor guards against a stolen inbox, so a link alone must never strip
+// it, and verifying the email before that factor is checked would let a
+// squatter's MFA account become verified by the owner merely clicking a link.
+func (s *Service) proveEmailOwnership(ctx context.Context, userID string) error {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	tag, err := tx.Exec(ctx, `UPDATE "users" SET "email_verified" = true, "updated_at" = now() WHERE id = $1 AND NOT "email_verified" AND NOT "mfa_enabled"`, userID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return nil // already verified, or MFA guards it: nothing to take over
+	}
+	for _, q := range []string{
+		`UPDATE "users" SET "password_hash" = NULL, "mfa_secret" = NULL, "updated_at" = now() WHERE id = $1`,
+		`DELETE FROM "auth_identities" WHERE "user_id" = $1 AND provider = 'PASSWORD'`,
+		`DELETE FROM "sessions" WHERE "user_id" = $1`,
+		`UPDATE "api_keys" SET "revoked_at" = now() WHERE "user_id" = $1 AND "revoked_at" IS NULL`,
+	} {
+		if _, err := tx.Exec(ctx, q, userID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
 }
 
 // firstFactorSession finishes a sign-in whose first factor (a password or a

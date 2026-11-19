@@ -54,6 +54,10 @@ var (
 	ErrInviteInvalid = errors.New("this invitation is no longer valid")
 	// ErrInviteEmailMismatch: the signed-in account's email does not match the invite.
 	ErrInviteEmailMismatch = errors.New("this invitation was sent to a different email address")
+	// ErrEmailUnverified: the in-app invitation flow matches on the account's
+	// email, so it needs that email proven first (verification link, magic link,
+	// or the emailed invitation link itself).
+	ErrEmailUnverified = errors.New("verify your email address first")
 )
 
 func iso(t time.Time) string { return t.UTC().Format(tsLayout) }
@@ -286,7 +290,16 @@ func (s *Service) AcceptInvitation(ctx context.Context, callerID, raw string) (M
 	if err != nil {
 		return Membership{}, err
 	}
-	return s.activateInvitation(ctx, callerID, inv)
+	m, err := s.activateInvitation(ctx, callerID, inv)
+	if err != nil {
+		return Membership{}, err
+	}
+	// The token only ever reached the invited inbox, and the caller's email
+	// matched it, so redeeming it proves ownership of that address.
+	if _, err := s.db.Exec(ctx, `UPDATE "users" SET "email_verified" = true, "updated_at" = now() WHERE id = $1 AND NOT "email_verified"`, callerID); err != nil {
+		return Membership{}, err
+	}
+	return m, nil
 }
 
 // invRow is the columns we need to validate + activate an invitation.
@@ -365,10 +378,15 @@ func (s *Service) activateInvitation(ctx context.Context, callerID string, inv i
 // MyInvitations lists the pending (unaccepted, unexpired) invitations addressed
 // to the signed-in user's own email, each carrying its workspace name for
 // display. Powers the in-app accept/decline surface reached from the bell.
+// The match is on the account's email, so an unverified account gets
+// ErrEmailUnverified: anyone can sign up with an address they do not own.
 func (s *Service) MyInvitations(ctx context.Context, userID string) ([]Invitation, error) {
 	u, err := s.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, err
+	}
+	if !u.EmailVerified {
+		return nil, ErrEmailUnverified
 	}
 	email := strings.ToLower(strings.TrimSpace(u.Email))
 	rows, err := s.db.Query(ctx,
@@ -399,9 +417,9 @@ func (s *Service) MyInvitations(ctx context.Context, userID string) ([]Invitatio
 
 // RespondToInvitation accepts or declines an invitation BY ID for the signed-in
 // caller (the in-app flow; no token needed). The caller's account email must
-// match the invitation. Accept activates the membership; decline deletes the
-// pending invitation. Returns the new membership on accept (zero value on
-// decline).
+// match the invitation, and be verified (see MyInvitations). Accept activates
+// the membership; decline deletes the pending invitation. Returns the new
+// membership on accept (zero value on decline).
 func (s *Service) RespondToInvitation(ctx context.Context, callerID, invitationID string, accept bool) (Membership, error) {
 	inv, err := s.loadInvitationBy(ctx, "id=$1", invitationID)
 	if err != nil {
@@ -414,6 +432,9 @@ func (s *Service) RespondToInvitation(ctx context.Context, callerID, invitationI
 	}
 	if strings.ToLower(strings.TrimSpace(u.Email)) != strings.ToLower(strings.TrimSpace(inv.email)) {
 		return Membership{}, ErrInviteEmailMismatch
+	}
+	if !u.EmailVerified {
+		return Membership{}, ErrEmailUnverified
 	}
 	if accept {
 		return s.activateInvitation(ctx, callerID, inv)

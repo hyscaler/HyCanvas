@@ -321,6 +321,15 @@ func (s *Service) userEmail(ctx context.Context, userID string) string {
 	return email
 }
 
+// verifiedUserEmail returns a user's email only when it is verified, else "".
+func (s *Service) verifiedUserEmail(ctx context.Context, userID string) string {
+	var email string
+	if err := s.db.QueryRow(ctx, `SELECT email FROM "users" WHERE id = $1 AND "email_verified"`, userID).Scan(&email); err != nil {
+		return ""
+	}
+	return email
+}
+
 // userExists reports whether a user id resolves to an account (guards grants
 // against typo'd or otherwise unknown ids that would otherwise dangle).
 func (s *Service) userExists(ctx context.Context, userID string) bool {
@@ -357,7 +366,9 @@ func (s *Service) resolveForUser(ctx context.Context, designID, userID string, l
 		return DesignAccessView{}, ErrNotFound
 	}
 	role := s.membershipRole(ctx, userID, workspaceID)
-	email := s.userEmail(ctx, userID)
+	// Email-targeted grants apply only once the caller has proven the address:
+	// anyone can sign up with an email they do not own.
+	email := s.verifiedUserEmail(ctx, userID)
 	var emails []string
 	if email != "" {
 		emails = []string{email}

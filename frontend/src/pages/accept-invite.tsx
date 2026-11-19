@@ -9,8 +9,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { CheckCircle2, AlertCircle, Loader2, LogIn, Clock, Sparkles, MailOpen, ArrowRight } from "lucide-react";
-import type { WorkspaceInvitation, WorkspaceRole } from "@hc/sdk";
+import { CheckCircle2, AlertCircle, Loader2, LogIn, Clock, Sparkles, MailOpen, ArrowRight, MailWarning } from "lucide-react";
+import { ApiError, type WorkspaceInvitation, type WorkspaceRole } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
 import { useAuth } from "@/store/auth";
 import { useToast } from "@/components/ui/Toast";
@@ -71,6 +71,10 @@ function RoleChip({ role }: { role: WorkspaceRole }) {
   );
 }
 
+// The in-app list matches invitations on the account's email, so the backend
+// refuses it until that email is verified.
+const isUnverified = (e: unknown) => e instanceof ApiError && (e.body as { code?: string } | null)?.code === "email_unverified";
+
 export default function AcceptInvitePage() {
   const router = useRouter();
   const toast = useToast();
@@ -87,6 +91,9 @@ export default function AcceptInvitePage() {
 
   const [invites, setInvites] = useState<WorkspaceInvitation[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [needsVerify, setNeedsVerify] = useState(false);
+  const [sending, setSending] = useState(false);
+  const user = useAuth((s) => s.user);
 
   // Public page: trigger the session bootstrap ourselves (no RequireAuth wrapper).
   useEffect(() => {
@@ -113,7 +120,10 @@ export default function AcceptInvitePage() {
     if (token || status !== "authed") return;
     let cancelled = false;
     void (async () => {
-      const list = await oc.myInvitations().catch(() => [] as WorkspaceInvitation[]);
+      const list = await oc.myInvitations().catch((e: unknown) => {
+        if (isUnverified(e) && !cancelled) setNeedsVerify(true);
+        return [] as WorkspaceInvitation[];
+      });
       if (!cancelled) setInvites(list);
     })();
     return () => {
@@ -136,8 +146,9 @@ export default function AcceptInvitePage() {
         } else {
           toast.success(tr("page.invitation_declined"));
         }
-      } catch {
-        toast.error(accept ? tr("page.could_not_accept_the_invitation") : tr("page.could_not_decline_the_invitation"));
+      } catch (e) {
+        if (isUnverified(e)) setNeedsVerify(true);
+        else toast.error(accept ? tr("page.could_not_accept_the_invitation") : tr("page.could_not_decline_the_invitation"));
       } finally {
         setBusyId(null);
       }
@@ -225,6 +236,43 @@ export default function AcceptInvitePage() {
               <Loader2 className="animate-spin text-neutral-300" size={20} />
             </div>
           )}
+        </Card>
+      </Scene>
+    );
+  }
+
+  const sendVerification = async () => {
+    if (!user) return;
+    setSending(true);
+    try {
+      await oc.requestEmailVerification(user.email);
+      toast.success(tr("auth.verification_email_sent_check_your_inbox"));
+    } catch {
+      toast.error(tr("auth.couldnt_send_the_email_please_try_again"));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // In-app list flow, for an account whose email is not verified yet.
+  if (needsVerify) {
+    return (
+      <Scene>
+        <Card>
+          <div className="flex flex-col items-center gap-4 text-center">
+            <HeroIcon>
+              <MailWarning size={26} />
+            </HeroIcon>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-neutral-900">{tr("auth.verify_your_email")}</h1>
+              <p className="mx-auto mt-2 max-w-xs text-sm text-neutral-500">
+                {tr("page.verify_email_to_see_invitations", { email: user?.email ?? "" })}
+              </p>
+            </div>
+            <Button size="lg" onClick={() => void sendVerification()} disabled={sending}>
+              {sending ? tr("auth.sending") : tr("page.send_verification_link")}
+            </Button>
+          </div>
         </Card>
       </Scene>
     );

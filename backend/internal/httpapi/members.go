@@ -45,6 +45,8 @@ func membersProblem(w http.ResponseWriter, r *http.Request, err error) {
 		problemWithCode(w, r, http.StatusConflict, "Conflict", "a workspace must keep at least one owner", "workspace_needs_owner")
 	case errors.Is(err, accounts.ErrInviteInvalid):
 		problemWithCode(w, r, http.StatusGone, "Gone", "this invitation is no longer valid", "invite_invalid")
+	case errors.Is(err, accounts.ErrEmailUnverified):
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "verify your email address to see and accept invitations", "email_unverified")
 	case errors.Is(err, accounts.ErrInviteEmailMismatch):
 		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "this invitation was sent to a different email address", "invite_email_mismatch")
 	default:
