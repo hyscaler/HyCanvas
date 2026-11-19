@@ -304,6 +304,17 @@ describe("layout + auto-fit (FR-11, FR-12)", () => {
 });
 
 describe("no-break spaces", () => {
+  it("wrapChunks reuses its result for the same text and locale, read-only", () => {
+    const first = wrapChunks("Hello brave world");
+    expect(wrapChunks("Hello brave world")).toBe(first);
+    expect(first.map((c) => c.text)).toEqual(["Hello", " ", "brave", " ", "world"]);
+    expect(Object.isFrozen(first) && Object.isFrozen(first[0])).toBe(true);
+    // A different locale is a different entry with the same split here.
+    const other = wrapChunks("Hello brave world", "en");
+    expect(other).not.toBe(first);
+    expect(other.map((c) => c.text)).toEqual(first.map((c) => c.text));
+  });
+
   it("wrapChunks keeps a no-break space and its neighbours in one chunk", () => {
     expect(wrapChunks("a b c").map((c) => c.text)).toEqual(["a", " ", "b c"]);
     expect(wrapChunks("a b c").map((c) => c.whitespace)).toEqual([false, true, false]);

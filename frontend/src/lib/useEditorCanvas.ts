@@ -20,6 +20,20 @@ import { imageAssets } from "@/lib/assetProvider";
 import { fonts } from "@/lib/fontProvider";
 import { pageGap, pageOffsets } from "@/lib/pageLayout";
 
+// While the view is moving (a pan or pinch sends a viewport change every frame),
+// a phone repaints its whole canvas at a device pixel ratio near 3, which is
+// about 9 backing pixels per CSS pixel. Touch devices paint at most this ratio
+// during the motion and repaint at full sharpness once it settles. A single
+// viewport change (zoom buttons, fit) is not motion and paints sharp at once.
+const MOTION_DPR_CAP = 1.5;
+/** Viewport changes closer together than this count as one continuous motion. */
+const MOTION_GAP_MS = 200;
+/** Quiet time after the last change before the full-resolution repaint. */
+const SETTLE_MS = 150;
+
+const coarsePointer = (): boolean =>
+  typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+
 export interface CanvasApi {
   scene: () => Scene | null;
   viewport: () => Viewport;
@@ -37,6 +51,13 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
   const sceneCacheRef = useRef<{ rev: number; scenes: Map<number, Scene> }>({ rev: -1, scenes: new Map() });
   const sizeRef = useRef({ width: 1, height: 1, dpr: 1 });
   const fittedRef = useRef(false);
+  // Pan/zoom motion tracking for the reduced-resolution repaint (see above).
+  const motionRef = useRef<{ active: boolean; lastChange: number; prev: string; settle: ReturnType<typeof setTimeout> | null }>({
+    active: false,
+    lastChange: 0,
+    prev: "",
+    settle: null,
+  });
   const rev = useEditor((s) => s.rev);
   const viewport = useEditor((s) => s.viewport);
   const activePage = useEditor((s) => s.activePage);
@@ -87,7 +108,8 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
   const render = useCallbackRef(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const dpr = window.devicePixelRatio || 1;
+    const fullDpr = window.devicePixelRatio || 1;
+    const dpr = motionRef.current.active ? Math.min(fullDpr, MOTION_DPR_CAP) : fullDpr;
     const rect = canvas.getBoundingClientRect();
     sizeRef.current = { width: rect.width, height: rect.height, dpr };
     useEditor.getState().setViewportSize(rect.width, rect.height);
@@ -194,12 +216,42 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
   useEffect(() => imageAssets.onChange(() => render()), [render]);
   useEffect(() => fonts.onChange(() => render()), [render]);
 
+  // Detect continuous pan/zoom on touch devices: the second viewport change
+  // inside MOTION_GAP_MS starts a motion (painted at MOTION_DPR_CAP), and
+  // SETTLE_MS without a change ends it with a full-resolution repaint. Declared
+  // before the repaint effect so a change that starts a motion is already
+  // painted at the reduced ratio.
+  useEffect(() => {
+    const m = motionRef.current;
+    const key = `${viewport.zoom}|${viewport.panX}|${viewport.panY}`;
+    if (key === m.prev) return;
+    const first = m.prev === "";
+    m.prev = key;
+    if (first || !coarsePointer() || (window.devicePixelRatio || 1) <= MOTION_DPR_CAP) return;
+    const now = performance.now();
+    const continuous = now - m.lastChange < MOTION_GAP_MS;
+    m.lastChange = now;
+    if (!continuous && !m.active) return;
+    m.active = true;
+    if (m.settle) clearTimeout(m.settle);
+    m.settle = setTimeout(() => {
+      m.settle = null;
+      m.active = false;
+      render();
+    }, SETTLE_MS);
+  }, [viewport, render]);
+
   // Repaint on viewport, active-page, text-edit (skip), mask-refine (skip),
   // live-transform, or hover change (hover reveals a selected/overflowing
   // element's off-page overflow).
   useEffect(() => {
     render();
   }, [viewport, activePage, editingTextId, maskRefining, transforming, hoverId, render]);
+
+  useEffect(() => () => {
+    const m = motionRef.current;
+    if (m.settle) clearTimeout(m.settle);
+  }, []);
 
   // Repaint on container resize.
   useEffect(() => {
