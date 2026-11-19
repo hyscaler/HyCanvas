@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { validate, createBlankDesign } from "@hc/schema";
+import { createBlankDesign } from "@hc/schema";
+import { validate } from "@hc/schema/dist/validation";
 import { whiteboardTemplates, buildTemplate } from "../templates";
 
 describe("templates", () => {

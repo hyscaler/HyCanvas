@@ -5,11 +5,11 @@
 // so opening an older file always succeeds.
 //
 
-// Types, zod schemas, and format constants.
+// Types and format constants. The zod schemas, validate() and the JSON Schema
+// export are NOT part of this entry: they pull in zod (about 100 KB compressed),
+// which most consumers never need. Import them from "@hc/schema/dist/validation"
+// (see validation.ts).
 export * from "./schema";
-
-// Validation gate (JSON-pointer errors), used by persistence/import/API.
-export * from "./validate";
 
 // Forward-only migration chain.
 export * from "./migrate";
@@ -25,9 +25,6 @@ export * from "./unknown-nodes";
 
 // Version-independent repairs for what an earlier writer got wrong.
 export * from "./repair";
-
-// Published JSON Schema (draft 2020-12) generation.
-export * from "./json-schema";
 
 // Yjs bridge (edit-time CRDT <-> serialized file).
 export * from "./yjs";

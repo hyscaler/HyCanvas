@@ -12,7 +12,7 @@
 // abort anything: they are collected per design and surfaced to subscribers
 // (the assistant chat offers a retry). Alt text is written in the same step.
 
-import { promptAssetKey, routeImageSource } from "@hc/aistudio";
+import { promptAssetKey, routeImageSource } from "@hc/aistudio/dist/imagePlan";
 import { useEditor } from "@/store/editor";
 import { oc, resolveAssetUrl } from "@/lib/sdk";
 

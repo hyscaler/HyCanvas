@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validate } from "@hc/schema";
+import { validate } from "@hc/schema/dist/validation";
 import { blocksToDesign, designToDoc } from "../convert";
 import {
   newHeading,

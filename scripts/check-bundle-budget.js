@@ -23,7 +23,7 @@ const OUT = path.resolve(process.argv[2] || path.join(__dirname, '..', 'frontend
 // Budgets in KB of gzip-compressed JavaScript.
 const BUDGETS = [
   { route: '/dashboard/', html: 'dashboard/index.html', page: '/dashboard/[[...view]]', budgetKB: 300 },
-  { route: '/editor/', html: 'editor/index.html', page: '/editor', budgetKB: 1000 },
+  { route: '/editor/', html: 'editor/index.html', page: '/editor', budgetKB: 750 },
 ];
 
 function scriptSrcs(html) {

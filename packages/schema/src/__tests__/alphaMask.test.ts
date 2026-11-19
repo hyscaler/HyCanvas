@@ -6,7 +6,8 @@
 // be undone and later refined by hand.
 
 import { describe, expect, it } from "vitest";
-import { currentSchemaVersion, ImageNodeSchema } from "../schema";
+import { currentSchemaVersion } from "../schema";
+import { ImageNodeSchema } from "../validation";
 import { migrate } from "../migrate";
 import { validate } from "../validate";
 import { createBlankDesign } from "../factory";

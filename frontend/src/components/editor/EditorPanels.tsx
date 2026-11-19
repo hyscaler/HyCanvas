@@ -12,27 +12,31 @@ import { formatBytes } from "@/lib/format";
 import { qrModules } from "@/lib/qr";
 import type { Sticker } from "@/lib/stickers";
 import { parseModelJson } from "@/lib/magicDesign";
-import {
-  normalizeOutline, deckThemes, layoutDeck, layoutDesign, groundImagePrompt, untrustedSourceRule,
-  sanitizeEditedOutline, dialsClause, dialDensities, dialTones, dialAudiences, dialScenarios, dialLooks, maxOutlinePages,
-  deriveLayoutContentSchema, layoutSelectionSchema, layoutSelectionSystemPrompt, layoutFillSystemPrompt, repairLayoutSelection,
-  normalizeLayoutFill, fallbackLayoutFill, preferredLayoutFor, type LayoutFill,
-  buildAgendaPages, pickAgendaLayout, extractTitleFromText, splitSlideSchema, splitSlideSystemPrompt,
-  firstTabularSource, parseDataMatrix, chartColumnSelectionSchema, chartColumnSelectionSystemPrompt, chartColumnSelectionUserPrompt, buildChartFromSelection,
-  relayoutDecisionSchema, relayoutDecisionSystemPrompt, regenerateFillSystemPrompt, changedImagePrompts,
-  buildGeneratedTheme, generatedThemeSchema, themeGenSystemPrompt, themeGenUserPrompt, themeIdFor, themeRecordFromDeckTheme,
-  type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
-  toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
-  deriveOutline, switchOutline, sourcesOutlineItem, type PageText, type SourceCitation,
-  themeCatalogEntry, deckThemeFromCatalog, themeRecordFromCatalog, deckThemeFromRecord, pageTreatment, catalogEntryForMood, themeRecordFromDesignSystem, type DeckLogo, type DeckReport, slotsFromThemeRecord,
-  isComposedSlide, slideItemOf, slideTextDump, reviseSlideSystemPrompt, reviseSlideSchema, reviseSlideItem, recomposeSlide } from "@hc/aistudio";
+import { normalizeOutline, type DesignOutline, type DesignType, type OutlineItem } from "@hc/aistudio/dist/outline";
+import { deckThemes } from "@hc/aistudio/dist/theme";
+import { layoutDesign } from "@hc/aistudio/dist/layout";
+import { groundImagePrompt } from "@hc/aistudio/dist/imagePrompt";
+import { untrustedSourceRule } from "@hc/aistudio/dist/promptRules";
+import { sanitizeEditedOutline, dialsClause, dialDensities, dialTones, dialAudiences, dialScenarios, dialLooks, maxOutlinePages, type GenerationDials } from "@hc/aistudio/dist/outlineEdit";
+import { deriveLayoutContentSchema, layoutSelectionSchema, layoutSelectionSystemPrompt, layoutFillSystemPrompt, repairLayoutSelection, normalizeLayoutFill, fallbackLayoutFill, preferredLayoutFor, type LayoutFill, relayoutDecisionSchema, relayoutDecisionSystemPrompt, regenerateFillSystemPrompt } from "@hc/aistudio/dist/layoutSchema";
+import { buildAgendaPages, pickAgendaLayout, extractTitleFromText, splitSlideSchema, splitSlideSystemPrompt } from "@hc/aistudio/dist/narrativeOps";
+import { firstTabularSource, parseDataMatrix, chartColumnSelectionSchema, chartColumnSelectionSystemPrompt, chartColumnSelectionUserPrompt, buildChartFromSelection } from "@hc/aistudio/dist/chartData";
+import { changedImagePrompts } from "@hc/aistudio/dist/imagePlan";
+import { buildGeneratedTheme, generatedThemeSchema, themeGenSystemPrompt, themeGenUserPrompt, themeIdFor, themeRecordFromDeckTheme } from "@hc/aistudio/dist/themeGen";
+import { toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep } from "@hc/aistudio/dist/assistant";
+import { deriveOutline, switchOutline, sourcesOutlineItem, type PageText, type SourceCitation } from "@hc/aistudio/dist/transform";
+import { themeCatalogEntry } from "@hc/aistudio/dist/themeCatalog";
+import { deckThemeFromCatalog, themeRecordFromCatalog, deckThemeFromRecord, themeRecordFromDesignSystem } from "@hc/aistudio/dist/themeRecords";
+import { pageTreatment } from "@hc/aistudio/dist/deckStyle";
+import { catalogEntryForMood, type DeckLogo } from "@hc/aistudio/dist/designSystem";
+import { type DeckReport } from "@hc/aistudio/dist/measure";
 import { builtinMasterAndLayouts, type SlideLayout } from "@hc/schema";
 import { shouldGroundInLayouts } from "@/lib/generationRoute";
 import { chooseAction, promptText } from "@/lib/promptDialog";
-import { downloadHycFile } from "@/lib/hycFile";
+import { downloadHycFile } from "@/lib/hycDownload";
 import { generateAltText } from "@/lib/altText";
 import { fonts } from "@/lib/fontProvider";
-import { ensureArtwork } from "@/lib/artwork";
+import { composer, loadComposer } from "@/lib/composer";
 import { locate } from "@hc/editor";
 import {
   critiquePage,
@@ -2703,27 +2707,29 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       // outline item, kept on the page or read by the model off its text, is
       // revised per the instruction and set again through the composer that
       // set its siblings, so the page comes back in the deck's own system.
-      if (isComposedSlide(page as unknown as { children: unknown[]; layoutId?: string; data?: Record<string, unknown> })) {
-        const current = slideItemOf(page as unknown as { data?: Record<string, unknown> });
+      // The composer (and its artwork) loads on demand; both slide paths below
+      // may need it, and the apply pass reads it synchronously.
+      if (!(await loadComposer().then(() => true, () => false))) return { error: tr("editor.skip_couldnt_regenerate_slide") };
+      if (composer().isComposedSlide(page as unknown as { children: unknown[]; layoutId?: string; data?: Record<string, unknown> })) {
+        const current = composer().slideItemOf(page as unknown as { data?: Record<string, unknown> });
         const shown = current
           ? JSON.stringify(Object.fromEntries(Object.entries(current).filter(([k]) => k !== "id")))
-          : slideTextDump(page as unknown as { notes?: string; children: unknown[] });
+          : composer().slideTextDump(page as unknown as { notes?: string; children: unknown[] });
         const heading = current ? `Current slide (its outline item):` : `Current slide (its text boxes, top to bottom, named by role):`;
         let item: OutlineItem;
         try {
           const { text } = await oc.aiTextStructured({
             workspaceId: deps.workspaceId,
-            system: reviseSlideSystemPrompt(deps.voiceClause),
+            system: composer().reviseSlideSystemPrompt(deps.voiceClause),
             prompt: `Deck: ${st.doc.title}\nSlide ${idx + 1} of ${st.doc.pages.length}\nInstruction: ${instruction}\n${heading}\n${shown.slice(0, 8000)}`,
-            schema: reviseSlideSchema(),
+            schema: composer().reviseSlideSchema(),
           }, deps.signal);
-          item = reviseSlideItem(parseModelJson(text), current);
+          item = composer().reviseSlideItem(parseModelJson(text), current);
         } catch (e) {
           if (deps.signal?.aborted) throw e;
           return { error: tr("editor.skip_couldnt_regenerate_slide") };
         }
-        await ensureArtwork();
-        const composed = recomposeSlide({ doc: st.doc, pageIndex: idx, item, brandPalette: deps.brandPalette, brandFonts: deps.brandFonts, logo: deps.brandLogo ?? null });
+        const composed = composer().recomposeSlide({ doc: st.doc, pageIndex: idx, item, brandPalette: deps.brandPalette, brandFonts: deps.brandFonts, logo: deps.brandLogo ?? null });
         if (!composed) return { error: tr("editor.skip_couldnt_regenerate_slide") };
         const { aspect, imageSize } = aspectAndImageSize(page);
         // The logo the composer places references assets the file must list
@@ -3062,7 +3068,9 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const reviewed = deps.reviewedOutline;
       if (reviewed) deps.reviewedOutline = undefined; // consumed once: later steps fetch their own
       // The composer's drawings download while the model writes the outline.
-      const artworkLoaded = ensureArtwork();
+      // Start loading the composer (and its artwork) while the outline is
+      // fetched; the apply pass composes with it synchronously.
+      const composerLoaded = loadComposer().then(() => true, () => false);
       const outline = reviewed
         ? structuredClone(reviewed)
         : await fetchAssistantOutline(deps.workspaceId, dt, brief, brandClause, pageCount, { signal: deps.signal, onStage: deps.onStage });
@@ -3237,7 +3245,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
             ),
           }));
       }
-      await artworkLoaded;
+      if (!(await composerLoaded)) return { error: tr("editor.skip_couldnt_plan_design") };
       return { payload: { kind: "outline", outline, size, brandPalette: paletteFor(deps), brandFonts: deps.brandFonts, brandLogo: deps.brandLogo ?? null, heroPlans, workspaceId: deps.workspaceId, designId: deps.designId ?? null, append, themeId: deps.styleThemeId, themeRecord: deps.styleThemeRecord, designType: dt, look: deps.dials?.look } };
     }
     default:
@@ -3747,7 +3755,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       // The kit sets a 16 by 9 deck in one of the signature templates'
       // systems (the style the outline named, repainted in the brand or a
       // chosen theme); other pages keep the classic composer.
-      const deck = layoutDeck(clean, themes[0], size, { catalog, brandPalette, seed, logo: brandLogo, designType, look: look && look !== "auto" ? look : undefined, fontsAuthored, renderer: "kit", brandFonts, themeChosen: !!(themeRecord || chosenEntry), themeSlots: themeRecord ? slotsFromThemeRecord(themeRecord) : null });
+      const deck = composer().layoutDeck(clean, themes[0], size, { catalog, brandPalette, seed, logo: brandLogo, designType, look: look && look !== "auto" ? look : undefined, fontsAuthored, renderer: "kit", brandFonts, themeChosen: !!(themeRecord || chosenEntry), themeSlots: themeRecord ? composer().slotsFromThemeRecord(themeRecord) : null });
       lastDeckCheck = deckCheckNote(deck.report);
       const base = append ? st.doc.pages.length : 0;
       const ids = append ? st.appendDeckPages(deck, size) : st.buildDeckFromOutline(deck, size);

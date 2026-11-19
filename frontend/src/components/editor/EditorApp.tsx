@@ -11,7 +11,7 @@ import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3,
 import type { AccessMode } from "@hc/sdk";
 import { ApiError } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
-import { downloadHycFile } from "@/lib/hycFile";
+import { downloadHycFile } from "@/lib/hycDownload";
 import { deckToVideoFile } from "@/lib/video/deckToVideo";
 import { parseCsvMatrix } from "@/lib/csv";
 import { useEditor } from "@/store/editor";

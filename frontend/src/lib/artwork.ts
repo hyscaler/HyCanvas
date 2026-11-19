@@ -9,7 +9,7 @@
 // else in the editor needs the sets: layout, reflow and theme code never draw
 // a drawing or an icon.
 
-import { artworkReady } from "@hc/aistudio";
+import { artworkReady } from "@hc/aistudio/dist/illustrations";
 
 let pending: Promise<boolean> | null = null;
 

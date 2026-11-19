@@ -11,11 +11,8 @@ import {
   GridNodeSchema,
   knownNodeSchemas,
   NodeBaseSchema,
-  maxNestingDepth,
-  type DesignFile,
-  type Node,
-  type NodeType,
-} from "./schema";
+} from "./schemas";
+import { maxNestingDepth, type DesignFile, type Node, type NodeType } from "./schema";
 import { walkNodes } from "./visitor";
 
 export type ValidationResult =

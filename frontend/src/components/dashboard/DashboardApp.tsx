@@ -46,7 +46,7 @@ import {
   Users,
   Moon,
   Sun, Sparkles, Wand2, Paperclip, Loader2, X, Palette, Menu } from "lucide-react";
-import type { dialTones as aiDialTones } from "@hc/aistudio";
+import type { dialTones as aiDialTones } from "@hc/aistudio/dist/outlineEdit";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { hycAccept, importedTitle, readFileText } from "@/lib/hycFilePicker";
 import { ApiError, type AiProviderPreset, type DesignRecord, type HomeItem, type MyTask, type StorageUsageView, type TaskStatus, type TemplateCollectionSummary, type TemplateSummary, type WorkspaceRole } from "@hc/sdk";

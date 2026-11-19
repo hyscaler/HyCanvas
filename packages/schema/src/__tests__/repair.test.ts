@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createBlankDesign, createNode, repairCornerRadius, validate } from "../index";
+import { createBlankDesign, createNode, repairCornerRadius } from "../index";
+import { validate } from "../validation";
 import type { GroupNode, ShapeNode } from "../schema";
 
 function deckWithNumericRadius() {

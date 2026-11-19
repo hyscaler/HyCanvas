@@ -1,7 +1,7 @@
 // ODP import (F28 completion C25): fixtures are minimal in-memory ODF zips.
 
 import { describe, expect, it } from "vitest";
-import { validate } from "@hc/schema";
+import { validate } from "@hc/schema/dist/validation";
 import { odfLengthPx, odpToDesign } from "../odpimport";
 import { zipStore } from "../zipstore";
 

@@ -5,7 +5,8 @@
 // and coordinate/rotation conversions get targeted checks.
 import { describe, expect, it } from "vitest";
 import { deflateRawSync } from "node:zlib";
-import { createBlankDesign, createNode, validate, type DesignFile, type Node } from "@hc/schema";
+import { createBlankDesign, createNode, type DesignFile, type Node } from "@hc/schema";
+import { validate } from "@hc/schema/dist/validation";
 import { deckToPptx } from "../pptx";
 import { pptxToDesign } from "../pptximport";
 import { parseXml, findFirst } from "../xml";

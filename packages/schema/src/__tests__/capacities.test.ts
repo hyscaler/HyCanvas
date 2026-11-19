@@ -4,7 +4,8 @@
 // them, so their presence or absence cannot change how a document draws.
 
 import { describe, expect, it } from "vitest";
-import { currentSchemaVersion, PlaceholderSchema } from "../schema";
+import { currentSchemaVersion } from "../schema";
+import { PlaceholderSchema } from "../validation";
 import { builtinMasterAndLayouts, capacityForPlaceholder } from "../theme";
 import { migrate } from "../migrate";
 import { validate } from "../validate";
