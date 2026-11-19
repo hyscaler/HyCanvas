@@ -8,7 +8,12 @@
 // the DesignFile JSON back; errors throw and surface as goja errors.
 
 import "./composer-polyfill.mjs"; // MUST stay the first import (host shims)
-import { composeDeckFile, composeDeckFileWithReport, capacityClause, kitVocabularyRule } from "../packages/aistudio/dist/index.js";
+import { composeDeckFile, composeDeckFileWithReport, capacityClause, kitVocabularyRule, provideIllustrations } from "../packages/aistudio/dist/index.js";
+import { ILLUSTRATIONS } from "../packages/aistudio/dist/illustrationset.js";
+
+// The composer reads its drawings from a registry (the editor loads them on
+// demand); the server always has them.
+provideIllustrations(ILLUSTRATIONS);
 
 globalThis.__composeDeckFile = (inputJson) => JSON.stringify(composeDeckFile(JSON.parse(inputJson)));
 // The same composition plus the reviewer's report, so the server can hand

@@ -28,6 +28,7 @@ export * from "./deck";
 export * from "./recompose";
 export * from "./designSystem";
 export * from "./archetypes";
+export * from "./illustrations";
 export * from "./measure";
 export * from "./prompts";
 export * from "./assistant";

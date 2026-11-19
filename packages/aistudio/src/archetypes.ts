@@ -23,7 +23,9 @@ import type { Archetype, CompositionCell, DesignType, OutlineItem } from "./outl
 import { contrastRatio, fixToAA } from "@hc/color";
 import type { DeckMotion, DesignSystem } from "./designSystem";
 import { ICON_BOX, ICON_GLYPHS, ICON_KEYWORDS } from "./iconset";
-import { ILLUSTRATIONS, ILLUSTRATION_KEYWORDS, type IllustrationDrawing } from "./illustrationset";
+import { ILLUSTRATION_KEYWORDS } from "./illustrationKeywords";
+import { illustrationDrawing } from "./illustrations";
+import type { IllustrationDrawing } from "./illustrationset";
 import type { PageVariant } from "./measure";
 import { ladderFrom, sizeFloor } from "./deckStyle";
 import { LOOKS, type LookSpec } from "./look";
@@ -221,14 +223,16 @@ export function applyMotion<N extends { name?: string; animation?: unknown }>(no
 }
 
 /** The drawing a keyword names, or null when the set has no drawing for
- *  it; matched whole, then by the first known word in a phrase. */
+ *  it; matched whole, then by the first known word in a phrase. Null too
+ *  while no set is provided (see illustrations.ts), so the page gets the
+ *  picture stand-in an unknown keyword gets rather than an empty slot. */
 export function illustrationFor(keyword: string | undefined): string | null {
   if (!keyword) return null;
   const k = keyword.trim().toLowerCase();
   if (!k) return null;
-  if (ILLUSTRATION_KEYWORDS[k]) return ILLUSTRATION_KEYWORDS[k];
-  for (const w of k.split(/[^a-z]+/)) if (w && ILLUSTRATION_KEYWORDS[w]) return ILLUSTRATION_KEYWORDS[w];
-  return null;
+  let name: string | undefined = ILLUSTRATION_KEYWORDS[k];
+  if (!name) for (const w of k.split(/[^a-z]+/)) if (w && ILLUSTRATION_KEYWORDS[w]) { name = ILLUSTRATION_KEYWORDS[w]; break; }
+  return name && illustrationDrawing(name) ? name : null;
 }
 
 /** Decode a baked path string (M/L/C/Z, absolute coordinates) into the
@@ -637,7 +641,7 @@ class Composer {
    *  own lift. One path node per fill layer, grouped, so the drawing is
    *  editable vector everywhere and the quality loop sees one box. */
   private illustration(name: string, r0: Rect): Node | null {
-    const d: IllustrationDrawing | undefined = ILLUSTRATIONS[name];
+    const d: IllustrationDrawing | undefined = illustrationDrawing(name);
     if (!d) return null;
     const k = Math.min(r0.width / d.w, r0.height / d.h);
     const w = Math.round(d.w * k);

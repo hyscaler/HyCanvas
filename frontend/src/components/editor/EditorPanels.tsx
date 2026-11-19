@@ -32,6 +32,7 @@ import { chooseAction, promptText } from "@/lib/promptDialog";
 import { downloadHycFile } from "@/lib/hycFile";
 import { generateAltText } from "@/lib/altText";
 import { fonts } from "@/lib/fontProvider";
+import { ensureIllustrations } from "@/lib/illustrations";
 import { locate } from "@hc/editor";
 import {
   critiquePage,
@@ -2712,6 +2713,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           if (deps.signal?.aborted) throw e;
           return { error: tr("editor.skip_couldnt_regenerate_slide") };
         }
+        await ensureIllustrations();
         const composed = recomposeSlide({ doc: st.doc, pageIndex: idx, item, brandPalette: deps.brandPalette, brandFonts: deps.brandFonts, logo: deps.brandLogo ?? null });
         if (!composed) return { error: tr("editor.skip_couldnt_regenerate_slide") };
         const { aspect, imageSize } = aspectAndImageSize(page);
@@ -3050,6 +3052,8 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       // second model call. Otherwise fetch one as before.
       const reviewed = deps.reviewedOutline;
       if (reviewed) deps.reviewedOutline = undefined; // consumed once: later steps fetch their own
+      // The composer's drawings download while the model writes the outline.
+      const illustrationsLoaded = ensureIllustrations();
       const outline = reviewed
         ? structuredClone(reviewed)
         : await fetchAssistantOutline(deps.workspaceId, dt, brief, brandClause, pageCount, { signal: deps.signal, onStage: deps.onStage });
@@ -3224,6 +3228,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
             ),
           }));
       }
+      await illustrationsLoaded;
       return { payload: { kind: "outline", outline, size, brandPalette: paletteFor(deps), brandFonts: deps.brandFonts, brandLogo: deps.brandLogo ?? null, heroPlans, workspaceId: deps.workspaceId, designId: deps.designId ?? null, append, themeId: deps.styleThemeId, themeRecord: deps.styleThemeRecord, designType: dt, look: deps.dials?.look } };
     }
     default:

@@ -588,7 +588,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
         : isOdp
           ? await (await import("@hc/export")).odpToDesign(new Uint8Array(await f.arrayBuffer()), { title: f.name.replace(/\.odp$/i, "") })
           : isMd
-            ? (await import("@/lib/mdOutlineDesign")).mdOutlineToDesign(await readFileText(f), f.name.replace(/\.(md|markdown)$/i, ""))
+            ? await (await import("@/lib/mdOutlineDesign")).mdOutlineToDesign(await readFileText(f), f.name.replace(/\.(md|markdown)$/i, ""))
             : (await loadHycFile()).parseHycFile(await readFileText(f));
       const title = importedTitle(file, f.name);
       const rec = await oc.createDesign({ workspaceId: activeWorkspaceId, title, from: { ...file, title } });
