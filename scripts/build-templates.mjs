@@ -28,6 +28,9 @@ const { composeDeckFile, decodeDrawingPath } = await import(join(ROOT, "packages
 // generated decks use, recolored to its own palette.
 const { ICON_GLYPHS, ICON_BOX } = await import(join(ROOT, "packages", "aistudio", "dist", "iconset.js"));
 const { ILLUSTRATIONS } = await import(join(ROOT, "packages", "aistudio", "dist", "illustrationset.js"));
+// composeDeckFile reads the same sets from a registry, so register them.
+const { provideArtwork } = await import(join(ROOT, "packages", "aistudio", "dist", "artset.js"));
+provideArtwork();
 const { svgToNodes } = await import(join(ROOT, "packages", "stock", "dist", "index.js"));
 
 // Bundled illustration packs (for "illustrations" page entries): asset id ->

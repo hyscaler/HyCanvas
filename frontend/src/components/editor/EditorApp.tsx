@@ -35,7 +35,6 @@ import { PropertiesPanel } from "./PropertiesPanel";
 import { ToolRail } from "./ToolRail";
 import { PagesBar, PagePill } from "./PagesBar";
 import { DocumentSurface } from "./DocumentSurface";
-import { PresentMode } from "./PresentMode";
 import { PresenceBar } from "./PresenceBar";
 import { HistoryPanel } from "./HistoryPanel";
 import { CommentsPanel } from "./CommentsPanel";
@@ -64,6 +63,8 @@ const PublishDialog = dynamic(() => import("./PublishDialog").then((m) => m.Publ
 const WebsiteDialog = dynamic(() => import("./WebsiteDialog").then((m) => m.WebsiteDialog), { ssr: false });
 const PrintDialog = dynamic(() => import("./PrintDialog").then((m) => m.PrintDialog), { ssr: false });
 const AccessibilityDialog = dynamic(() => import("./AccessibilityDialog").then((m) => m.AccessibilityDialog), { ssr: false });
+// Present mode loads when presenting starts, not with the editor (#77).
+const PresentMode = dynamic(() => import("./PresentMode").then((m) => m.PresentMode), { ssr: false });
 
 type Status = "loading" | "ready" | "error" | "forbidden" | "notfound";
 

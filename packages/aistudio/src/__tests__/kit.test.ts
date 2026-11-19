@@ -16,6 +16,10 @@ import { iconGlyphFor } from "../archetypes";
 import { kitFits, leadingFigure, splitPoint } from "../kit/render";
 import { kitDrawingNames, kitVocabularyRule } from "../kit/vocab";
 import { PACK_DRAWINGS, PACK_KEYWORDS } from "../kit/packset";
+import { provideArtwork } from "../artset";
+
+// The composer draws from the artwork registry; a host provides the sets.
+provideArtwork();
 
 type N = { name?: string; type: string; children?: N[]; content?: { runs: { text: string; style: { fontFamily: string; fill: { color: { srgb: { r: number; g: number; b: number; a: number } } } } }[] }[]; data?: Record<string, unknown> };
 

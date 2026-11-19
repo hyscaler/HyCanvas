@@ -6,7 +6,7 @@
 // by scripts/gen-kit-vocab.mjs from this module's build).
 
 import { KIT_STYLES, kitStyleNames } from "./looks";
-import { PACK_KEYWORDS } from "./packset";
+import { PACK_KEYWORDS } from "./packKeys";
 import { kitSignatureNames } from "./signature";
 
 /** The drawing keywords the model may name, in vocabulary order. */

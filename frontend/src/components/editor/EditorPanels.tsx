@@ -10,7 +10,7 @@ import { searchFonts, type FontCatalogEntry } from "@hc/text";
 import { toHex, fromHex, relativeLuminance } from "@hc/color";
 import { formatBytes } from "@/lib/format";
 import { qrModules } from "@/lib/qr";
-import { stickers, stickerCategories, type Sticker } from "@/lib/stickers";
+import type { Sticker } from "@/lib/stickers";
 import { parseModelJson } from "@/lib/magicDesign";
 import {
   normalizeOutline, deckThemes, layoutDeck, layoutDesign, groundImagePrompt, untrustedSourceRule,
@@ -32,7 +32,7 @@ import { chooseAction, promptText } from "@/lib/promptDialog";
 import { downloadHycFile } from "@/lib/hycFile";
 import { generateAltText } from "@/lib/altText";
 import { fonts } from "@/lib/fontProvider";
-import { ensureIllustrations } from "@/lib/illustrations";
+import { ensureArtwork } from "@/lib/artwork";
 import { locate } from "@hc/editor";
 import {
   critiquePage,
@@ -633,6 +633,15 @@ export function ElementsPanel() {
   // Graphics browser state: search across the bundled sticker library and
   // per-category expansion (collapsed categories render only their first rows).
   const [stickerQuery, setStickerQuery] = useState("");
+  // The sticker rows load with the panel, not with the editor (#77).
+  const [stickerLib, setStickerLib] = useState<typeof import("@/lib/stickerLibrary") | null>(null);
+  useEffect(() => {
+    let live = true;
+    void import("@/lib/stickerLibrary").then((m) => { if (live) setStickerLib(m); }).catch(() => {});
+    return () => { live = false; };
+  }, []);
+  const stickers = stickerLib?.stickers ?? [];
+  const stickerCategories = stickerLib?.stickerCategories ?? [];
   const [expandedStickerCats, setExpandedStickerCats] = useState<Set<string>>(new Set());
   const stickerTile = (s: Sticker) => (
     <button
@@ -675,7 +684,7 @@ export function ElementsPanel() {
         {/* Graphics: bundled, free, editable-vector stickers (insert via addIconSvg).
             Searchable across label/category/keywords; browsable by category with
             a per-category "Show all" so the DOM stays small at 400+ assets. */}
-        <CollapsibleSection title={tr("editor.graphics")} icon={Sparkles} defaultOpen badge={String(stickers.length)}>
+        <CollapsibleSection title={tr("editor.graphics")} icon={Sparkles} defaultOpen badge={stickerLib ? String(stickers.length) : undefined}>
           <div className="mb-2">
             <input
               value={stickerQuery}
@@ -2713,7 +2722,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           if (deps.signal?.aborted) throw e;
           return { error: tr("editor.skip_couldnt_regenerate_slide") };
         }
-        await ensureIllustrations();
+        await ensureArtwork();
         const composed = recomposeSlide({ doc: st.doc, pageIndex: idx, item, brandPalette: deps.brandPalette, brandFonts: deps.brandFonts, logo: deps.brandLogo ?? null });
         if (!composed) return { error: tr("editor.skip_couldnt_regenerate_slide") };
         const { aspect, imageSize } = aspectAndImageSize(page);
@@ -3053,7 +3062,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const reviewed = deps.reviewedOutline;
       if (reviewed) deps.reviewedOutline = undefined; // consumed once: later steps fetch their own
       // The composer's drawings download while the model writes the outline.
-      const illustrationsLoaded = ensureIllustrations();
+      const artworkLoaded = ensureArtwork();
       const outline = reviewed
         ? structuredClone(reviewed)
         : await fetchAssistantOutline(deps.workspaceId, dt, brief, brandClause, pageCount, { signal: deps.signal, onStage: deps.onStage });
@@ -3228,7 +3237,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
             ),
           }));
       }
-      await illustrationsLoaded;
+      await artworkLoaded;
       return { payload: { kind: "outline", outline, size, brandPalette: paletteFor(deps), brandFonts: deps.brandFonts, brandLogo: deps.brandLogo ?? null, heroPlans, workspaceId: deps.workspaceId, designId: deps.designId ?? null, append, themeId: deps.styleThemeId, themeRecord: deps.styleThemeRecord, designType: dt, look: deps.dials?.look } };
     }
     default:
