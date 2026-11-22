@@ -103,6 +103,21 @@ export function worldAABB(file: DesignFile, id: string): Rect | null {
   });
 }
 
+/**
+ * Page-space bounds of every child of one parent, in order, without a scan per
+ * node. worldAABB walks the whole file twice for each id it is asked about, so
+ * asking for all the siblings of a node (snapping does, on every pointer move)
+ * costs the square of the page's node count. Here the parent's world matrix is
+ * found once (identity when the siblings are a page's own children) and each
+ * box is one multiplication.
+ */
+export function siblingAABBs(file: DesignFile, siblings: readonly Node[], parent: Node | null): Rect[] {
+  const parentWorld = parent ? worldMatrix(file, parent.id) ?? identity() : identity();
+  return siblings.map((node) =>
+    transformRect(multiply(parentWorld, fromTransform(node.transform)), { x: 0, y: 0, width: node.size.width, height: node.size.height }),
+  );
+}
+
 /** The page-space AABB enclosing several nodes. */
 export function unionAABB(file: DesignFile, ids: string[]): Rect | null {
   let out: Rect | null = null;

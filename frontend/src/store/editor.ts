@@ -70,6 +70,7 @@ import {
   resizePage,
   worldAABB,
   worldMatrix,
+  siblingAABBs,
   unionAABB,
   moveTransform,
   rotateAboutPoint,
@@ -3377,8 +3378,15 @@ export const useEditor = create<EditorState>((set, get) => {
         return null;
       }
       const pageRect = { x: 0, y: 0, width: page.width, height: page.height };
-      const ids = page.children.map((c) => c.id);
-      const nodes = ids.length ? unionAABB(get().doc, ids) : null;
+      // One pass over the page's own children: unionAABB scans the file for
+      // every id, which made this quadratic and ran on every edit (#77).
+      let nodes: { x: number; y: number; width: number; height: number } | null = null;
+      for (const b of siblingAABBs(get().doc, page.children, null)) {
+        if (!nodes) { nodes = { ...b }; continue; }
+        const x0 = Math.min(nodes.x, b.x), y0 = Math.min(nodes.y, b.y);
+        const x1 = Math.max(nodes.x + nodes.width, b.x + b.width), y1 = Math.max(nodes.y + nodes.height, b.y + b.height);
+        nodes = { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
+      }
       let bounds: { x: number; y: number; width: number; height: number };
       if (!nodes) {
         bounds = pageRect;
