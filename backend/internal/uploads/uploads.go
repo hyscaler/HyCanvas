@@ -561,6 +561,8 @@ func (s *Service) Remove(ctx context.Context, userID, id string) error {
 	_ = s.storage.Delete(rec.StorageKey)
 	// The preview proxy (when one was generated) goes with the asset.
 	_ = s.storage.Delete(proxyKey(id))
+	// So do its downscaled preview copies.
+	s.deleteThumbs(id)
 	return s.deleteAsset(ctx, id)
 }
 
