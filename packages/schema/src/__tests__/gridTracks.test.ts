@@ -7,7 +7,8 @@
 // rather than showing a hole.
 
 import { describe, expect, it } from "vitest";
-import { createBlankDesign, createNode, currentSchemaVersion, GridNodeSchema, migrate, validate, type Node } from "../index";
+import { createBlankDesign, createNode, currentSchemaVersion, migrate, type Node } from "../index";
+import { GridNodeSchema, validate } from "../validation";
 
 const grid = (extra: Record<string, unknown> = {}) =>
   createNode("grid", {

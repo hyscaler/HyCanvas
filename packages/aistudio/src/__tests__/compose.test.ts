@@ -7,6 +7,10 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { provideArtwork } from "../artset";
+
+// The composer draws from the artwork registry; a host provides the sets.
+provideArtwork();
 
 const testdata = path.resolve(__dirname, "../../../../backend/internal/composer/testdata");
 

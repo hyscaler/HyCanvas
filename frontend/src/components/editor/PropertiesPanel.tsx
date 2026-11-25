@@ -11,7 +11,8 @@ import type {
   TableConditionalRule, TableNode, TextEffect, Theme,
 } from "@hc/schema";
 import { themeFromPalette } from "@hc/schema";
-import { deriveThemeSlots, extractLayoutSet, repairThemeSlots, themeIdFor, themeSlotNames, type ExtractedLayoutSet, type ExtractPageLike } from "@hc/aistudio";
+import { deriveThemeSlots, repairThemeSlots, themeIdFor, themeSlotNames } from "@hc/aistudio/dist/themeGen";
+import { extractLayoutSet, type ExtractedLayoutSet, type ExtractPageLike } from "@hc/aistudio/dist/layoutExtract";
 import { refineExtractedLayoutSet } from "@/lib/layoutVision";
 import { generateAltText, generateChartAltText } from "@/lib/altText";
 import { builtinThemes, themeStyleLabel, themeStyleOrder } from "@/lib/themeCatalog";

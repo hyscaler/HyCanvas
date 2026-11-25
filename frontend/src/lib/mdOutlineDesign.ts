@@ -5,9 +5,11 @@
 // Its own module so the dashboard can load it (and the deck builder in
 // @hc/aistudio behind it) only when a markdown file is actually imported.
 
-import { catalogEntryForMood, deckThemes, layoutDeck, parseMarkdownOutline } from "@hc/aistudio";
+import { catalogEntryForMood } from "@hc/aistudio/dist/designSystem";
+import { deckThemes } from "@hc/aistudio/dist/theme";
+import { parseMarkdownOutline } from "@hc/aistudio/dist/mdoutline";
 import { createBlankDesign, type DesignFile } from "@hc/schema";
-import { ensureIllustrations } from "@/lib/illustrations";
+import { composer, loadComposer } from "@/lib/composer";
 
 export async function mdOutlineToDesign(md: string, fallbackTitle: string): Promise<DesignFile> {
   const outline = parseMarkdownOutline(md, { fallbackTitle });
@@ -15,8 +17,8 @@ export async function mdOutlineToDesign(md: string, fallbackTitle: string): Prom
   const size = { width: 1920, height: 1080 };
   const seed = Array.from(outline.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
   const theme = deckThemes({ count: 1, kicker: outline.title, seed })[0];
-  await ensureIllustrations();
-  const deck = layoutDeck(outline, theme, size, { catalog: catalogEntryForMood(outline.theme, seed), seed });
+  await loadComposer();
+  const deck = composer().layoutDeck(outline, theme, size, { catalog: catalogEntryForMood(outline.theme, seed), seed });
   const file = createBlankDesign({ title: outline.title, width: size.width, height: size.height });
   let pageSeq = 0;
   file.pages = deck.pages.map((p, i) => ({

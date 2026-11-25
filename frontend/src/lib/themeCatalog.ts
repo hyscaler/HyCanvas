@@ -3,7 +3,7 @@
 // generation and the Go manifest read the same source; this wrapper adds the
 // translated display names and style labels the picker shows.
 
-import { themeCatalog, type ThemeCatalogEntry, type ThemeStyleGroup } from "@hc/aistudio";
+import { themeCatalog, type ThemeCatalogEntry, type ThemeStyleGroup } from "@hc/aistudio/dist/themeCatalog";
 import { tr, trOr } from "@/lib/i18n";
 
 export type { ThemeCatalogEntry, ThemeStyleGroup };

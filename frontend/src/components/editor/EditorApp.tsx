@@ -7,11 +7,11 @@ import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import { isAiBusy, requestAi, subscribeOpenProperties } from "@/lib/aiRequests";
 import type { Node as DesignNode } from "@hc/schema";
-import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown, Film, Table2, SlidersHorizontal } from "lucide-react";
+import { ChevronLeft, Undo2, Redo2, Download, Save, Loader2, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown, Film, Table2, SlidersHorizontal } from "lucide-react";
 import type { AccessMode } from "@hc/sdk";
 import { ApiError } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
-import { downloadHycFile } from "@/lib/hycFile";
+import { downloadHycFile } from "@/lib/hycDownload";
 import { deckToVideoFile } from "@/lib/video/deckToVideo";
 import { parseCsvMatrix } from "@/lib/csv";
 import { useEditor } from "@/store/editor";
@@ -35,7 +35,6 @@ import { PropertiesPanel } from "./PropertiesPanel";
 import { ToolRail } from "./ToolRail";
 import { PagesBar, PagePill } from "./PagesBar";
 import { DocumentSurface } from "./DocumentSurface";
-import { PresentMode } from "./PresentMode";
 import { PresenceBar } from "./PresenceBar";
 import { HistoryPanel } from "./HistoryPanel";
 import { CommentsPanel } from "./CommentsPanel";
@@ -64,6 +63,8 @@ const PublishDialog = dynamic(() => import("./PublishDialog").then((m) => m.Publ
 const WebsiteDialog = dynamic(() => import("./WebsiteDialog").then((m) => m.WebsiteDialog), { ssr: false });
 const PrintDialog = dynamic(() => import("./PrintDialog").then((m) => m.PrintDialog), { ssr: false });
 const AccessibilityDialog = dynamic(() => import("./AccessibilityDialog").then((m) => m.AccessibilityDialog), { ssr: false });
+// Present mode loads when presenting starts, not with the editor (#77).
+const PresentMode = dynamic(() => import("./PresentMode").then((m) => m.PresentMode), { ssr: false });
 
 type Status = "loading" | "ready" | "error" | "forbidden" | "notfound";
 
@@ -361,6 +362,14 @@ export function EditorApp() {
   }, [isPhone]);
   const onRailPanelOpen = useCallback(() => {
     if (isPhone) setCompactPropsOpen(false);
+  }, [isPhone]);
+  // Rulers cost a phone a strip of canvas on two sides, so they start off
+  // there. Once per session: the overflow menu still turns them back on.
+  const rulersDefaulted = useRef(false);
+  useEffect(() => {
+    if (!isPhone || rulersDefaulted.current) return;
+    rulersDefaulted.current = true;
+    if (useEditor.getState().showRulers) useEditor.getState().toggleRulers();
   }, [isPhone]);
   // Toasts float above the phone tab bar rather than over it.
   useEffect(() => {
@@ -1136,8 +1145,12 @@ export function EditorApp() {
               <Share2 size={16} /> {tr("editor.share")}
             </Button>
           )}
-          <Button size="sm" className="pointer-coarse:h-10" onClick={() => void save()} disabled={!designId || saving || accessMode !== "edit"} title={accessMode !== "edit" ? tr("editor.you_do_not_have_edit_access") : designId ? tr("editor.save_a_snapshot") : tr("editor.open_from_the_dashboard_to_save")}>
-            {saving ? tr("editor.saving") : tr("editor.save")}
+          {/* On a phone the bar is too narrow for a word: Save is an icon there
+              (its label stays for screen readers), a spinner while it saves. */}
+          <Button size="sm" className={`pointer-coarse:h-10 ${isPhone ? "w-10 shrink-0 px-0" : ""}`} onClick={() => void save()} disabled={!designId || saving || accessMode !== "edit"} aria-label={saving ? tr("editor.saving") : tr("editor.save")} title={accessMode !== "edit" ? tr("editor.you_do_not_have_edit_access") : designId ? tr("editor.save_a_snapshot") : tr("editor.open_from_the_dashboard_to_save")}>
+            {isPhone
+              ? (saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />)
+              : (saving ? tr("editor.saving") : tr("editor.save"))}
           </Button>
         </div>
       </header>

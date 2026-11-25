@@ -26,7 +26,7 @@ import {
   type Viewport,
   type DeckFrame,
 } from "@hc/engine";
-import { serializeOutlineMarkdown, type OutlinePageLike } from "@hc/aistudio";
+import { serializeOutlineMarkdown, type OutlinePageLike } from "@hc/aistudio/dist/mdoutline";
 import { useEditor } from "@/store/editor";
 import { prefersReducedMotion } from "@/lib/theme";
 import { useBrand } from "@/store/brand";

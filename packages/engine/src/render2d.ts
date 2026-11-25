@@ -63,6 +63,13 @@ export interface Render2DOptions {
   /** Viewport culling + sub-pixel LOD (FR-27); default on. Set false to force a
    *  full paint of every node (e.g. off-screen thumbnail/export of a whole page). */
   cull?: boolean;
+  /** Partial redraw: a page-space rectangle outside which nothing needs
+   *  painting. Leaf nodes whose box lies outside it are skipped, exactly like
+   *  nodes outside the viewport. The CALLER clips the context to the same area
+   *  (and clears it) before rendering; this only saves the work of painting
+   *  what the clip would discard. Pass it already padded for anything that
+   *  draws outside a node's box (shadows, strokes). Ignored when cull is false. */
+  region?: { x: number; y: number; width: number; height: number };
   /** Draw ONLY the page background (fill), then return. Used by the editor's
    *  two-pass stacked render: all page backgrounds first, so a later page's
    *  background never covers an earlier page's overflowing content. */
@@ -346,6 +353,13 @@ function drawImageNode(ctx: CanvasLike, node: ImageNode, w: number, h: number, a
       // dimensions, not the natural ones.
       let srcW = natW;
       let srcH = natH;
+      // The pixels the drawn image really has. Usually the natural size, but a
+      // preview loads a downscaled copy of the asset, and the size recorded on
+      // the node can be stale: the sample rectangle below is worked out on the
+      // srcW x srcH basis and then scaled onto these, or a smaller copy would
+      // show only its top-left corner.
+      let pixW = el.naturalWidth || el.width || natW;
+      let pixH = el.naturalHeight || el.height || natH;
       // Duotone (FR-12): swap in a cached luminance->gradient mapped copy so the
       // per-pixel work runs only when source/colors/intensity change.
       const duo = duotoneEffect(node.effects);
@@ -363,7 +377,7 @@ function drawImageNode(ctx: CanvasLike, node: ImageNode, w: number, h: number, a
           img = mapped;
           const mw = (mapped as { width?: number }).width;
           const mh = (mapped as { height?: number }).height;
-          if (mw && mh) { srcW = mw; srcH = mh; }
+          if (mw && mh) { srcW = mw; srcH = mh; pixW = mw; pixH = mh; }
         }
       }
       // Alpha mask (v20): non-destructive background removal keeps the original
@@ -386,16 +400,17 @@ function drawImageNode(ctx: CanvasLike, node: ImageNode, w: number, h: number, a
             img = masked;
             const mw = (masked as { width?: number }).width;
             const mh = (masked as { height?: number }).height;
-            if (mw && mh) { srcW = mw; srcH = mh; }
+            if (mw && mh) { srcW = mw; srcH = mh; pixW = mw; pixH = mh; }
           }
         }
       }
       const crop = node.crop ?? { x: 0, y: 0, width: 1, height: 1 };
       const fr = fitRect(srcW * crop.width, srcH * crop.height, w, h, node.fit, node.focalPoint);
-      const sx = (crop.x + fr.source.x * crop.width) * srcW;
-      const sy = (crop.y + fr.source.y * crop.height) * srcH;
-      const sw = fr.source.width * crop.width * srcW;
-      const sh = fr.source.height * crop.height * srcH;
+      const kx = pixW / srcW, ky = pixH / srcH;
+      const sx = (crop.x + fr.source.x * crop.width) * srcW * kx;
+      const sy = (crop.y + fr.source.y * crop.height) * srcH * ky;
+      const sw = fr.source.width * crop.width * srcW * kx;
+      const sh = fr.source.height * crop.height * srcH * ky;
       ctx.drawImage(img, sx, sy, sw, sh, fr.dest.x, fr.dest.y, fr.dest.width, fr.dest.height);
       return;
     }
@@ -2254,10 +2269,17 @@ export function renderScene(
 
   // Page-space viewport rect for culling: pan is the top-left page point, and
   // width/zoom is the visible page span. Disabled (null) when opts.cull === false.
-  const cull =
+  let cull =
     opts.cull === false
       ? null
       : { x: viewport.panX, y: viewport.panY, w: viewport.width / viewport.zoom, h: viewport.height / viewport.zoom, zoom: viewport.zoom };
+  // A partial redraw narrows the cull rect to the region that is being repainted.
+  if (cull && opts.region) {
+    const r = opts.region;
+    const x0 = Math.max(cull.x, r.x), y0 = Math.max(cull.y, r.y);
+    const x1 = Math.min(cull.x + cull.w, r.x + r.width), y1 = Math.min(cull.y + cull.h, r.y + r.height);
+    cull = { x: x0, y: y0, w: Math.max(0, x1 - x0), h: Math.max(0, y1 - y0), zoom: cull.zoom };
+  }
 
   const kids = scene.root.children;
   if (kids) {

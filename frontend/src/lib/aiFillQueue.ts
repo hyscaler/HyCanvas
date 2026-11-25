@@ -9,7 +9,7 @@
 // the deck is complete either way, so nothing is surfaced as an error.
 
 import type { SlideLayout } from "@hc/schema";
-import { deriveLayoutContentSchema, layoutFillSystemPrompt, normalizeLayoutFill, type LayoutFill } from "@hc/aistudio";
+import { deriveLayoutContentSchema, layoutFillSystemPrompt, normalizeLayoutFill, type LayoutFill } from "@hc/aistudio/dist/layoutSchema";
 import { useEditor } from "@/store/editor";
 import { oc } from "@/lib/sdk";
 import { parseModelJson } from "@/lib/magicDesign";

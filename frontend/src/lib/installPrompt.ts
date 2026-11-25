@@ -8,7 +8,10 @@
 //
 // Safari on iPhone and iPad has no such event: the only way in is Share, then
 // Add to Home Screen, so there the button explains those steps instead.
-// Anything already running as the installed app shows no button at all.
+// Other phone and tablet browsers (Firefox on Android, Chrome on iPhone, or
+// Chrome before it has offered its dialog) install from their own menu, so
+// the account menu's shortcut explains that. Anything already running as the
+// installed app shows no button at all.
 
 interface InstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -20,6 +23,9 @@ export type InstallState =
   | "prompt"
   /** iPhone/iPad Safari: install by hand from the Share menu. */
   | "ios"
+  /** A phone or tablet browser with no dialog to open: install from the
+   *  browser's own menu. Only the account menu offers this one. */
+  | "manual"
   /** Already running as the installed app, or nothing to offer. */
   | "none";
 
@@ -49,6 +55,11 @@ function iosSafari(): boolean {
   return ios && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
 }
 
+function handheld(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android|iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+}
+
 if (typeof window !== "undefined") {
   window.addEventListener("beforeinstallprompt", (e) => {
     // Keep the browser's own mini-infobar out of the way; our button asks.
@@ -67,6 +78,7 @@ export function installState(): InstallState {
   if (installed || standalone()) return "none";
   if (deferred) return "prompt";
   if (iosSafari()) return "ios";
+  if (handheld()) return "manual";
   return "none";
 }
 

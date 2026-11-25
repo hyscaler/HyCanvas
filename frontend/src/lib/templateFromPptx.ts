@@ -16,14 +16,8 @@ import {
   type Color,
   type Theme,
 } from "@hc/schema";
-import {
-  deriveThemeSlots,
-  extractLayoutSet,
-  repairThemeSlots,
-  themeSlotNames,
-  verifyLayoutCapacities,
-  type ExtractPageLike,
-} from "@hc/aistudio";
+import { deriveThemeSlots, repairThemeSlots, themeSlotNames } from "@hc/aistudio/dist/themeGen";
+import { extractLayoutSet, verifyLayoutCapacities, type ExtractPageLike } from "@hc/aistudio/dist/layoutExtract";
 import { pptxToDesign } from "@hc/export";
 import { searchFonts } from "@hc/text";
 import { refineExtractedLayoutSet } from "@/lib/layoutVision";

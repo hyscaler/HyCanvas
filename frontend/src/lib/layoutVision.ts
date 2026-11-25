@@ -11,13 +11,7 @@
 
 import type { DesignFile } from "@hc/schema";
 import { createScene, renderScene, type CanvasLike, type Viewport } from "@hc/engine";
-import {
-  applyLayoutReview,
-  layoutReviewInstruction,
-  parseLayoutReview,
-  type ExtractedLayout,
-  type ExtractedLayoutSet,
-} from "@hc/aistudio";
+import { applyLayoutReview, layoutReviewInstruction, parseLayoutReview, type ExtractedLayout, type ExtractedLayoutSet } from "@hc/aistudio/dist/layoutExtract";
 import { imageAssets } from "@/lib/assetProvider";
 import { oc } from "@/lib/sdk";
 

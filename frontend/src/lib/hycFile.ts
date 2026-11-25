@@ -10,26 +10,13 @@
 // they are stored: data-URL assets are fully self-contained, workspace-hosted
 // assets keep their URLs (which resolve only on the origin instance).
 
-import { currentSchemaVersion, migrate, repairCornerRadius, validate, type DesignFile } from "@hc/schema";
+import { currentSchemaVersion, migrate, repairCornerRadius, type DesignFile } from "@hc/schema";
+import { validate } from "@hc/schema/dist/validation";
 import { tr } from "@/lib/i18n";
 import { CodedError } from "./errors";
-import { hycExtension } from "./hycFilePicker";
 
 export { hycAccept, hycExtension, importedTitle, readFileText } from "./hycFilePicker";
-
-/** Serialize a design file and hand it to the browser as `<baseName>.hyc`. */
-export function downloadHycFile(file: DesignFile, baseName: string): void {
-  const safe = (baseName || "design").replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "") || "design";
-  const blob = new Blob([JSON.stringify(file, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${safe}${hycExtension}`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
+export { downloadHycFile } from "./hycDownload";
 
 /** Parse + validate + forward-migrate .hyc text. Throws an Error whose message
  *  is safe to show the user when the content is not a usable design file. */

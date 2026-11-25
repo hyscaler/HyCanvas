@@ -540,6 +540,8 @@
   "dashboard.install_app_ios_intro": "HyCanvas को ऐप की तरह खोलने के लिए होम स्क्रीन पर जोड़ें:",
   "dashboard.install_app_ios_step_add": "होम स्क्रीन पर जोड़ें चुनें, फिर जोड़ें पर टैप करें",
   "dashboard.install_app_ios_step_share": "ब्राउज़र टूलबार में शेयर पर टैप करें",
+  "dashboard.install_app_step_install": "ऐप इंस्टॉल करें या होम स्क्रीन पर जोड़ें चुनें",
+  "dashboard.install_app_step_menu": "ब्राउज़र का मेनू खोलें",
   "dashboard.settings": "सेटिंग्स",
   "dashboard.share": "साझा करें",
   "dashboard.sheet": "शीट",

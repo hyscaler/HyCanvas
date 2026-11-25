@@ -153,7 +153,8 @@ export function PageOverlays({ api }: { api: CanvasApi }) {
               onClick={async () => { const t = await promptText({ title: `Page ${i + 1} title`, label: tr("editor.title"), placeholder: tr("editor.add_page_title"), defaultValue: p.name ?? "", confirmText: "Save" }); if (t !== null) st.setPageName(i, t); }}
               className="min-w-0 truncate text-neutral-400 hover:text-neutral-700"
               title={tr("editor.rename_page")}
-            >{p.name ? `- ${p.name}` : "- Add page title"}</button>
+            >{/* A page still called by its number has no title of its own yet. */
+              p.name && p.name !== `Page ${i + 1}` ? `- ${p.name}` : "- Add page title"}</button>
             <span className="flex-1" />
             {isPhone ? (
               // A phone row has no room for seven 36px buttons beside the page

@@ -4,7 +4,8 @@
 // whole-file validation.
 
 import { describe, expect, it } from "vitest";
-import { createBlankDesign, createNode, currentSchemaVersion, InteractionSchema, migrate, validate, type Node } from "../index";
+import { createBlankDesign, createNode, currentSchemaVersion, migrate, type Node } from "../index";
+import { InteractionSchema, validate } from "../validation";
 
 describe("migration to v24", () => {
   // The exact version pin lives in the NEWEST version's test (gridTracks.test.ts)

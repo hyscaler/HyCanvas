@@ -4,7 +4,8 @@
 // everywhere (the engine clamps unknowns to its default at render time).
 
 import { describe, expect, it } from "vitest";
-import { createBlankDesign, migrate, PageTransitionSchema, validate } from "../index";
+import { createBlankDesign, migrate } from "../index";
+import { PageTransitionSchema, validate } from "../validation";
 
 describe("migration to v22", () => {
   // The exact version pin lives with the LATEST bump (animchannels.test.ts),

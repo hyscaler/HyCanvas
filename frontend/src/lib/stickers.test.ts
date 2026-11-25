@@ -4,7 +4,7 @@
 // parser cannot round-trip (strokes, transforms, groups, gradients, text).
 
 import { describe, it, expect } from "vitest";
-import { stickers } from "./stickers";
+import { stickers } from "./stickerLibrary";
 import { flattenSvgToNodes } from "./svgFlatten";
 
 const WRAPPER = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">';

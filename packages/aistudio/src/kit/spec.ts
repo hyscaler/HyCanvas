@@ -11,8 +11,9 @@
 // naming what still does not so the deck's report can hand it back.
 
 import { createNode, roundedCorners, type Fill, type Node, type PathContour } from "@hc/schema";
-import { ICON_BOX, ICON_GLYPHS } from "../iconset";
-import { PACK_DRAWINGS, type PackDrawing } from "./packset";
+import { ICON_BOX } from "../iconKeys";
+import { iconGlyph, packDrawingData } from "../illustrations";
+import type { PackDrawing } from "./packKeys";
 import { decodeDrawingPath } from "../archetypes";
 
 /** A solid hex, or a gradient between hex stops. */
@@ -280,7 +281,7 @@ function buttonNodes(p: ButtonPrim, overfull: string[]): Node[] {
 }
 
 function iconNode(p: IconPrim): Node | null {
-  const contours = ICON_GLYPHS[p.icon];
+  const contours = iconGlyph(p.icon);
   if (!contours?.length) return null;
   const size = p.w;
   const k = size / ICON_BOX;
@@ -367,7 +368,7 @@ function pathNode(p: PathPrim): Node {
  *  as one thing and the measure sees one box. Named "Illustration" so the
  *  editor's picture queue leaves the page alone. */
 export function drawingNode(p: DrawingPrim): Node | null {
-  const d: PackDrawing | undefined = PACK_DRAWINGS[p.asset];
+  const d: PackDrawing | undefined = packDrawingData(p.asset);
   if (!d) return null;
   const k = Math.min(p.w / d.w, p.h / d.h);
   const w = Math.round(d.w * k), h = Math.round(d.h * k);

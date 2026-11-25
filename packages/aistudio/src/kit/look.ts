@@ -14,7 +14,9 @@
 import { fromHex, toHex, fixToAA, contrastRatio, rgbToHsl, hslToRgb } from "@hc/color";
 import type { DeckLogo } from "../designSystem";
 import { KIT_STYLES, kitStyleNames } from "./looks";
-import { PACK_DRAWINGS, PACK_KEYWORDS, PACK_PEEPS } from "./packset";
+import { PACK_DRAWING_IDS, PACK_KEYWORDS, PACK_PEEPS } from "./packKeys";
+
+const PACK_ID_SET = new Set(PACK_DRAWING_IDS);
 import { decor, ellipse, logo, rect, text, type Prim, type ShapePrim, type TextPrim } from "./spec";
 
 export const W = 1920;
@@ -330,7 +332,7 @@ export function packDrawing(name: string | undefined): string | null {
   if (!name) return null;
   const k = name.trim().toLowerCase();
   if (!k) return null;
-  if (PACK_DRAWINGS[k]) return k;
+  if (PACK_ID_SET.has(k)) return k;
   if (PACK_KEYWORDS[k]) return PACK_KEYWORDS[k];
   for (const w of k.split(/[^a-z0-9]+/)) if (w && PACK_KEYWORDS[w]) return PACK_KEYWORDS[w];
   return null;
@@ -343,14 +345,14 @@ export function drawingFor(K: KitLook, slot: keyof KitStyle["art"], named: strin
   if (own) return own;
   const styled = packDrawing(K.art[slot]);
   if (styled) return styled;
-  const pool = Object.keys(PACK_DRAWINGS).filter((id) => !id.startsWith("op-"));
+  const pool = PACK_DRAWING_IDS.filter((id) => !id.startsWith("op-"));
   return pool[Math.abs(seed) % pool.length];
 }
 
 /** The portrait for a slot, cycling the style's own when the pack has
  *  them, else the pack's. */
 export function peepFor(K: KitLook, k: number): string {
-  const own = K.peeps.filter((id) => PACK_DRAWINGS[id]);
+  const own = K.peeps.filter((id) => PACK_ID_SET.has(id));
   const pool = own.length ? own : PACK_PEEPS;
   return pool[k % pool.length];
 }

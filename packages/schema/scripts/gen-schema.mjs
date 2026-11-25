@@ -3,7 +3,7 @@
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { getJsonSchema } from "../dist/index.js";
+import { getJsonSchema } from "../dist/validation.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, "..", "schema.json");

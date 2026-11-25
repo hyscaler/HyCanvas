@@ -3,7 +3,7 @@
 // the published schema cannot drift from them (AC-7).
 
 import { z } from "zod";
-import { DesignFileSchema } from "./schema";
+import { DesignFileSchema } from "./schemas";
 
 /** Media type for the open design file format. */
 export const designMediaType = "application/vnd.hycanvas.design+json";

@@ -1,27 +1,7 @@
 import { describe, it, expect } from "vitest";
 import Ajv2020 from "ajv/dist/2020";
-import {
-  currentSchemaVersion,
-  maxNestingDepth,
-  knownNodeTypes,
-  createNode,
-  createBlankDesign,
-  validate,
-  migrate,
-  migrations,
-  needsMigration,
-  getJsonSchema,
-  fromDesignFile,
-  toDesignFile,
-  isUnknownNode,
-  wrapUnknownNode,
-  unwrapUnknownNode,
-  collectIds,
-  maxDepth,
-  type DesignFile,
-  type Node,
-  type NodeType,
-} from "../index";
+import { currentSchemaVersion, maxNestingDepth, knownNodeTypes, createNode, createBlankDesign, migrate, migrations, needsMigration, fromDesignFile, toDesignFile, isUnknownNode, wrapUnknownNode, unwrapUnknownNode, collectIds, maxDepth, type DesignFile, type Node, type NodeType } from "../index";
+import { validate, getJsonSchema } from "../validation";
 
 const constructable = knownNodeTypes.filter(
   (t) => t !== "model3d",

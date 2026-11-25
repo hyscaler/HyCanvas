@@ -14,6 +14,7 @@ import {
   resizeNode,
   resizeSpacingSnap,
   rotateAboutPoint,
+  siblingAABBs,
   unionAABB,
   worldAABB,
   worldMatrix,
@@ -593,10 +594,9 @@ export function Gizmo({ api }: { api: CanvasApi }) {
         const widths: number[] = [];
         const heights: number[] = [];
         const sibBoxes: Rect[] = [];
-        for (const sib of loc2!.siblings) {
-          if (sib.id === d.id || (sib as { hidden?: boolean }).hidden) continue;
-          const b = worldAABB(store.doc, sib.id);
-          if (!b) continue;
+        // One pass over the siblings (worldAABB per sibling scans the file).
+        const sibs = loc2!.siblings.filter((sib) => sib.id !== d.id && !(sib as { hidden?: boolean }).hidden);
+        for (const b of siblingAABBs(store.doc, sibs, loc2!.parent)) {
           xs.push(b.x, b.x + b.width, b.x + b.width / 2);
           ys.push(b.y, b.y + b.height, b.y + b.height / 2);
           widths.push(b.width);
@@ -851,10 +851,8 @@ export function Gizmo({ api }: { api: CanvasApi }) {
         const wBoxes: Rect[] = [];
         const hBoxes: Rect[] = [];
         if (self) { if (sm.w != null) wBoxes.push(self); if (sm.h != null) hBoxes.push(self); }
-        for (const s of loc.siblings) {
-          if (s.id === id || (s as { hidden?: boolean }).hidden) continue;
-          const b = worldAABB(d, s.id);
-          if (!b) continue;
+        const others = loc.siblings.filter((s) => s.id !== id && !(s as { hidden?: boolean }).hidden);
+        for (const b of siblingAABBs(d, others, loc.parent)) {
           if (sm.w != null && near(b.width, sm.w)) wBoxes.push(b);
           if (sm.h != null && near(b.height, sm.h)) hBoxes.push(b);
         }

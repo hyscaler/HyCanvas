@@ -20,7 +20,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // authoring pipeline to compile candidate specs to a scratch seed for review).
 const SPEC_DIR = process.env.TEMPLATE_SPECS || join(ROOT, "scripts", "templates");
 const SEED = process.env.TEMPLATE_SEED || join(ROOT, "backend", "internal", "templates", "seed.json");
-const { validate, createNode } = await import(join(ROOT, "packages", "schema", "dist", "index.js"));
+const { createNode } = await import(join(ROOT, "packages", "schema", "dist", "index.js"));
+const { validate } = await import(join(ROOT, "packages", "schema", "dist", "validation.js"));
 const { composeDeckFile, decodeDrawingPath } = await import(join(ROOT, "packages", "aistudio", "dist", "index.js"));
 // The composer's baked icon and drawing sets (Tabler Icons, ManyPixels; both
 // MIT) are not part of the package's public surface, so they are read from
@@ -28,6 +29,9 @@ const { composeDeckFile, decodeDrawingPath } = await import(join(ROOT, "packages
 // generated decks use, recolored to its own palette.
 const { ICON_GLYPHS, ICON_BOX } = await import(join(ROOT, "packages", "aistudio", "dist", "iconset.js"));
 const { ILLUSTRATIONS } = await import(join(ROOT, "packages", "aistudio", "dist", "illustrationset.js"));
+// composeDeckFile reads the same sets from a registry, so register them.
+const { provideArtwork } = await import(join(ROOT, "packages", "aistudio", "dist", "artset.js"));
+provideArtwork();
 const { svgToNodes } = await import(join(ROOT, "packages", "stock", "dist", "index.js"));
 
 // Bundled illustration packs (for "illustrations" page entries): asset id ->

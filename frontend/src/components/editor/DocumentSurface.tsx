@@ -4,10 +4,17 @@
 // for the whiteboard; `doc.meta.<kind>` for docs/sheets/video) and brings its
 // own tools, so the shared chrome (top bar, save/export) stays in EditorApp.
 
-import { WhiteboardSurface } from "./WhiteboardSurface";
-import { DocSurface } from "./DocSurface";
-import { SheetSurface } from "./SheetSurface";
-import { VideoSurface } from "./VideoSurface";
+//
+// Each surface is its own chunk, loaded only for a document of its kind, so a
+// design never downloads the video, sheet, doc or whiteboard code (#77).
+
+import dynamic from "next/dynamic";
+
+const loading = () => <div className="flex-1" />;
+const WhiteboardSurface = dynamic(() => import("./WhiteboardSurface").then((m) => m.WhiteboardSurface), { ssr: false, loading });
+const DocSurface = dynamic(() => import("./DocSurface").then((m) => m.DocSurface), { ssr: false, loading });
+const SheetSurface = dynamic(() => import("./SheetSurface").then((m) => m.SheetSurface), { ssr: false, loading });
+const VideoSurface = dynamic(() => import("./VideoSurface").then((m) => m.VideoSurface), { ssr: false, loading });
 
 export interface SurfaceProps {
   kind: string;

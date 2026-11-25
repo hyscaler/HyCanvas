@@ -540,6 +540,8 @@
   "dashboard.install_app_ios_intro": "HyCanvas をホーム画面に追加すると、アプリのように開けます:",
   "dashboard.install_app_ios_step_add": "「ホーム画面に追加」を選び、「追加」をタップ",
   "dashboard.install_app_ios_step_share": "ブラウザのツールバーで共有をタップ",
+  "dashboard.install_app_step_install": "「アプリをインストール」または「ホーム画面に追加」を選択",
+  "dashboard.install_app_step_menu": "ブラウザのメニューを開く",
   "dashboard.settings": "設定",
   "dashboard.share": "共有",
   "dashboard.sheet": "シート",

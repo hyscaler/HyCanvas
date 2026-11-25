@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { MousePointer2, PenTool, Pencil, Minus, MoveUpRight, Square, Circle, Type, MessageSquarePlus, Copy, ClipboardPaste, CopyPlus, Trash2, Group, Ungroup, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, FlipHorizontal2, FlipVertical2, Paintbrush, PaintBucket, Lock, LockOpen, Eye, EyeOff, BoxSelect, Wallpaper, ImageUp, Crop } from "lucide-react";
 import type { CharStyle, Color, Node as SchemaNode, Page, Paragraph, ParagraphStyle, TextNode, Transform } from "@hc/schema";
 import { isDecorative, resolveReadingOrder } from "@hc/schema";
-import { locate, moveTransform, marqueeSelect, parentSpaceDelta, worldMatrix, worldAABB, unionAABB, snap, spacingSnap, type SpacingGuide, type EditCommand } from "@hc/editor";
+import { locate, moveTransform, marqueeSelect, parentSpaceDelta, worldMatrix, worldAABB, unionAABB, siblingAABBs, snap, spacingSnap, type SpacingGuide, type EditCommand } from "@hc/editor";
 import { fitStickyFontScale, routeConnector } from "@hc/whiteboard";
 import { fontFamilyStack, weightFromFontStyle, type Rect } from "@hc/engine";
 import { measuredTextHeight } from "@/lib/textFit";
@@ -1975,10 +1975,10 @@ export function Canvas() {
           if (Math.abs(ty - box.y) <= threshold) sdy = ty - box.y;
         } else {
           const movingSet = new Set(movedIds);
-          statics = pageNode.children
-            .filter((node) => !movingSet.has(node.id) && !node.hidden)
-            .map((node) => worldAABB(doc, node.id))
-            .filter((b): b is Rect => !!b);
+          // The page's own children: their boxes need no scan of the file
+          // (worldAABB per node made every pointer move quadratic, #77).
+          const others = pageNode.children.filter((node) => !movingSet.has(node.id) && !node.hidden);
+          statics = siblingAABBs(doc, others, null);
           const res = snap(box, statics, { threshold, pageRect: { x: 0, y: 0, width: pageNode.width, height: pageNode.height } });
           sdx = res.dx; sdy = res.dy;
           gx2.push(...res.guidesX); gy2.push(...res.guidesY);

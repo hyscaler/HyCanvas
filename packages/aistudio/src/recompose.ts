@@ -14,7 +14,7 @@
 
 import type { Fill, Node, Theme } from "@hc/schema";
 import { fromHex } from "@hc/color";
-import { deckThemeFromRecord } from "./compose";
+import { deckThemeFromRecord } from "./themeRecords";
 import { deckThemes } from "./theme";
 import { deriveDesignSystem, type DeckLogo, type DesignSystem } from "./designSystem";
 import { composeArchetypePage, type ComposedPage } from "./archetypes";

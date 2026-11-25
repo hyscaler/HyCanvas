@@ -13,6 +13,7 @@ export * from "./types";
 export * from "./math";
 export * from "./viewport";
 export * from "./tiles";
+export * from "./sceneDiff";
 export * from "./color";
 export * from "./fonts";
 export * from "./image";

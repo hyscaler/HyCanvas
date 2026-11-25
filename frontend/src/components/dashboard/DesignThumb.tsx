@@ -1,12 +1,14 @@
-// A real design preview: lazily fetches the design file and renders it to a
-// small canvas via @hc/engine, fit-and-centered. Falls back to a gradient tile
-// while loading or on error. (A server-side thumbnail pipeline is deferred;
-// this gives genuine previews for the handful of cards on screen.)
+// A real design preview: lazily fetches the design file and renders its first
+// page to a small canvas via @hc/engine, fit-and-centered, in a worker where
+// the browser allows (lib/thumb). Images load at the card's size through the
+// server's downscaled variants. Falls back to a gradient tile while loading or
+// on error.
 
 import { useEffect, useRef, useState } from "react";
-import type { CanvasLike, Viewport } from "@hc/engine";
-import { oc } from "@/lib/sdk";
-import { imageAssets } from "@/lib/assetProvider";
+import type { AssetProvider, CanvasLike, Viewport } from "@hc/engine";
+import { oc, resolveAssetUrl } from "@/lib/sdk";
+import { previewFontsWanted, thumbUrl, thumbWidthFor } from "@/lib/thumb/thumbUrl";
+import { renderThumbInWorker } from "@/lib/thumb/thumbClient";
 
 // Nearest scrollable ancestor, used as the observer root: the dashboard grids
 // scroll in an inner overflow-y-auto container, and a rootMargin only extends
@@ -51,13 +53,7 @@ export function DesignThumb({ designId, templateId, trashed }: { designId?: stri
         // `trashed` opts into the member-only trash read; without it the file
         // endpoint returns 404 for trashed designs and the card shows only the
         // gradient fallback.
-        // The engine (and the schema and font catalog behind it) loads with the
-        // first preview, in parallel with the file, rather than with the page:
-        // the dashboard shell paints before any preview needs it.
-        const [file, { createScene, renderScene }] = await Promise.all([
-          templateId ? oc.getTemplateFile(templateId) : oc.getDesignFile(designId!, trashed ? { trashed: true } : undefined),
-          import("@hc/engine"),
-        ]);
+        const file = await (templateId ? oc.getTemplateFile(templateId) : oc.getDesignFile(designId!, trashed ? { trashed: true } : undefined));
         if (cancelled) return;
         const canvas = ref.current;
         if (!canvas) return;
@@ -87,19 +83,70 @@ export function DesignThumb({ designId, templateId, trashed }: { designId?: stri
         const dpr = Math.min(2, window.devicePixelRatio || 1);
         const cw = canvas.clientWidth || 260;
         const ch = canvas.clientHeight || 195;
+        // Only the first page is drawn, and its images at the card's size, not
+        // the originals: the server serves each upload downscaled (#77).
+        const page = file.pages[0];
+        const shown = { ...file, pages: [page] };
+        const tw = thumbWidthFor(cw, dpr);
+        const assets = (file.assets ?? [])
+          .filter((a) => a.url && a.kind !== "video")
+          .map((a) => ({ id: a.id, url: thumbUrl(resolveAssetUrl(a.url), tw) }));
+        const fontRefs = ((file as unknown as { fonts?: { family?: string; url?: string }[] }).fonts ?? [])
+          .filter((f): f is { family: string; url: string } => !!f.family && !!f.url)
+          .map((f) => ({ family: f.family, url: resolveAssetUrl(f.url) }));
+
+        // Off the main thread when the browser can: the worker loads the
+        // images and fonts, renders, and hands back a bitmap. It declines what
+        // it cannot draw faithfully (an SVG image, no fonts in workers), and
+        // then, or with no worker at all, the page draws it below.
+        try {
+          const bitmap = await renderThumbInWorker({ file: shown, width: cw, height: ch, dpr, assets, fonts: fontRefs, webFonts: previewFontsWanted(!!templateId) });
+          if (cancelled) { bitmap.close(); return; }
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          const bctx = canvas.getContext("2d");
+          if (bctx) {
+            bctx.drawImage(bitmap, 0, 0);
+            bitmap.close();
+            setOk(true);
+            return;
+          }
+          bitmap.close();
+        } catch {
+          /* fall through to the page's own render */
+        }
+        if (cancelled) return;
+
+        // The engine (and the schema and font catalog behind it) loads only
+        // for this path, never with the dashboard shell.
+        const { createScene, renderScene } = await import("@hc/engine");
+        const images = new Map<string, HTMLImageElement | null>();
+        await Promise.all(assets.map((a) => new Promise<void>((done) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          const finish = (ok: boolean) => { images.set(a.id, ok ? img : null); done(); };
+          const timer = setTimeout(() => finish(false), 12_000);
+          img.onload = () => { clearTimeout(timer); finish(true); };
+          img.onerror = () => { clearTimeout(timer); finish(false); };
+          img.src = a.url;
+        })));
+        if (cancelled) return;
         canvas.width = Math.round(cw * dpr);
         canvas.height = Math.round(ch * dpr);
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        const page = file.pages[0];
         const zoom = Math.min(cw / page.width, ch / page.height);
         const panX = -((cw - page.width * zoom) / 2) / zoom;
         const panY = -((ch - page.height * zoom) / 2) / zoom;
         const vp: Viewport = { zoom, panX, panY, dpr, width: cw, height: ch };
-        imageAssets.registerAll(file.assets ?? []);
-        renderScene(createScene(file), ctx as unknown as CanvasLike, vp, { assets: imageAssets });
+        const provider: AssetProvider = {
+          image: (id) => images.get(id) ?? null,
+          status: (id) => (images.get(id) ? "ready" : "missing"),
+          onChange: () => () => {},
+        };
+        renderScene(createScene(shown), ctx as unknown as CanvasLike, vp, { assets: provider });
         setOk(true);
       } catch {
         if (!cancelled) setOk(false);

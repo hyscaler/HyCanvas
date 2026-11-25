@@ -4,7 +4,8 @@
 // additive.
 
 import { describe, expect, it } from "vitest";
-import { createBlankDesign, createNode, migrate, validate, type Node } from "../index";
+import { createBlankDesign, createNode, migrate, type Node } from "../index";
+import { validate } from "../validation";
 
 describe("migration to v23", () => {
   // The exact version pin lives with the LATEST bump (interactions.test.ts),

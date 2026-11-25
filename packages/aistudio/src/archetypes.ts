@@ -22,7 +22,10 @@ import { createNode, roundedCorners, type Color, type Fill, type Node } from "@h
 import type { Archetype, CompositionCell, DesignType, OutlineItem } from "./outline";
 import { contrastRatio, fixToAA } from "@hc/color";
 import type { DeckMotion, DesignSystem } from "./designSystem";
-import { ICON_BOX, ICON_GLYPHS, ICON_KEYWORDS } from "./iconset";
+import { ICON_BOX, ICON_KEYWORDS, ICON_NAMES } from "./iconKeys";
+import { iconGlyph } from "./illustrations";
+
+const ICON_NAME_SET = new Set(ICON_NAMES);
 import { ILLUSTRATION_KEYWORDS } from "./illustrationKeywords";
 import { illustrationDrawing } from "./illustrations";
 import type { IllustrationDrawing } from "./illustrationset";
@@ -161,11 +164,19 @@ export function keepLastWordCompany(text: string, maxChars = Infinity): string {
  *  knows ("cloud storage" finds the cloud), so a model that writes a phrase
  *  still gets a picture and one that invents a word gets none. */
 export function iconGlyphFor(keyword: string | undefined): string | null {
+  const name = iconNameFor(keyword);
+  // Only a glyph that can be drawn: until the host provides the glyphs (see
+  // illustrations.ts) a page lays out as for an item with no icon, instead of
+  // reserving room for one it cannot draw.
+  return name && iconGlyph(name) ? name : null;
+}
+
+function iconNameFor(keyword: string | undefined): string | null {
   if (!keyword) return null;
   const k = keyword.trim().toLowerCase();
   if (!k) return null;
   // A glyph's own name (circle-check, alert-triangle) is the glyph.
-  if (ICON_GLYPHS[k]) return k;
+  if (ICON_NAME_SET.has(k)) return k;
   const direct = ICON_KEYWORDS[k];
   if (direct) return direct;
   for (const w of k.split(/[^a-z]+/)) {
@@ -588,7 +599,7 @@ class Composer {
    *  Coordinates are in node space at final size (transform scale 1), so the
    *  quality loop and the renderers see the same box. */
   private icon(glyph: string, x: number, y: number, size: number, color: Color): Node | null {
-    const contours = ICON_GLYPHS[glyph];
+    const contours = iconGlyph(glyph);
     if (!contours?.length) return null;
     const k = size / ICON_BOX;
     const pt = (p: { x: number; y: number }) => ({ x: Math.round(p.x * k * 100) / 100, y: Math.round(p.y * k * 100) / 100 });

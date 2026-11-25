@@ -50,6 +50,10 @@ func mountUploads(api chi.Router, up *uploads.Service, acct *accounts.Service) {
 	// can probe existence/size without downloading; ServeContent handles both.
 	api.Get("/assets/{id}/content", assetContentHandler(up))
 	api.Head("/assets/{id}/content", assetContentHandler(up))
+	// The same image downscaled for previews (?w= a width in CSS pixels times the
+	// device pixel ratio); serves the original when no smaller copy applies.
+	api.Get("/assets/{id}/thumb", assetThumbHandler(up))
+	api.Head("/assets/{id}/thumb", assetThumbHandler(up))
 	// Preview proxy (540p) for heavy videos; 404 when none exists.
 	api.Get("/assets/{id}/proxy", assetProxyHandler(up))
 	api.Head("/assets/{id}/proxy", assetProxyHandler(up))
@@ -293,6 +297,33 @@ const untrustedContentCSP = "default-src 'none'; img-src data: blob:; media-src 
 func setUntrustedContentHeaders(w http.ResponseWriter) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Security-Policy", untrustedContentCSP)
+}
+
+// assetThumbHandler serves an image asset downscaled to the variant width that
+// covers ?w= (see uploads.Thumbnail). Anything that has no smaller copy (a
+// video, an SVG, an image already that small, a bad width) is answered with
+// the original bytes, exactly as /content would, so a client can always ask
+// for the thumb of an asset it is about to draw small.
+func assetThumbHandler(up *uploads.Service) http.HandlerFunc {
+	content := assetContentHandler(up)
+	return func(w http.ResponseWriter, r *http.Request) {
+		width, _ := strconv.Atoi(r.URL.Query().Get("w"))
+		data, mime, err := up.Thumbnail(r.Context(), chi.URLParam(r, "id"), width)
+		if err != nil {
+			if errors.Is(err, uploads.ErrNoThumb) {
+				content(w, r)
+				return
+			}
+			uploadsProblem(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", mime)
+		setUntrustedContentHeaders(w)
+		// A variant is derived from an asset whose bytes do not change under its
+		// id, so it can be cached; a day keeps a replaced upload from lingering.
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(data))
+	}
 }
 
 func assetContentHandler(up *uploads.Service) http.HandlerFunc {

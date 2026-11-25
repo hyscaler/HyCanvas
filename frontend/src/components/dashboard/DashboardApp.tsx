@@ -45,8 +45,8 @@ import {
   List,
   Users,
   Moon,
-  Sun, Sparkles, Wand2, Paperclip, Loader2, X, Palette, Menu } from "lucide-react";
-import type { dialTones as aiDialTones } from "@hc/aistudio";
+  Sun, Sparkles, Wand2, Paperclip, Loader2, X, Palette, Menu, MonitorDown } from "lucide-react";
+import type { dialTones as aiDialTones } from "@hc/aistudio/dist/outlineEdit";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { hycAccept, importedTitle, readFileText } from "@/lib/hycFilePicker";
 import { ApiError, type AiProviderPreset, type DesignRecord, type HomeItem, type MyTask, type StorageUsageView, type TaskStatus, type TemplateCollectionSummary, type TemplateSummary, type WorkspaceRole } from "@hc/sdk";
@@ -71,7 +71,7 @@ import { ApiKeysPanel } from "./ApiKeysPanel";
 import { WorkspaceAiPanel } from "./WorkspaceAiPanel";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
-import { InstallAppButton } from "@/components/InstallAppButton";
+import { InstallAppButton, useInstallApp } from "@/components/InstallAppButton";
 import { HeroArt, EmptyArt, RailArt } from "@/components/ui/CanvasBackdrop";
 import { attachableAccept, extractAiSources, maxAiSources, type AiSource } from "@/lib/aiAttachments";
 import { stageAiSources } from "@/lib/aiRequests";
@@ -1768,8 +1768,10 @@ function UserMenu({ user, onSettings, onSignOut }: { user: { name?: string | nul
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useOutsideClose(ref, open, () => setOpen(false));
+  const app = useInstallApp();
   return (
     <div className="relative" ref={ref}>
+      {app.dialog}
       <button onClick={() => setOpen((o) => !o)} aria-label={tr("dashboard.account")} className="oc-gradient grid h-8 w-8 place-items-center rounded-full text-sm font-bold text-white">
         {(user?.name || user?.email || "?").charAt(0).toUpperCase()}
       </button>
@@ -1781,6 +1783,9 @@ function UserMenu({ user, onSettings, onSignOut }: { user: { name?: string | nul
           </div>
           <div className="my-1 border-t border-neutral-100" />
           <ThemeMenuItem />
+          {app.state !== "none" && (
+            <button onClick={() => { setOpen(false); app.install(); }} title={tr("dashboard.install_app_hint")} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-start text-sm text-neutral-700 hover:bg-neutral-100"><MonitorDown size={15} className="text-neutral-400" /> {tr("dashboard.install_app")}</button>
+          )}
           <button onClick={() => { setOpen(false); onSettings(); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-start text-sm text-neutral-700 hover:bg-neutral-100"><Settings size={15} className="text-neutral-400" /> {tr("dashboard.settings")}</button>
           <button onClick={() => { setOpen(false); onSignOut(); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-start text-sm text-neutral-700 hover:bg-neutral-100"><LogOut size={15} className="text-neutral-400" /> {tr("dashboard.sign_out")}</button>
         </div>

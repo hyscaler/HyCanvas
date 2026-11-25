@@ -3,7 +3,7 @@ import { archetypes, normalizeOutline, type Archetype } from "../outline";
 import { deriveDesignSystem, catalogEntryForSeed, catalogEntryForMood, designSystemSlots, hueName, artDirectionFor } from "../designSystem";
 import { archetypeIsImpact, composeArchetypePage, keepLastWordCompany, iconGlyphFor, applyMotion, illustrationFor, decodeDrawingPath } from "../archetypes";
 import { ILLUSTRATIONS, ILLUSTRATION_KEYWORDS } from "../illustrationset";
-import { provideIllustrations } from "../illustrations";
+import { provideArtwork } from "../artset";
 import { themeCatalog } from "../themeCatalog";
 import { repairContrast } from "../repair";
 import { composeDeckFileWithReport } from "../compose";
@@ -18,7 +18,7 @@ import { qualityCheck } from "../quality";
 import { contrastRatio } from "@hc/color";
 
 // The composer reads its drawings from a registry the host fills.
-provideIllustrations(ILLUSTRATIONS);
+provideArtwork();
 
 const size = { width: 1920, height: 1080 };
 const theme = deckThemes({ count: 1, seed: 3, kicker: "Coastal Restoration" })[0];
