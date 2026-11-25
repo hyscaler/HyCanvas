@@ -540,6 +540,8 @@
   "dashboard.install_app_ios_intro": "将 HyCanvas 添加到主屏幕，即可像应用一样打开：",
   "dashboard.install_app_ios_step_add": "选择添加到主屏幕，然后点按添加",
   "dashboard.install_app_ios_step_share": "点按浏览器工具栏中的分享",
+  "dashboard.install_app_step_install": "选择“安装应用”或“添加到主屏幕”",
+  "dashboard.install_app_step_menu": "打开浏览器菜单",
   "dashboard.settings": "设置",
   "dashboard.share": "分享",
   "dashboard.sheet": "表格",
